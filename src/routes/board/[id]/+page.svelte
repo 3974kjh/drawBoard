@@ -41,6 +41,7 @@
 	import PropertyPanel from '$lib/component/board/PropertyPanel.svelte';
 	import BoardStage from '$lib/component/board/BoardStage.svelte';
 	import ImportModal from '$lib/component/board/ImportModal.svelte';
+	import MinimapThumbnail from '$lib/component/board/MinimapThumbnail.svelte';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -51,6 +52,7 @@
 	/* ── State ── */
 	let stageRef = $state<HTMLElement | null>(null);
 	let drawCanvas = $state<HTMLCanvasElement | null>(null);
+	let stageWrapRef = $state<HTMLElement | null>(null);
 	let boardTitle = $state('');
 	let themeId = $state<ThemeId>('whiteboard');
 	let strokes = $state<Stroke[]>([]);
@@ -140,7 +142,9 @@
 		const snapshot: Snapshot = {
 			strokes: deepClone(strokes),
 			elements: deepClone(elements),
-			themeId
+			themeId,
+			stageWidth,
+			stageHeight
 		};
 		history = [...history.slice(0, historyIndex + 1), snapshot];
 		historyIndex = history.length - 1;
@@ -148,6 +152,13 @@
 	};
 
 	const applySnapshot = (snapshot: Snapshot) => {
+		/* Restore board dimensions first so the canvas is resized before redraw */
+		stageWidth = snapshot.stageWidth;
+		stageHeight = snapshot.stageHeight;
+		if (drawCanvas) {
+			drawCanvas.width = stageWidth;
+			drawCanvas.height = stageHeight;
+		}
 		strokes = deepClone(snapshot.strokes);
 		elements = deepClone(snapshot.elements);
 		themeId = snapshot.themeId;
@@ -188,6 +199,12 @@
 		};
 	};
 
+	/** Returns the current inner dimensions of the board's scrollable wrapper. */
+	const getViewportSize = () => ({
+		w: Math.max(400, Math.floor(stageWrapRef?.clientWidth || 1200)),
+		h: Math.max(300, Math.floor(stageWrapRef?.clientHeight || 700))
+	});
+
 	const loadBoard = () => {
 		const board = getBoardById(boardId);
 		if (!board) {
@@ -196,9 +213,10 @@
 		}
 		boardTitle = board.title;
 		themeId = board.themeId;
-		/* Restore saved canvas size (fall back to defaults) */
-		stageWidth = board.width ?? 1200;
-		stageHeight = board.height ?? 700;
+		/* Restore saved canvas size; fall back to viewport dimensions for new boards */
+		const vp = getViewportSize();
+		stageWidth = board.width ?? vp.w;
+		stageHeight = board.height ?? vp.h;
 		strokes = deepClone(board.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(board.elements).map((el: BoardElement) => migrateElement(el));
 		selectedElementIds = [];
@@ -243,11 +261,22 @@
 	};
 
 	const clearBoard = () => {
-		if (!confirm('보드를 초기화할까요?')) return;
+		if (!confirm('보드를 초기화할까요?\n내용과 보드 크기가 모두 초기화됩니다.')) return;
+		const vp = getViewportSize();
 		strokes = [];
 		elements = [];
 		selectedElementIds = [];
 		editingElementId = null;
+		stageWidth = vp.w;
+		stageHeight = vp.h;
+		if (drawCanvas) {
+			drawCanvas.width = stageWidth;
+			drawCanvas.height = stageHeight;
+		}
+		redrawCanvas();
+		/* Reset history so undo/redo cannot go back to pre-clear state */
+		history = [];
+		historyIndex = -1;
 		commitSnapshot();
 	};
 
@@ -1105,11 +1134,12 @@
 	/>
 
 	<div class="workspace">
-		<ToolPanel bind:activeTool />
+		<ToolPanel bind:activeTool bind:keepToolActive />
 
 		<BoardStage
 			bind:stageRef
 			bind:drawCanvas
+			bind:wrapRef={stageWrapRef}
 			themeBackground={currentTheme.background}
 			themeGridColor={currentTheme.gridColor}
 			{activeTool}
@@ -1135,41 +1165,52 @@
 			onExpandBoard={expandBoard}
 		/>
 
-		<PropertyPanel
-			bind:penColor
-			bind:fillColor
-			bind:penSize
-			bind:eraserSize
-			bind:borderWidth
-			bind:fontSize
-			bind:snapThreshold
-			bind:themeId
-			bind:keepToolActive
-			{activeTool}
-			{stageWidth}
-			{stageHeight}
-			{selectedElementIds}
-			{selectedElements}
-			{isTextAlignVisible}
-			{canGroup}
-			{canUngroup}
-			{canDistribute}
-			onThemeChange={applyThemeDefaults}
-			onDuplicate={duplicateSelectedElement}
-			onDelete={deleteSelectedElement}
-			onGroup={groupSelected}
-			onUngroup={ungroupSelected}
-			onAlign={alignSelected}
-			onDistribute={distributeSelected}
-			onTextAlign={setTextAlign}
-			onTextVerticalAlign={setTextVerticalAlign}
-			onPenColorChange={handlePenColorChange}
-			onFillColorChange={handleFillColorChange}
-			onBorderWidthChange={handleBorderWidthChange}
-			onFontSizeChange={handleFontSizeChange}
+		<div class="right-col">
+			<MinimapThumbnail
+				{stageWidth}
+				{stageHeight}
+				themeBackground={currentTheme.background}
+				themeGridColor={currentTheme.gridColor}
+				{strokes}
+				{elements}
+				{stageWrapRef}
+			/>
+
+			<PropertyPanel
+				bind:penColor
+				bind:fillColor
+				bind:penSize
+				bind:eraserSize
+				bind:borderWidth
+				bind:fontSize
+				bind:snapThreshold
+				bind:themeId
+				{activeTool}
+				{stageWidth}
+				{stageHeight}
+				{selectedElementIds}
+				{selectedElements}
+				{isTextAlignVisible}
+				{canGroup}
+				{canUngroup}
+				{canDistribute}
+				onThemeChange={applyThemeDefaults}
+				onDuplicate={duplicateSelectedElement}
+				onDelete={deleteSelectedElement}
+				onGroup={groupSelected}
+				onUngroup={ungroupSelected}
+				onAlign={alignSelected}
+				onDistribute={distributeSelected}
+				onTextAlign={setTextAlign}
+				onTextVerticalAlign={setTextVerticalAlign}
+				onPenColorChange={handlePenColorChange}
+				onFillColorChange={handleFillColorChange}
+				onBorderWidthChange={handleBorderWidthChange}
+				onFontSizeChange={handleFontSizeChange}
 			onImageUpload={handleImageUpload}
 			onExpandBoard={expandBoard}
 		/>
+		</div>
 	</div>
 </main>
 
@@ -1238,6 +1279,19 @@
 		gap: 0.7rem;
 		padding: 0.7rem;
 		box-sizing: border-box;
+	}
+
+	.right-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.right-col :global(.property-panel) {
+		flex: 1;
+		min-height: 0;
 	}
 
 	/* ── Unsaved changes modal ── */

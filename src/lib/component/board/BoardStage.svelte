@@ -17,6 +17,7 @@
 	interface Props {
 		stageRef: HTMLElement | null;
 		drawCanvas: HTMLCanvasElement | null;
+		wrapRef: HTMLElement | null;
 		themeBackground: string;
 		themeGridColor: string;
 		activeTool: DrawingTool;
@@ -45,6 +46,7 @@
 	let {
 		stageRef = $bindable(null),
 		drawCanvas = $bindable(null),
+		wrapRef = $bindable(null),
 		themeBackground,
 		themeGridColor,
 		activeTool,
@@ -73,10 +75,38 @@
 	/* ── Internal eraser cursor tracking ── */
 	let eraserPos = $state<{ x: number; y: number } | null>(null);
 
-	/* ── Edge hover for expand buttons (board-space coords) ── */
+	/* ── Edge hover for expand buttons (visible-viewport coords) ── */
 	let hoverEdge = $state<'top' | 'bottom' | 'left' | 'right' | null>(null);
 
-	const EDGE_ZONE = 36; // px from board edge that activates the expand button
+	const EDGE_ZONE = 36; // px from visible edge that activates the expand button
+
+	/* ── Scroll / viewport state for visible-edge detection ── */
+	let _scrollLeft = $state(0);
+	let _scrollTop = $state(0);
+	let _viewportW = $state(0);
+	let _viewportH = $state(0);
+
+	const _visCenterX = $derived(_scrollLeft + _viewportW / 2);
+	const _visCenterY = $derived(_scrollTop + _viewportH / 2);
+
+	$effect(() => {
+		const el = wrapRef;
+		if (!el) return;
+		const update = () => {
+			_scrollLeft = el.scrollLeft;
+			_scrollTop = el.scrollTop;
+			_viewportW = el.clientWidth;
+			_viewportH = el.clientHeight;
+		};
+		update();
+		el.addEventListener('scroll', update, { passive: true });
+		const ro = new ResizeObserver(update);
+		ro.observe(el);
+		return () => {
+			el.removeEventListener('scroll', update);
+			ro.disconnect();
+		};
+	});
 
 	function handlePointerMove(event: PointerEvent) {
 		const rect = stageRef?.getBoundingClientRect();
@@ -90,11 +120,11 @@
 				eraserPos = null;
 			}
 
-			/* Determine which board edge (if any) the pointer is near */
-			if (by < EDGE_ZONE) hoverEdge = 'top';
-			else if (by > stageHeight - EDGE_ZONE) hoverEdge = 'bottom';
-			else if (bx < EDGE_ZONE) hoverEdge = 'left';
-			else if (bx > stageWidth - EDGE_ZONE) hoverEdge = 'right';
+			/* Determine which VISIBLE VIEWPORT edge (if any) the pointer is near */
+			if (by < _scrollTop + EDGE_ZONE) hoverEdge = 'top';
+			else if (by > _scrollTop + _viewportH - EDGE_ZONE) hoverEdge = 'bottom';
+			else if (bx < _scrollLeft + EDGE_ZONE) hoverEdge = 'left';
+			else if (bx > _scrollLeft + _viewportW - EDGE_ZONE) hoverEdge = 'right';
 			else hoverEdge = null;
 		}
 		onPointerMove(event);
@@ -116,7 +146,7 @@
 	}
 </script>
 
-<section class="stage-wrap">
+<section class="stage-wrap" bind:this={wrapRef}>
 	<section
 		class="board-stage"
 		class:eraser-active={activeTool === 'eraser'}
@@ -130,11 +160,12 @@
 		role="application"
 		aria-label="드로잉 보드"
 	>
-		<!-- Edge expand buttons – positioned inside board-stage so they track board coords -->
+		<!-- Edge expand buttons – centered on the VISIBLE viewport edge, not the board edge -->
 		{#if hoverEdge === 'top'}
 			<button
 				type="button"
 				class="expand-btn top"
+				style={`top:${_scrollTop}px;left:${_visCenterX}px;`}
 				onclick={() => onExpandBoard('top', 200)}
 				title="위로 200px 확장"
 			>
@@ -146,6 +177,7 @@
 			<button
 				type="button"
 				class="expand-btn bottom"
+				style={`top:${Math.min(stageHeight, _scrollTop + _viewportH) - 26}px;left:${_visCenterX}px;`}
 				onclick={() => onExpandBoard('bottom', 200)}
 				title="아래로 200px 확장"
 			>
@@ -157,6 +189,7 @@
 			<button
 				type="button"
 				class="expand-btn left"
+				style={`left:${_scrollLeft}px;top:${_visCenterY}px;`}
 				onclick={() => onExpandBoard('left', 200)}
 				title="왼쪽으로 200px 확장"
 			>
@@ -168,6 +201,7 @@
 			<button
 				type="button"
 				class="expand-btn right"
+				style={`left:${Math.min(stageWidth, _scrollLeft + _viewportW) - 26}px;top:${_visCenterY}px;`}
 				onclick={() => onExpandBoard('right', 200)}
 				title="오른쪽으로 200px 확장"
 			>
@@ -321,10 +355,41 @@
 <style>
 	.stage-wrap {
 		position: relative;
-		border-radius: 18px;
 		overflow: auto;
 		border: 1px solid #cbd5e1;
 		background: #f8fafc;
+		/* Firefox */
+		scrollbar-width: thin;
+		scrollbar-color: #94a3b8 transparent;
+	}
+
+	/* Webkit (Chrome, Safari, Edge) */
+	.stage-wrap::-webkit-scrollbar {
+		width: 7px;
+		height: 7px;
+	}
+
+	.stage-wrap::-webkit-scrollbar-track {
+		background: transparent;
+		border-radius: 99px;
+	}
+
+	.stage-wrap::-webkit-scrollbar-thumb {
+		background: #94a3b8;
+		border-radius: 99px;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+		transition: background 0.2s;
+	}
+
+	.stage-wrap::-webkit-scrollbar-thumb:hover {
+		background: #64748b;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+	}
+
+	.stage-wrap::-webkit-scrollbar-corner {
+		background: transparent;
 	}
 
 	.board-stage {
@@ -385,8 +450,6 @@
 	}
 
 	.expand-btn.top {
-		top: 0;
-		left: 50%;
 		transform: translateX(-50%);
 		width: 88px;
 		height: 26px;
@@ -395,12 +458,10 @@
 	}
 
 	.expand-btn.top:hover {
-		transform: translateX(-50%) translateY(2px);
+		filter: brightness(0.93);
 	}
 
 	.expand-btn.bottom {
-		bottom: 0;
-		left: 50%;
 		transform: translateX(-50%);
 		width: 88px;
 		height: 26px;
@@ -409,12 +470,10 @@
 	}
 
 	.expand-btn.bottom:hover {
-		transform: translateX(-50%) translateY(-2px);
+		filter: brightness(0.93);
 	}
 
 	.expand-btn.left {
-		left: 0;
-		top: 50%;
 		transform: translateY(-50%);
 		width: 26px;
 		height: 88px;
@@ -423,12 +482,10 @@
 	}
 
 	.expand-btn.left:hover {
-		transform: translateY(-50%) translateX(2px);
+		filter: brightness(0.93);
 	}
 
 	.expand-btn.right {
-		right: 0;
-		top: 50%;
 		transform: translateY(-50%);
 		width: 26px;
 		height: 88px;
@@ -437,7 +494,7 @@
 	}
 
 	.expand-btn.right:hover {
-		transform: translateY(-50%) translateX(-2px);
+		filter: brightness(0.93);
 	}
 
 	/* ── Elements ── */

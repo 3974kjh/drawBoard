@@ -138,6 +138,8 @@ export interface Snapshot {
 	strokes: Stroke[];
 	elements: BoardElement[];
 	themeId: ThemeId;
+	stageWidth: number;
+	stageHeight: number;
 }
 
 export interface ToolItem {

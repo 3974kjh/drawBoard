@@ -20,7 +20,6 @@
 		snapThreshold: number;
 		themeId: ThemeId;
 		activeTool: DrawingTool;
-		keepToolActive: boolean;
 		stageWidth: number;
 		stageHeight: number;
 		selectedElementIds: string[];
@@ -56,7 +55,6 @@
 		snapThreshold = $bindable(8),
 		themeId = $bindable<ThemeId>('whiteboard'),
 		activeTool,
-		keepToolActive = $bindable(false),
 		stageWidth,
 		stageHeight,
 		selectedElementIds,
@@ -280,16 +278,6 @@
 			{/each}
 		</select>
 	</div>
-
-	<div class="divider"></div>
-
-	<!-- ─── Tool lock ─── -->
-	<label class="toggle-row" title="활성화하면 도형 추가 후 같은 도구를 유지합니다">
-		<input type="checkbox" bind:checked={keepToolActive} />
-		<!-- prettier-ignore -->
-		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-		도구 고정
-	</label>
 
 	<div class="divider"></div>
 
@@ -588,23 +576,6 @@
 		margin: 0.55rem 0;
 	}
 
-	/* ─── Toggle row ─── */
-	.toggle-row {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.78rem;
-		font-weight: 500;
-		cursor: pointer;
-		color: #475569;
-	}
-
-	.toggle-row input[type='checkbox'] {
-		accent-color: #2563eb;
-		width: 15px;
-		height: 15px;
-	}
-
 	/* ─── Selection info ─── */
 	.selection-info {
 		font-size: 0.73rem;
@@ -685,6 +656,7 @@
 		border-color: #93c5fd;
 		color: #2563eb;
 	}
+
 
 	/* ─── Board size ─── */
 	.size-display {
