@@ -58,7 +58,7 @@
 
 | 도구 | 기능 |
 |------|------|
-| ✊ 선택 | 드래그 이동 · 범위 선택(마키) · 회전 · 크기 조절 |
+| ➤ 선택 | 드래그 이동 · 범위 선택(마키) · 회전 · 크기 조절 (커서 화살표 아이콘) |
 | ✏️ 펜 | 자유 드로잉, 색상/굵기 설정 |
 | 🧹 지우개 | 펜 획 / 요소 삭제, 크기 설정, 커스텀 커서 표시 |
 | ⬜ 사각형 | 내부 텍스트 입력 지원 |
@@ -99,7 +99,8 @@
 | 스냅 | 스냅 민감도 슬라이더 |
 | 테마 | 화이트보드 / 칠판 / 네온 그리드 전환 |
 | 정렬 | 다중 선택 시: 좌·중·우·상·중간·하 정렬 + 가로·세로 균등 분배 |
-| 텍스트 정렬 | 텍스트 편집 요소 선택 시: 좌·중·우 |
+| 텍스트 가로 정렬 | 텍스트 편집 요소 선택 시: 좌·중·우 |
+| 텍스트 세로 정렬 | 텍스트 편집 요소 선택 시: 상단·중간·하단 |
 
 ### 스냅 & 스마트 가이드
 
@@ -176,7 +177,7 @@ BoardData
       ├── x, y, width, height
       ├── rotation, borderWidth
       ├── strokeColor, fillColor
-      ├── text, textAlign, fontSize  ← rect/ellipse/text 전용
+      ├── text, textAlign, textVerticalAlign, fontSize  ← rect/ellipse/text 전용
       ├── imageDataUrl?      ← image 전용, base64 data-URL
       └── groupId            ← 그룹화 연결 키
 ```

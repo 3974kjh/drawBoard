@@ -153,7 +153,8 @@ export const drawElementToCanvas = (
 		ctx.fillStyle = element.strokeColor;
 		ctx.textAlign = element.textAlign;
 		ctx.textBaseline = 'top';
-		ctx.font = `${element.fontSize}px sans-serif`;
+		const fs = element.fontSize ?? 18;
+		ctx.font = `${fs}px sans-serif`;
 		const x =
 			element.textAlign === 'left'
 				? element.x + 10
@@ -161,8 +162,17 @@ export const drawElementToCanvas = (
 					? element.x + element.width / 2
 					: element.x + element.width - 10;
 		const lines = element.text.split('\n');
+		const lineHeight = fs + 4;
+		const totalTextH = lines.length * lineHeight;
+		const valign = element.textVerticalAlign ?? 'top';
+		const startY =
+			valign === 'top'
+				? element.y + 10
+				: valign === 'middle'
+					? element.y + (element.height - totalTextH) / 2
+					: element.y + element.height - totalTextH - 10;
 		lines.forEach((line, idx) => {
-			ctx.fillText(line, x, element.y + 10 + idx * (element.fontSize + 4), element.width - 16);
+			ctx.fillText(line, x, startY + idx * lineHeight, element.width - 16);
 		});
 	}
 	ctx.restore();

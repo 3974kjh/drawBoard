@@ -13,6 +13,7 @@ export type DrawingTool =
 	| 'image';
 
 export type TextAlign = 'left' | 'center' | 'right';
+export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 export type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
 export type DistributeMode = 'horizontal' | 'vertical';
 export type Axis = 'x' | 'y';
@@ -45,6 +46,7 @@ export interface BoardElement {
 	borderWidth: number;
 	text: string;
 	textAlign: TextAlign;
+	textVerticalAlign: TextVerticalAlign;
 	fontSize: number;
 	/** base64 data-URL stored when type === 'image' */
 	imageDataUrl?: string;
@@ -144,12 +146,9 @@ export interface ToolItem {
 	icon: string;
 }
 
-/* Grabbing-hand SVG for the select/move tool */
+/* Mouse-pointer (cursor arrow) SVG for the select/move tool */
 const GRAB_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M18 11v-1a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/>
-  <path d="M14 10V9a2 2 0 0 0-2-2 2 2 0 0 0-2 2v1"/>
-  <path d="M10 9.5V9a2 2 0 0 0-2-2 2 2 0 0 0-2 2v1"/>
-  <path d="M6 10.5a2 2 0 0 0-2 2V15a8 8 0 0 0 16 0v-5a2 2 0 0 0-2-2 2 2 0 0 0-2 2v-1.5"/>
+  <path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>
 </svg>`;
 
 /* Image/picture SVG icon */

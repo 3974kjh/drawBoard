@@ -6,6 +6,7 @@
 		type DistributeMode,
 		type DrawingTool,
 		type TextAlign,
+		type TextVerticalAlign,
 		type ThemeId
 	} from '$lib/board-types';
 
@@ -36,6 +37,7 @@
 		onAlign: (mode: AlignMode) => void;
 		onDistribute: (mode: DistributeMode) => void;
 		onTextAlign: (align: TextAlign) => void;
+		onTextVerticalAlign: (align: TextVerticalAlign) => void;
 		onPenColorChange: (color: string) => void;
 		onFillColorChange: (color: string) => void;
 		onBorderWidthChange: (w: number) => void;
@@ -71,6 +73,7 @@
 		onAlign,
 		onDistribute,
 		onTextAlign,
+		onTextVerticalAlign,
 		onPenColorChange,
 		onFillColorChange,
 		onBorderWidthChange,
@@ -393,7 +396,7 @@
 	<!-- ─── Text align ─── -->
 	{#if isTextAlignVisible}
 		<div class="sub-section">
-			<div class="section-title small">텍스트 정렬</div>
+			<div class="section-title small">텍스트 가로 정렬</div>
 			<div class="text-align-row">
 				<button type="button" title="왼쪽 정렬" onclick={() => onTextAlign('left')}>
 					<!-- prettier-ignore -->
@@ -406,6 +409,23 @@
 				<button type="button" title="오른쪽 정렬" onclick={() => onTextAlign('right')}>
 					<!-- prettier-ignore -->
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+				</button>
+			</div>
+		</div>
+		<div class="sub-section">
+			<div class="section-title small">텍스트 세로 정렬</div>
+			<div class="text-align-row">
+				<button type="button" title="상단 정렬" onclick={() => onTextVerticalAlign('top')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+				</button>
+				<button type="button" title="중간 정렬" onclick={() => onTextVerticalAlign('middle')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+				</button>
+				<button type="button" title="하단 정렬" onclick={() => onTextVerticalAlign('bottom')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
 				</button>
 			</div>
 		</div>

@@ -187,7 +187,7 @@
 			<div
 				class={`element ${isSelected ? 'selected' : ''} ${element.type}`}
 				data-element-id={element.id}
-				style={`left:${element.x}px;top:${element.y}px;width:${element.width}px;height:${element.height}px;--fill:${element.fillColor};--stroke:${element.strokeColor};--border-w:${bw}px;text-align:${element.textAlign};transform:rotate(${element.rotation}deg);transform-origin:center center;`}
+				style={`left:${element.x}px;top:${element.y}px;width:${element.width}px;height:${element.height}px;--fill:${element.fillColor};--stroke:${element.strokeColor};--border-w:${bw}px;text-align:${element.textAlign};--text-valign:${element.textVerticalAlign === 'middle' ? 'center' : element.textVerticalAlign === 'bottom' ? 'flex-end' : 'flex-start'};transform:rotate(${element.rotation}deg);transform-origin:center center;`}
 				ondblclick={() => onDblClickElement(element.id)}
 				role="button"
 				tabindex="0"
@@ -561,6 +561,9 @@
 		white-space: pre-wrap;
 		pointer-events: none;
 		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: var(--text-valign, flex-start);
 	}
 
 	.text-editor {

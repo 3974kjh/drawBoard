@@ -15,6 +15,7 @@
 		type Snapshot,
 		type Stroke,
 		type TextAlign,
+		type TextVerticalAlign,
 		type ThemeId
 	} from '$lib/board-types';
 	import { getBoardById, getBoards, upsertBoard } from '$lib/board-storage';
@@ -179,6 +180,10 @@
 			...el,
 			rotation: typeof raw.rotation === 'number' ? (raw.rotation as number) : 0,
 			borderWidth: typeof raw.borderWidth === 'number' ? (raw.borderWidth as number) : 2,
+			textVerticalAlign:
+				raw.textVerticalAlign === 'middle' || raw.textVerticalAlign === 'bottom'
+					? (raw.textVerticalAlign as TextVerticalAlign)
+					: 'top',
 			type: legacyType === 'line' ? 'line-h' : el.type
 		};
 	};
@@ -327,6 +332,7 @@
 			borderWidth: isImage ? 0 : type === 'text' ? 1 : borderWidth,
 			text: '',
 			textAlign: 'left',
+			textVerticalAlign: 'top',
 			fontSize: type === 'text' ? 24 : 18
 		};
 		elements = [...elements, element];
@@ -793,6 +799,14 @@
 		commitSnapshot();
 	};
 
+	const setTextVerticalAlign = (align: TextVerticalAlign) => {
+		if (selectedElementIds.length === 0) return;
+		updateSelectedElements((item) =>
+			TEXT_EDITABLE_TYPES.includes(item.type) ? { ...item, textVerticalAlign: align } : item
+		);
+		commitSnapshot();
+	};
+
 	const alignSelected = (mode: AlignMode) => {
 		if (selectedElements.length < 2) return;
 		const minX = Math.min(...selectedElements.map((item) => item.x));
@@ -1148,6 +1162,7 @@
 			onAlign={alignSelected}
 			onDistribute={distributeSelected}
 			onTextAlign={setTextAlign}
+			onTextVerticalAlign={setTextVerticalAlign}
 			onPenColorChange={handlePenColorChange}
 			onFillColorChange={handleFillColorChange}
 			onBorderWidthChange={handleBorderWidthChange}
