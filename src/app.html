@@ -3,15 +3,94 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content="DrawDashBoard – 아이디어를 그림과 텍스트로 한눈에 정리하는 드로잉 보드" />
-		<title>DrawDashBoard</title>
-		<!-- Handwriting / brush font for branding -->
+
+		<!-- ─── Primary SEO ─────────────────────────────────────────── -->
+		<title>DrawDashBoard – 아이디어를 그림으로 시각화하는 온라인 드로잉 보드</title>
+		<meta name="title" content="DrawDashBoard – 아이디어를 그림으로 시각화하는 온라인 드로잉 보드" />
+		<meta
+			name="description"
+			content="DrawDashBoard는 아이디어를 그림, 도형, 텍스트로 시각화하는 무료 온라인 드로잉 보드입니다. 화이트보드·칠판·네온 테마, 자유 드로잉, 이미지 삽입, PDF 내보내기를 지원합니다."
+		/>
+		<meta
+			name="keywords"
+			content="드로잉 보드, 온라인 화이트보드, 아이디어 정리, 스케치 툴, 칠판, 그림 그리기, 도형 그리기, whiteboard, drawing board, 마인드맵, 아이디어 보드, 협업 보드"
+		/>
+		<meta name="author" content="DrawDashBoard" />
+		<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+		<meta name="theme-color" content="#2563eb" />
+
+		<!-- ─── Canonical (배포 후 실제 도메인으로 변경) ─────────────── -->
+		<link rel="canonical" href="https://draw-dash-board.pages.dev/" />
+
+		<!-- ─── Open Graph (Facebook · KakaoTalk · 네이버 미리보기) ──── -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://draw-dash-board.pages.dev/" />
+		<meta property="og:site_name" content="DrawDashBoard" />
+		<meta property="og:locale" content="ko_KR" />
+		<meta property="og:title" content="DrawDashBoard – 아이디어를 그림으로 시각화하는 온라인 드로잉 보드" />
+		<meta
+			property="og:description"
+			content="무료 온라인 드로잉 보드. 도형·텍스트·자유 드로잉·이미지 삽입, PDF/PNG 내보내기까지 한 곳에서."
+		/>
+		<!-- og-image.svg를 PNG로 변환 후 og-image.png로 교체하거나 그대로 사용 가능 -->
+		<meta property="og:image" content="https://draw-dash-board.pages.dev/og-image.svg" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="DrawDashBoard 드로잉 보드 화면 미리보기" />
+
+		<!-- ─── Twitter Card ─────────────────────────────────────────── -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content="https://draw-dash-board.pages.dev/" />
+		<meta name="twitter:title" content="DrawDashBoard – 아이디어를 그림으로 시각화하는 온라인 드로잉 보드" />
+		<meta
+			name="twitter:description"
+			content="무료 온라인 드로잉 보드. 도형·텍스트·자유 드로잉·이미지 삽입, PDF/PNG 내보내기까지 한 곳에서."
+		/>
+		<meta name="twitter:image" content="https://draw-dash-board.pages.dev/og-image.svg" />
+
+		<!-- ─── 검색엔진 소유권 인증 (등록 후 content 값을 교체하고 주석 해제) ── -->
+		<!-- Google Search Console -->
+		<meta name="google-site-verification" content="5A9TLUOxp_gJtvs6H36WkcuJ6EotYV49OiJSHLxhhtM" />
+		<!-- 네이버 서치어드바이저 (https://searchadvisor.naver.com) -->
+		<meta name="naver-site-verification" content="f61ca010c208679297c557aaadbd0430a6909a58" />
+
+		<!-- ─── JSON-LD 구조화 데이터 (Google 리치 결과) ───────────────── -->
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebApplication",
+				"name": "DrawDashBoard",
+				"url": "https://draw-dash-board.pages.dev",
+				"description": "아이디어를 그림, 도형, 텍스트로 시각화하는 무료 온라인 드로잉 보드",
+				"applicationCategory": "DesignApplication",
+				"operatingSystem": "Any",
+				"browserRequirements": "HTML5, JavaScript",
+				"inLanguage": "ko",
+				"offers": {
+					"@type": "Offer",
+					"price": "0",
+					"priceCurrency": "KRW"
+				},
+				"featureList": [
+					"자유 드로잉",
+					"도형 그리기 (사각형, 원, 삼각형, 선)",
+					"텍스트 입력",
+					"이미지 삽입",
+					"PDF 내보내기",
+					"PNG 내보내기",
+					"화이트보드 / 칠판 / 네온 그리드 테마"
+				]
+			}
+		</script>
+
+		<!-- ─── Fonts ─────────────────────────────────────────────────── -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
 		<link
 			href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap"
 			rel="stylesheet"
 		/>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

@@ -1,3 +1,47 @@
-# allow crawling everything by default
+# DrawDashBoard — robots.txt
+# 배포 URL: https://draw-dash-board.pages.dev (실제 도메인으로 변경 필요)
+
+# ─── 기본 규칙 (모든 크롤러) ─────────────────────────────────────────────
 User-agent: *
-Disallow:
+Allow: /
+# /board/* 경로는 사용자 로컬 스토리지 기반 데이터로 크롤러가 내용을 볼 수 없음
+Disallow: /board/
+
+# ─── Google ──────────────────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Disallow: /board/
+
+User-agent: Googlebot-Image
+Allow: /
+Disallow: /board/
+
+# ─── 네이버 (Yeti) ────────────────────────────────────────────────────────
+# 네이버 서치어드바이저: https://searchadvisor.naver.com
+User-agent: Yeti
+Allow: /
+Disallow: /board/
+
+# ─── 다음 / 카카오 ────────────────────────────────────────────────────────
+# 다음 웹마스터 도구: https://webmaster.daum.net
+User-agent: Daum
+Allow: /
+Disallow: /board/
+
+User-agent: Daumoa
+Allow: /
+Disallow: /board/
+
+# ─── Bing ────────────────────────────────────────────────────────────────
+User-agent: Bingbot
+Allow: /
+Disallow: /board/
+
+# ─── 기타 주요 봇 ────────────────────────────────────────────────────────
+User-agent: Slurp
+Allow: /
+Disallow: /board/
+
+# ─── Sitemap ─────────────────────────────────────────────────────────────
+# 배포 후 실제 도메인으로 변경 필요
+Sitemap: https://draw-dash-board.pages.dev/sitemap.xml
