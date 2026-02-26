@@ -1,5 +1,5 @@
 # DrawDashBoard — robots.txt
-# 배포 URL: https://draw-dash-board.pages.dev (실제 도메인으로 변경 필요)
+# 배포 URL: https://drawboard-ekj.pages.dev
 
 # ─── 기본 규칙 (모든 크롤러) ─────────────────────────────────────────────
 User-agent: *
@@ -43,5 +43,4 @@ Allow: /
 Disallow: /board/
 
 # ─── Sitemap ─────────────────────────────────────────────────────────────
-# 배포 후 실제 도메인으로 변경 필요
-Sitemap: https://draw-dash-board.pages.dev/sitemap.xml
+Sitemap: https://drawboard-ekj.pages.dev/sitemap.xml

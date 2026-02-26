@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   DrawDashBoard — sitemap.xml
-  배포 후 <loc> 태그의 도메인을 실제 URL로 변경하세요.
-  예) https://draw-dash-board.pages.dev → https://your-actual-domain.com
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
   <!-- 메인 페이지 (보드 목록) -->
   <url>
-    <loc>https://draw-dash-board.pages.dev/</loc>
+    <loc>https://drawboard-ekj.pages.dev/</loc>
     <lastmod>2026-02-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://draw-dash-board.pages.dev/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://drawboard-ekj.pages.dev/"/>
   </url>
 
 </urlset>
