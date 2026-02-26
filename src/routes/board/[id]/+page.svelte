@@ -67,6 +67,8 @@
 	let borderWidth = $state(2);
 	let fontSize = $state(18);
 	let snapThreshold = $state(8);
+	let gridEnabled = $state(true);
+	let gridSize = $state(32);
 	let keepToolActive = $state(false);
 	let showImportModal = $state(false);
 	let importBoards = $state<BoardData[]>([]);
@@ -144,7 +146,9 @@
 			elements: deepClone(elements),
 			themeId,
 			stageWidth,
-			stageHeight
+			stageHeight,
+			gridEnabled,
+			gridSize
 		};
 		history = [...history.slice(0, historyIndex + 1), snapshot];
 		historyIndex = history.length - 1;
@@ -162,6 +166,8 @@
 		strokes = deepClone(snapshot.strokes);
 		elements = deepClone(snapshot.elements);
 		themeId = snapshot.themeId;
+		gridEnabled = snapshot.gridEnabled;
+		gridSize = snapshot.gridSize;
 		selectedElementIds = [];
 		editingElementId = null;
 	};
@@ -217,6 +223,8 @@
 		const vp = getViewportSize();
 		stageWidth = board.width ?? vp.w;
 		stageHeight = board.height ?? vp.h;
+		gridEnabled = board.gridEnabled ?? true;
+		gridSize = board.gridSize ?? 32;
 		strokes = deepClone(board.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(board.elements).map((el: BoardElement) => migrateElement(el));
 		selectedElementIds = [];
@@ -243,7 +251,9 @@
 			currentTheme.gridColor,
 			strokes,
 			elements,
-			imageMap
+			imageMap,
+			gridEnabled,
+			gridSize
 		);
 		upsertBoard({
 			...original,
@@ -253,7 +263,9 @@
 			elements: deepClone(elements),
 			thumbnail,
 			width: stageWidth,
-			height: stageHeight
+			height: stageHeight,
+			gridEnabled,
+			gridSize
 		});
 		isDirty = false;
 		refreshImportBoards();
@@ -953,7 +965,9 @@
 			stageWidth,
 			stageHeight,
 			currentTheme.background,
-			currentTheme.gridColor
+			currentTheme.gridColor,
+			gridEnabled,
+			gridSize
 		);
 		strokes.forEach((stroke) => drawStroke(ctx, stroke));
 	};
@@ -970,7 +984,9 @@
 			stageWidth,
 			stageHeight,
 			currentTheme.background,
-			currentTheme.gridColor
+			currentTheme.gridColor,
+			gridEnabled,
+			gridSize
 		);
 		strokes.forEach((stroke) => drawStroke(ctx, stroke));
 		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap));
@@ -995,7 +1011,7 @@
 		renderCanvas.height = stageHeight;
 		const ctx = renderCanvas.getContext('2d');
 		if (!ctx) return;
-		drawThemeBackground(ctx, stageWidth, stageHeight, currentTheme.background, currentTheme.gridColor);
+		drawThemeBackground(ctx, stageWidth, stageHeight, currentTheme.background, currentTheme.gridColor, gridEnabled, gridSize);
 		strokes.forEach((stroke) => drawStroke(ctx, stroke));
 		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap));
 		renderCanvas.toBlob(
@@ -1142,6 +1158,8 @@
 			bind:wrapRef={stageWrapRef}
 			themeBackground={currentTheme.background}
 			themeGridColor={currentTheme.gridColor}
+			{gridEnabled}
+			{gridSize}
 			{activeTool}
 			{eraserSize}
 			{stageWidth}
@@ -1209,6 +1227,10 @@
 				onFontSizeChange={handleFontSizeChange}
 			onImageUpload={handleImageUpload}
 			onExpandBoard={expandBoard}
+			{gridEnabled}
+			{gridSize}
+			onGridEnabledChange={(v) => { gridEnabled = v; commitSnapshot(); }}
+			onGridSizeChange={(v) => { gridSize = v; commitSnapshot(); }}
 		/>
 		</div>
 	</div>

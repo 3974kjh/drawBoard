@@ -43,6 +43,10 @@
 		onFontSizeChange: (size: number) => void;
 		onImageUpload: (dataUrl: string) => void;
 		onExpandBoard: (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => void;
+		gridEnabled: boolean;
+		gridSize: number;
+		onGridEnabledChange: (v: boolean) => void;
+		onGridSizeChange: (v: number) => void;
 	}
 
 	let {
@@ -77,7 +81,11 @@
 		onBorderWidthChange,
 		onFontSizeChange,
 		onImageUpload,
-		onExpandBoard
+		onExpandBoard,
+		gridEnabled,
+		gridSize,
+		onGridEnabledChange,
+		onGridSizeChange
 	}: Props = $props();
 
 	const singleElement = $derived(
@@ -277,6 +285,46 @@
 				<option value={theme.id}>{theme.label}</option>
 			{/each}
 		</select>
+	</div>
+
+	<!-- ─── Grid ─── -->
+	<div class="section">
+		<div class="section-title">
+			<!-- prettier-ignore -->
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+			격자
+		</div>
+		<label class="grid-toggle-row">
+			<span>격자 표시</span>
+			<button
+				type="button"
+				class="toggle-btn"
+				class:active={gridEnabled}
+				onclick={() => onGridEnabledChange(!gridEnabled)}
+				title={gridEnabled ? '격자 숨기기' : '격자 표시'}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+		{#if gridEnabled}
+			<div class="grid-size-row">
+				<span class="grid-size-label">간격 <strong>{gridSize}px</strong></span>
+				<input
+					type="range"
+					min="8"
+					max="96"
+					step="8"
+					value={gridSize}
+					oninput={(e) => onGridSizeChange(Number(e.currentTarget.value))}
+					onchange={(e) => onGridSizeChange(Number(e.currentTarget.value))}
+				/>
+				<div class="grid-presets">
+					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>촘촘</button>
+					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>보통</button>
+					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>넓게</button>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<div class="divider"></div>
@@ -760,5 +808,100 @@
 	.upload-btn:hover {
 		background: #dbeafe;
 		border-color: #2563eb;
+	}
+
+	/* ─── Grid toggle ─── */
+	.grid-toggle-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		font-size: 0.78rem;
+		color: #374151;
+		margin-bottom: 0.5rem;
+		cursor: pointer;
+	}
+
+	.toggle-btn {
+		position: relative;
+		width: 34px;
+		height: 18px;
+		border-radius: 999px;
+		border: none;
+		background: #cbd5e1;
+		cursor: pointer;
+		padding: 0;
+		transition: background 0.18s;
+		flex-shrink: 0;
+	}
+
+	.toggle-btn.active {
+		background: #2563eb;
+	}
+
+	.toggle-knob {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: #fff;
+		transition: transform 0.18s;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+	}
+
+	.toggle-btn.active .toggle-knob {
+		transform: translateX(16px);
+	}
+
+	/* ─── Grid size ─── */
+	.grid-size-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.grid-size-label {
+		font-size: 0.74rem;
+		color: #64748b;
+	}
+
+	.grid-size-label strong {
+		color: #1e293b;
+		font-weight: 600;
+	}
+
+	.grid-size-row input[type='range'] {
+		width: 100%;
+		accent-color: #2563eb;
+	}
+
+	.grid-presets {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.grid-presets button {
+		flex: 1;
+		padding: 0.25rem 0;
+		font-size: 0.68rem;
+		font-weight: 600;
+		border: 1px solid #e2e8f0;
+		border-radius: 6px;
+		background: #fff;
+		color: #64748b;
+		cursor: pointer;
+		transition: background 0.12s, border-color 0.12s, color 0.12s;
+	}
+
+	.grid-presets button:hover {
+		background: #f1f5f9;
+		border-color: #94a3b8;
+	}
+
+	.grid-presets button.active {
+		background: #2563eb;
+		border-color: #2563eb;
+		color: #fff;
 	}
 </style>

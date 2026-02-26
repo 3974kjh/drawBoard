@@ -64,6 +64,8 @@ export interface BoardData {
 	/** Saved canvas dimensions so they persist across reloads */
 	width?: number;
 	height?: number;
+	gridEnabled?: boolean;
+	gridSize?: number;
 }
 
 export interface BoardTheme {
@@ -140,6 +142,8 @@ export interface Snapshot {
 	themeId: ThemeId;
 	stageWidth: number;
 	stageHeight: number;
+	gridEnabled: boolean;
+	gridSize: number;
 }
 
 export interface ToolItem {

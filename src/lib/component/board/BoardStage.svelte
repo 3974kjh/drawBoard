@@ -41,6 +41,8 @@
 		onElementTextChange: (id: string, text: string) => void;
 		onElementTextBlur: () => void;
 		onExpandBoard: (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => void;
+		gridEnabled: boolean;
+		gridSize: number;
 	}
 
 	let {
@@ -49,6 +51,8 @@
 		wrapRef = $bindable(null),
 		themeBackground,
 		themeGridColor,
+		gridEnabled,
+		gridSize,
 		activeTool,
 		eraserSize,
 		stageWidth,
@@ -151,7 +155,7 @@
 		class="board-stage"
 		class:eraser-active={activeTool === 'eraser'}
 		bind:this={stageRef}
-		style={`--theme-bg:${themeBackground};--grid-color:${themeGridColor};min-width:${stageWidth}px;min-height:${stageHeight}px;`}
+		style={`--theme-bg:${themeBackground};--grid-color:${gridEnabled ? themeGridColor : 'transparent'};--grid-size:${gridSize}px;min-width:${stageWidth}px;min-height:${stageHeight}px;`}
 		onpointerdown={onPointerDown}
 		onpointermove={handlePointerMove}
 		onpointerup={onPointerUp}
@@ -398,8 +402,8 @@
 		height: 100%;
 		overflow: hidden;
 		background:
-			repeating-linear-gradient(0deg, var(--grid-color) 0 1px, transparent 1px 32px),
-			repeating-linear-gradient(90deg, var(--grid-color) 0 1px, transparent 1px 32px),
+			repeating-linear-gradient(0deg, var(--grid-color) 0 1px, transparent 1px var(--grid-size)),
+			repeating-linear-gradient(90deg, var(--grid-color) 0 1px, transparent 1px var(--grid-size)),
 			var(--theme-bg);
 	}
 

@@ -6,20 +6,22 @@ export const drawThemeBackground = (
 	width: number,
 	height: number,
 	background: string,
-	gridColor: string
+	gridColor: string,
+	gridEnabled = true,
+	gridSize = 32
 ): void => {
 	ctx.fillStyle = background;
 	ctx.fillRect(0, 0, width, height);
+	if (!gridEnabled) return;
 	ctx.strokeStyle = gridColor;
 	ctx.lineWidth = 1;
-	const gap = 32;
-	for (let x = 0; x < width; x += gap) {
+	for (let x = 0; x < width; x += gridSize) {
 		ctx.beginPath();
 		ctx.moveTo(x, 0);
 		ctx.lineTo(x, height);
 		ctx.stroke();
 	}
-	for (let y = 0; y < height; y += gap) {
+	for (let y = 0; y < height; y += gridSize) {
 		ctx.beginPath();
 		ctx.moveTo(0, y);
 		ctx.lineTo(width, y);
@@ -189,7 +191,9 @@ export const renderThumbnail = (
 	gridColor: string,
 	strokes: Stroke[],
 	elements: BoardElement[],
-	imageMap?: Map<string, HTMLImageElement>
+	imageMap?: Map<string, HTMLImageElement>,
+	gridEnabled = true,
+	gridSize = 32
 ): string => {
 	const thumbW = 280;
 	const thumbH = Math.round(thumbW * (stageHeight / stageWidth));
@@ -199,7 +203,7 @@ export const renderThumbnail = (
 	const ctx = canvas.getContext('2d');
 	if (!ctx) return '';
 	ctx.scale(thumbW / stageWidth, thumbH / stageHeight);
-	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor);
+	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
 	strokes.forEach((s) => drawStroke(ctx, s));
 	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap));
 	return canvas.toDataURL('image/jpeg', 0.55);
