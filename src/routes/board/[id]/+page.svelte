@@ -97,6 +97,9 @@
 	/* ── Non-reactive eraser state ── */
 	let _prevEraserPt: Point | null = null;
 
+	/* ── Clipboard for copy/paste ── */
+	let _clipboard: BoardElement[] = [];
+
 	/* ── Derived ── */
 	const currentTheme = $derived(
 		BOARD_THEMES.find((theme) => theme.id === themeId) ?? BOARD_THEMES[0]
@@ -1425,6 +1428,39 @@
 			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
 				event.preventDefault();
 				redo();
+			}
+			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+				event.preventDefault();
+				if (selectedElementIds.length > 0) {
+					const ids = $state.snapshot(selectedElementIds);
+					const snap = $state.snapshot(elements);
+					_clipboard = snap.filter((el) => ids.includes(el.id));
+				}
+			}
+			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+				event.preventDefault();
+				if (_clipboard.length > 0) {
+					const offset = 20;
+					// Build group ID mapping first
+					const groupMap = new Map<string, string>();
+					for (const orig of _clipboard) {
+						if (orig.groupId && !groupMap.has(orig.groupId)) {
+							groupMap.set(orig.groupId, nextId());
+						}
+					}
+					const newEls: BoardElement[] = _clipboard.map((el) => ({
+						...JSON.parse(JSON.stringify(el)),
+						id: nextId(),
+						groupId: el.groupId ? groupMap.get(el.groupId) : undefined,
+						x: el.x + offset,
+						y: el.y + offset
+					}));
+					elements = [...elements, ...newEls];
+					selectedElementIds = newEls.map((el) => el.id);
+					// Shift clipboard so next paste offsets further
+					_clipboard = _clipboard.map((el) => ({ ...el, x: el.x + offset, y: el.y + offset }));
+					commitSnapshot();
+				}
 			}
 			if (event.key === 'Delete') {
 				deleteSelectedElement();

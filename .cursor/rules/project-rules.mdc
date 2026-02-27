@@ -151,7 +151,6 @@ All board-page components live in **`src/lib/component/board/`**.
 - `src/app.html` – all meta tags, Open Graph, Twitter Card, JSON-LD (`WebApplication` schema)
 - `static/robots.txt` – crawler rules; disallows `/board/` (local-storage data)
 - `static/sitemap.xml` – site structure (update `<lastmod>` after significant changes)
-- `static/og-image.svg` – Open Graph preview image
 
 ---
 

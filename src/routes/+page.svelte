@@ -51,24 +51,8 @@
 	<!-- ── Header (logo + subtitle only, no action button) ── -->
 	<header class="header">
 		<div class="logo">
-			<!-- D logo mark -->
-			<svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true">
-				<defs>
-					<linearGradient id="hbg" x1="0%" y1="0%" x2="100%" y2="100%">
-						<stop offset="0%" stop-color="#1d4ed8"/>
-						<stop offset="100%" stop-color="#7c3aed"/>
-					</linearGradient>
-				</defs>
-				<rect width="64" height="64" rx="14" fill="url(#hbg)"/>
-				<path d="M11 52 Q18 46 25 49 Q32 52 39 46 Q46 40 53 43"
-					stroke="#ffffff" stroke-opacity="0.25" stroke-width="2.2"
-					stroke-linecap="round" fill="none"/>
-				<text x="32" y="44" text-anchor="middle"
-					font-family="Georgia,serif" font-size="38" font-weight="700"
-					letter-spacing="-1" fill="#ffffff">D</text>
-				<circle cx="47" cy="18" r="3.5" fill="#fbbf24"/>
-				<line x1="47" y1="22" x2="53" y2="28" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
-			</svg>
+			<!-- D logo mark – using static/favicon.svg -->
+			<img src="/favicon.svg" alt="DrawDashBoard logo" width="44" height="44" aria-hidden="true" />
 			<div class="logo-text">
 				<h1 class="brand-title">DrawDashBoard</h1>
 				<p class="subtitle">Sketch ideas &middot; organize visually</p>
