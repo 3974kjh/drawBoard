@@ -15,6 +15,8 @@ export type DrawingTool =
 export type TextAlign = 'left' | 'center' | 'right';
 export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 export type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
+/** Which of the 8 resize handles is being dragged (compass directions). */
+export type ResizeHandle = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
 export type DistributeMode = 'horizontal' | 'vertical';
 export type Axis = 'x' | 'y';
 export type Orientation = 'vertical' | 'horizontal';
@@ -122,7 +124,11 @@ export type InteractionState =
 			kind: 'resize';
 			pointerId: number;
 			elementId: string;
+			/** Which handle is being dragged (compass: nw/n/ne/w/e/sw/s/se). */
+			handle: ResizeHandle;
 			start: Point;
+			originX: number;
+			originY: number;
 			originWidth: number;
 			originHeight: number;
 	  }
@@ -152,31 +158,35 @@ export interface ToolItem {
 	icon: string;
 }
 
-/* Mouse-pointer (cursor arrow) SVG for the select/move tool */
-const GRAB_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>
-</svg>`;
-
-/* Image/picture SVG icon */
-const IMAGE_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+/* ── Tool SVG icons ── */
+const SELECT_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/></svg>`;
+const PEN_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+const ERASER_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21H7z"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>`;
+const RECT_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`;
+const ELLIPSE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="10" ry="6"/></svg>`;
+const TRIANGLE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 20h20L12 2z"/></svg>`;
+const LINE_H_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="2" y1="12" x2="22" y2="12"/></svg>`;
+const LINE_V_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/></svg>`;
+const TEXT_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
+const IMAGE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
 
 export const TOOL_ITEMS: ToolItem[] = [
-	{ tool: 'select', label: '선택', icon: GRAB_ICON },
-	{ tool: 'pen', label: '펜', icon: '✏️' },
-	{ tool: 'eraser', label: '지우개', icon: '🧹' },
-	{ tool: 'rect', label: '사각형', icon: '⬜' },
-	{ tool: 'ellipse', label: '원', icon: '⭕' },
-	{ tool: 'triangle', label: '삼각형', icon: '△' },
-	{ tool: 'line-h', label: '가로선', icon: '━' },
-	{ tool: 'line-v', label: '세로선', icon: '┃' },
-	{ tool: 'text', label: '텍스트', icon: '🔤' },
-	{ tool: 'image', label: '이미지', icon: IMAGE_ICON }
+	{ tool: 'select', label: 'Select', icon: SELECT_ICON },
+	{ tool: 'pen', label: 'Pen', icon: PEN_ICON },
+	{ tool: 'eraser', label: 'Eraser', icon: ERASER_ICON },
+	{ tool: 'rect', label: 'Rectangle', icon: RECT_ICON },
+	{ tool: 'ellipse', label: 'Ellipse', icon: ELLIPSE_ICON },
+	{ tool: 'triangle', label: 'Triangle', icon: TRIANGLE_ICON },
+	{ tool: 'line-h', label: 'H-Line', icon: LINE_H_ICON },
+	{ tool: 'line-v', label: 'V-Line', icon: LINE_V_ICON },
+	{ tool: 'text', label: 'Text', icon: TEXT_ICON },
+	{ tool: 'image', label: 'Image', icon: IMAGE_ICON }
 ];
 
 export const BOARD_THEMES: BoardTheme[] = [
 	{
 		id: 'whiteboard',
-		label: '화이트보드',
+		label: 'Whiteboard',
 		background: '#ffffff',
 		gridColor: '#f1f5f9',
 		defaultStrokeColor: '#111827',
@@ -184,7 +194,7 @@ export const BOARD_THEMES: BoardTheme[] = [
 	},
 	{
 		id: 'chalkboard',
-		label: '칠판',
+		label: 'Chalkboard',
 		background: '#10362f',
 		gridColor: 'rgba(255,255,255,0.07)',
 		defaultStrokeColor: '#f8fafc',
@@ -192,7 +202,7 @@ export const BOARD_THEMES: BoardTheme[] = [
 	},
 	{
 		id: 'neon-grid',
-		label: '네온 그리드',
+		label: 'Neon Grid',
 		background: '#080c24',
 		gridColor: 'rgba(56, 189, 248, 0.18)',
 		defaultStrokeColor: '#e2e8f0',

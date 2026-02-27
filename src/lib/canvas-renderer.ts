@@ -29,22 +29,46 @@ export const drawThemeBackground = (
 	}
 };
 
-/** Draw a single pen stroke. Eraser strokes are skipped (legacy data). */
+/**
+ * Draw a single pen stroke with quadratic Bezier smoothing.
+ * Midpoints between consecutive control points are used as anchor points,
+ * which produces natural, smooth curves that match the live-drawing preview.
+ * Eraser strokes are skipped (legacy data).
+ */
 export const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke): void => {
 	if (stroke.tool === 'eraser') return;
-	if (stroke.points.length === 0) return;
+	const pts = stroke.points;
+	if (pts.length === 0) return;
 	ctx.save();
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
 	ctx.lineWidth = stroke.size;
 	ctx.strokeStyle = stroke.color;
-	ctx.beginPath();
-	ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-	for (let i = 1; i < stroke.points.length; i += 1) {
-		const point = stroke.points[i];
-		ctx.lineTo(point.x, point.y);
+	ctx.fillStyle = stroke.color;
+
+	if (pts.length === 1) {
+		// Single tap → filled circle dot
+		ctx.beginPath();
+		ctx.arc(pts[0].x, pts[0].y, stroke.size / 2, 0, Math.PI * 2);
+		ctx.fill();
+	} else if (pts.length === 2) {
+		ctx.beginPath();
+		ctx.moveTo(pts[0].x, pts[0].y);
+		ctx.lineTo(pts[1].x, pts[1].y);
+		ctx.stroke();
+	} else {
+		// Quadratic Bezier: midpoints become anchor points, recorded points are control points
+		ctx.beginPath();
+		ctx.moveTo(pts[0].x, pts[0].y);
+		for (let i = 1; i < pts.length - 1; i++) {
+			const midX = (pts[i].x + pts[i + 1].x) / 2;
+			const midY = (pts[i].y + pts[i + 1].y) / 2;
+			ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
+		}
+		// Final segment to the last point
+		ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+		ctx.stroke();
 	}
-	ctx.stroke();
 	ctx.restore();
 };
 

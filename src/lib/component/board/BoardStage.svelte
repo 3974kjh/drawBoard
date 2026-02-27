@@ -6,8 +6,12 @@
 		type GroupBox,
 		type GuideLine,
 		type GuideDistance,
-		type Point
+		type Point,
+		type ResizeHandle
 	} from '$lib/board-types';
+
+	/** All 8 resize handle positions (compass directions). */
+	const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
 
 	interface MarqueeRect {
 		start: Point;
@@ -22,6 +26,8 @@
 		themeGridColor: string;
 		activeTool: DrawingTool;
 		eraserSize: number;
+		/** Whether the eraser is actively pressed down (erasing right now). */
+		isErasing: boolean;
 		stageWidth: number;
 		stageHeight: number;
 		elements: BoardElement[];
@@ -36,7 +42,7 @@
 		onPointerMove: (e: PointerEvent) => void;
 		onPointerUp: (e: PointerEvent) => void;
 		onDblClickElement: (id: string) => void;
-		onBeginResize: (e: PointerEvent, id: string) => void;
+		onBeginResize: (e: PointerEvent, id: string, handle: ResizeHandle) => void;
 		onBeginRotate: (e: PointerEvent, id: string) => void;
 		onElementTextChange: (id: string, text: string) => void;
 		onElementTextBlur: () => void;
@@ -55,6 +61,7 @@
 		gridSize,
 		activeTool,
 		eraserSize,
+		isErasing,
 		stageWidth,
 		stageHeight,
 		elements,
@@ -162,7 +169,7 @@
 		onpointercancel={onPointerUp}
 		onpointerleave={handlePointerLeave}
 		role="application"
-		aria-label="드로잉 보드"
+		aria-label="Drawing board"
 	>
 		<!-- Edge expand buttons – centered on the VISIBLE viewport edge, not the board edge -->
 		{#if hoverEdge === 'top'}
@@ -171,7 +178,7 @@
 				class="expand-btn top"
 				style={`top:${_scrollTop}px;left:${_visCenterX}px;`}
 				onclick={() => onExpandBoard('top', 200)}
-				title="위로 200px 확장"
+				title="Expand top by 200px"
 			>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
@@ -183,7 +190,7 @@
 				class="expand-btn bottom"
 				style={`top:${Math.min(stageHeight, _scrollTop + _viewportH) - 26}px;left:${_visCenterX}px;`}
 				onclick={() => onExpandBoard('bottom', 200)}
-				title="아래로 200px 확장"
+				title="Expand bottom by 200px"
 			>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
@@ -195,7 +202,7 @@
 				class="expand-btn left"
 				style={`left:${_scrollLeft}px;top:${_visCenterY}px;`}
 				onclick={() => onExpandBoard('left', 200)}
-				title="왼쪽으로 200px 확장"
+				title="Expand left by 200px"
 			>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
@@ -207,7 +214,7 @@
 				class="expand-btn right"
 				style={`left:${Math.min(stageWidth, _scrollLeft + _viewportW) - 26}px;top:${_visCenterY}px;`}
 				onclick={() => onExpandBoard('right', 200)}
-				title="오른쪽으로 200px 확장"
+				title="Expand right by 200px"
 			>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
@@ -270,7 +277,7 @@
 					<div class="image-placeholder">
 						<!-- prettier-ignore -->
 						<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-						<span>속성 패널에서 이미지 선택</span>
+						<span>Select image in the properties panel</span>
 					</div>
 				{/if}
 			{/if}
@@ -291,27 +298,29 @@
 						></textarea>
 					{:else}
 						<div class="text-view" style={`font-size:${element.fontSize}px;`}>
-							{element.text || (element.type === 'text' ? '더블클릭해 텍스트 입력' : '')}
+							{element.text || (element.type === 'text' ? 'Double-click to enter text' : '')}
 						</div>
 					{/if}
 				{/if}
 
-				{#if isSingleSelected}
-					<!-- Rotation handle -->
+			{#if isSingleSelected}
+				<!-- Rotation handle -->
+				<button
+					type="button"
+					class="rotate-handle"
+					onpointerdown={(event) => onBeginRotate(event, element.id)}
+					aria-label="Rotate element"
+				>↻</button>
+				<!-- 8-point resize handles -->
+				{#each RESIZE_HANDLES as handle (handle)}
 					<button
 						type="button"
-						class="rotate-handle"
-						onpointerdown={(event) => onBeginRotate(event, element.id)}
-						aria-label="요소 회전"
-					>↻</button>
-					<!-- Resize handle -->
-					<button
-						type="button"
-						class="resize-handle"
-						onpointerdown={(event) => onBeginResize(event, element.id)}
-						aria-label="요소 크기 조절"
+						class={`resize-handle handle-${handle}`}
+						onpointerdown={(event) => onBeginResize(event, element.id, handle)}
+						aria-label={`Resize (${handle})`}
 					></button>
-				{/if}
+				{/each}
+			{/if}
 			</div>
 		{/each}
 
@@ -346,12 +355,20 @@
 			</div>
 		{/each}
 
-		<!-- Eraser cursor -->
+		<!-- Eraser cursor: centred on the pointer via transform -->
 		{#if activeTool === 'eraser' && eraserPos}
 			<div
 				class="eraser-cursor"
-				style={`left:${eraserPos.x - eraserSize / 2}px;top:${eraserPos.y - eraserSize / 2}px;width:${eraserSize}px;height:${eraserSize}px;`}
-			></div>
+				class:active={isErasing}
+				style={`left:${eraserPos.x}px;top:${eraserPos.y}px;width:${eraserSize}px;height:${eraserSize}px;`}
+			>
+				<!-- Inner eraser icon (only when idle / not pressed) -->
+				{#if !isErasing}
+					<svg class="eraser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/>
+					</svg>
+				{/if}
+			</div>
 		{/if}
 	</section>
 </section>
@@ -409,6 +426,13 @@
 
 	.board-stage.eraser-active {
 		cursor: none;
+	}
+
+	/* Propagate cursor:none to every descendant while eraser is active so child
+	   elements (handles, text boxes, etc.) don't show the native cursor and
+	   reveal a visual mismatch with the eraser circle. */
+	.board-stage.eraser-active * {
+		cursor: none !important;
 	}
 
 	canvas {
@@ -644,16 +668,27 @@
 	/* ── Handles ── */
 	.resize-handle {
 		position: absolute;
-		right: -6px;
-		bottom: -6px;
-		width: 12px;
-		height: 12px;
-		border-radius: 3px;
+		width: 10px;
+		height: 10px;
+		border-radius: 2px;
 		background: #2563eb;
 		border: 2px solid #fff;
-		cursor: nwse-resize;
 		z-index: 6;
+		padding: 0;
+		/* prevent the handle click from bubbling to the element */
 	}
+
+	/* Corner handles */
+	.handle-nw { top: -5px;  left: -5px;              cursor: nwse-resize; }
+	.handle-ne { top: -5px;  right: -5px;              cursor: nesw-resize; }
+	.handle-sw { bottom: -5px; left: -5px;             cursor: nesw-resize; }
+	.handle-se { bottom: -5px; right: -5px;            cursor: nwse-resize; }
+
+	/* Edge handles (centred on each side) */
+	.handle-n  { top: -5px;    left: calc(50% - 5px); cursor: ns-resize; }
+	.handle-s  { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+	.handle-w  { left: -5px;   top: calc(50% - 5px);  cursor: ew-resize; }
+	.handle-e  { right: -5px;  top: calc(50% - 5px);  cursor: ew-resize; }
 
 	.rotate-handle {
 		position: absolute;
@@ -746,10 +781,66 @@
 	/* ── Eraser cursor ── */
 	.eraser-cursor {
 		position: absolute;
-		border: 2px dashed rgba(239, 68, 68, 0.85);
+		transform: translate(-50%, -50%);
+		box-sizing: border-box;
 		border-radius: 50%;
 		pointer-events: none;
 		z-index: 10;
-		box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25);
+
+		/* Idle state: soft pink glass eraser */
+		background: radial-gradient(
+			circle at 38% 36%,
+			rgba(255, 210, 210, 0.38) 0%,
+			rgba(240, 140, 140, 0.18) 60%,
+			rgba(220, 90, 90, 0.08) 100%
+		);
+		border: 1.5px solid rgba(190, 60, 60, 0.5);
+		box-shadow:
+			0 0 6px rgba(220, 90, 90, 0.12),
+			inset 0 1px 4px rgba(255, 255, 255, 0.35);
+		color: rgba(180, 60, 60, 0.45);
+		transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+
+		display: grid;
+		place-items: center;
+	}
+
+	/* Inner eraser icon scales to ~40% of the cursor size */
+	.eraser-cursor .eraser-icon {
+		width: 42%;
+		height: 42%;
+		opacity: 0.5;
+	}
+
+	/* Active state (pointer pressed): more vivid + pulsing glow */
+	.eraser-cursor.active {
+		background: radial-gradient(
+			circle at 38% 36%,
+			rgba(255, 180, 180, 0.55) 0%,
+			rgba(240, 100, 100, 0.32) 60%,
+			rgba(200, 60, 60, 0.18) 100%
+		);
+		border-color: rgba(200, 50, 50, 0.75);
+		box-shadow:
+			0 0 12px rgba(220, 70, 70, 0.35),
+			inset 0 1px 4px rgba(255, 255, 255, 0.25);
+	}
+
+	/* Center crosshair dot – always visible for precision */
+	.eraser-cursor::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 3px;
+		height: 3px;
+		border-radius: 50%;
+		background: rgba(190, 50, 50, 0.55);
+		transition: background 0.12s;
+	}
+
+	.eraser-cursor.active::after {
+		background: rgba(200, 40, 40, 0.85);
 	}
 </style>

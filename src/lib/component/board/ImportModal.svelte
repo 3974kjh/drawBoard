@@ -20,7 +20,7 @@
 		BOARD_THEMES.find((t) => t.id === id)?.label ?? id;
 
 	const fmt = (iso: string) =>
-		new Intl.DateTimeFormat('ko-KR', {
+		new Intl.DateTimeFormat('en-US', {
 			month: '2-digit',
 			day: '2-digit',
 			hour: '2-digit',
@@ -34,7 +34,7 @@
 		<div
 			class="backdrop-close"
 			role="button"
-			aria-label="불러오기 모달 닫기"
+			aria-label="Close import modal"
 			onclick={onClose}
 			onkeydown={(e) => e.key === 'Escape' && onClose()}
 		></div>
@@ -45,9 +45,9 @@
 				<div class="modal-title-wrap">
 					<!-- prettier-ignore -->
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-					<h2>보드 불러오기</h2>
-				</div>
-				<p class="modal-desc">선택한 보드 내용을 현재 보드로 복사합니다.</p>
+				<h2>Import Board</h2>
+			</div>
+			<p class="modal-desc">Copy the selected board's content into the current board.</p>
 			</div>
 
 			<!-- Board list -->
@@ -56,7 +56,7 @@
 					<div class="empty-wrap">
 						<!-- prettier-ignore -->
 						<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
-						<p>불러올 보드가 없습니다.</p>
+						<p>No boards available to import.</p>
 					</div>
 				{:else}
 					{#each boards as item (item.id)}
@@ -85,10 +85,10 @@
 								<span class="item-stats">
 									<!-- prettier-ignore -->
 									<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-									{item.elements.length}개 요소 &nbsp;·&nbsp;
-									<!-- prettier-ignore -->
-									<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
-									{item.strokes.length}개 획
+								{item.elements.length} element{item.elements.length !== 1 ? 's' : ''} &nbsp;·&nbsp;
+								<!-- prettier-ignore -->
+								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+								{item.strokes.length} stroke{item.strokes.length !== 1 ? 's' : ''}
 								</span>
 							</div>
 
@@ -104,7 +104,7 @@
 
 			<!-- Footer -->
 			<div class="modal-footer">
-				<button type="button" class="btn-close" onclick={onClose}>닫기</button>
+				<button type="button" class="btn-close" onclick={onClose}>Close</button>
 			</div>
 		</div>
 	</div>

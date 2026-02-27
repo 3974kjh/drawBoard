@@ -12,6 +12,7 @@
 		type GuideDistance,
 		type InteractionState,
 		type Point,
+		type ResizeHandle,
 		type Snapshot,
 		type Stroke,
 		type TextAlign,
@@ -84,6 +85,17 @@
 	let stageHeight = $state(700);
 	let guideLines = $state<GuideLine[]>([]);
 	let guideDistances = $state<GuideDistance[]>([]);
+
+	/* ── Non-reactive live-drawing state (bypasses Svelte reactivity for perf) ── */
+	let _livePoints: Point[] = [];
+	let _liveColor = '';
+	let _liveSize = 0;
+	let _committedImageData: ImageData | null = null;
+	let _liveRafId = 0;
+	let _isLiveDrawing = false;
+
+	/* ── Non-reactive eraser state ── */
+	let _prevEraserPt: Point | null = null;
 
 	/* ── Derived ── */
 	const currentTheme = $derived(
@@ -269,11 +281,11 @@
 		});
 		isDirty = false;
 		refreshImportBoards();
-		alert('보드가 저장되었습니다.');
+		alert('Board saved.');
 	};
 
 	const clearBoard = () => {
-		if (!confirm('보드를 초기화할까요?\n내용과 보드 크기가 모두 초기화됩니다.')) return;
+		if (!confirm('Clear the board?\nAll content and board size will be reset.')) return;
 		const vp = getViewportSize();
 		strokes = [];
 		elements = [];
@@ -478,62 +490,331 @@
 
 	/* ── Drawing ── */
 	const startDrawing = (point: Point) => {
-		const stroke: Stroke = {
-			id: nextId(),
-			tool: 'pen',
-			color: penColor,
-			size: penSize,
-			points: [point]
-		};
-		strokes = [...strokes, stroke];
+		// Snapshot the current canvas so we can restore it on every RAF frame
+		if (drawCanvas) {
+			const ctx = drawCanvas.getContext('2d');
+			if (ctx) {
+				_committedImageData = ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+			}
+		}
+		_livePoints = [point];
+		_liveColor = penColor;
+		_liveSize = penSize;
+		_isLiveDrawing = true;
+		_drawLiveStroke();
 	};
 
 	const pushPointToStroke = (point: Point) => {
-		const last = strokes.at(-1);
-		if (!last) return;
-		last.points = [...last.points, point];
-		strokes = [...strokes.slice(0, -1), last];
+		if (!_isLiveDrawing) return;
+		_livePoints = [..._livePoints, point];
+		// Batch canvas updates through RAF for smoothest rendering
+		if (_liveRafId === 0) {
+			_liveRafId = requestAnimationFrame(() => {
+				_liveRafId = 0;
+				_drawLiveStroke();
+			});
+		}
+	};
+
+	/** Restore the pre-stroke canvas snapshot then draw the in-progress stroke with Bezier smoothing. */
+	const _drawLiveStroke = () => {
+		if (!drawCanvas || !_committedImageData) return;
+		const ctx = drawCanvas.getContext('2d');
+		if (!ctx) return;
+		ctx.putImageData(_committedImageData, 0, 0);
+		_renderSmoothStroke(ctx, _livePoints, _liveColor, _liveSize);
+	};
+
+	/** Render a stroke array using quadratic Bezier midpoint smoothing. */
+	const _renderSmoothStroke = (
+		ctx: CanvasRenderingContext2D,
+		pts: Point[],
+		color: string,
+		size: number
+	) => {
+		if (pts.length === 0) return;
+		ctx.save();
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = size;
+		ctx.strokeStyle = color;
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		if (pts.length === 1) {
+			ctx.arc(pts[0].x, pts[0].y, size / 2, 0, Math.PI * 2);
+			ctx.fill();
+		} else if (pts.length === 2) {
+			ctx.moveTo(pts[0].x, pts[0].y);
+			ctx.lineTo(pts[1].x, pts[1].y);
+			ctx.stroke();
+		} else {
+			ctx.moveTo(pts[0].x, pts[0].y);
+			for (let i = 1; i < pts.length - 1; i++) {
+				const midX = (pts[i].x + pts[i + 1].x) / 2;
+				const midY = (pts[i].y + pts[i + 1].y) / 2;
+				ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
+			}
+			ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+			ctx.stroke();
+		}
+		ctx.restore();
+	};
+
+	/** Commit the finished live stroke into the reactive strokes state on pointer-up. */
+	const commitLiveStroke = () => {
+		if (!_isLiveDrawing) return;
+		_isLiveDrawing = false;
+		if (_liveRafId !== 0) {
+			cancelAnimationFrame(_liveRafId);
+			_liveRafId = 0;
+		}
+		_committedImageData = null;
+		if (_livePoints.length < 1) return;
+		const stroke: Stroke = {
+			id: nextId(),
+			tool: 'pen',
+			color: _liveColor,
+			size: _liveSize,
+			points: [..._livePoints]
+		};
+		strokes = [...strokes, stroke];
+		_livePoints = [];
+		// The $effect on strokes will now fire → redrawCanvas() for a clean committed frame
 	};
 
 	/* ── Eraser ── */
-	const isInsideEraser = (p: Point, center: Point, radius: number): boolean => {
-		const dx = p.x - center.x;
-		const dy = p.y - center.y;
-		return dx * dx + dy * dy <= radius * radius;
+
+	/**
+	 * Flatten a stroke's Bezier curve into a dense polyline that follows the
+	 * actual rendered path.  This is critical because `drawStroke` uses
+	 * quadratic Bezier smoothing where recorded points are *control points*
+	 * (the curve does NOT pass through them).  If the eraser operates on the
+	 * raw recorded points it causes a visible "shape shift" when control
+	 * points are removed.  By flattening first, every point lies ON the
+	 * visible curve, so splitting produces segments whose shape is identical
+	 * to the original.
+	 *
+	 * Sampling: ~FLATTEN_PX pixels between consecutive output points.
+	 * If the stroke is already denser than this it is returned as-is.
+	 */
+	const FLATTEN_PX = 3;
+	const _flattenBezier = (pts: Point[]): Point[] => {
+		if (pts.length <= 2) return pts;
+
+		// Skip if already dense (previously flattened stroke)
+		let totalDist = 0;
+		for (let i = 1; i < Math.min(pts.length, 30); i++) {
+			totalDist += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+		}
+		if (totalDist / (Math.min(pts.length, 30) - 1) <= FLATTEN_PX * 1.2) return pts;
+
+		const flat: Point[] = [{ x: pts[0].x, y: pts[0].y }];
+		let cx = pts[0].x, cy = pts[0].y;
+
+		for (let i = 1; i < pts.length - 1; i++) {
+			const px = pts[i].x, py = pts[i].y;
+			const ex = (pts[i].x + pts[i + 1].x) / 2;
+			const ey = (pts[i].y + pts[i + 1].y) / 2;
+			const d = Math.hypot(px - cx, py - cy) + Math.hypot(ex - px, ey - py);
+			const steps = Math.max(1, Math.ceil(d / FLATTEN_PX));
+			for (let s = 1; s <= steps; s++) {
+				const t = s / steps;
+				const u = 1 - t;
+				flat.push({
+					x: u * u * cx + 2 * u * t * px + t * t * ex,
+					y: u * u * cy + 2 * u * t * py + t * t * ey
+				});
+			}
+			cx = ex;
+			cy = ey;
+		}
+
+		// Final straight segment to pts[n-1]
+		const last = pts[pts.length - 1];
+		const ld = Math.hypot(last.x - cx, last.y - cy);
+		const ls = Math.max(1, Math.ceil(ld / FLATTEN_PX));
+		for (let s = 1; s <= ls; s++) {
+			const t = s / ls;
+			flat.push({ x: cx + (last.x - cx) * t, y: cy + (last.y - cy) * t });
+		}
+		return flat;
 	};
 
-	const eraseAt = (point: Point) => {
-		const radius = eraserSize / 2;
-		const nextStrokes: Stroke[] = [];
+	/**
+	 * Shortest distance² from point `c` to segment a→b.
+	 * Used only in the fast-rejection phase.
+	 */
+	const _segDistSq = (a: Point, b: Point, c: Point): number => {
+		const dx = b.x - a.x, dy = b.y - a.y;
+		const lenSq = dx * dx + dy * dy;
+		if (lenSq < 1e-10) return (c.x - a.x) ** 2 + (c.y - a.y) ** 2;
+		const t = Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / lenSq));
+		const px = a.x + t * dx, py = a.y + t * dy;
+		return (px - c.x) ** 2 + (py - c.y) ** 2;
+	};
 
-		for (const stroke of strokes) {
-			if (stroke.tool === 'eraser') continue;
+	/**
+	 * Find parametric t-values in the open interval (0, 1) where the line
+	 * segment a→b crosses the eraser circle boundary.
+	 * Returns 0, 1, or 2 values in ascending order.
+	 */
+	const _circleTs = (a: Point, b: Point, center: Point, r2: number): number[] => {
+		const dx = b.x - a.x, dy = b.y - a.y;
+		const fx = a.x - center.x, fy = a.y - center.y;
+		const A = dx * dx + dy * dy;
+		if (A < 1e-10) return [];
+		const B = 2 * (fx * dx + fy * dy);
+		const C = fx * fx + fy * fy - r2;
+		const disc = B * B - 4 * A * C;
+		if (disc < 0) return [];
+		const sqD = Math.sqrt(disc);
+		const ts: number[] = [];
+		const t1 = (-B - sqD) / (2 * A);
+		const t2 = (-B + sqD) / (2 * A);
+		if (t1 > 1e-6 && t1 < 1 - 1e-6) ts.push(t1);
+		if (t2 > 1e-6 && t2 < 1 - 1e-6 && Math.abs(t2 - t1) > 1e-6) ts.push(t2);
+		return ts;
+	};
 
-			const segments: Point[][] = [];
-			let current: Point[] = [];
+	/** Linear interpolation between two points. */
+	const _lerp = (a: Point, b: Point, t: number): Point => ({
+		x: a.x + (b.x - a.x) * t,
+		y: a.y + (b.y - a.y) * t
+	});
 
-			for (const p of stroke.points) {
-				if (!isInsideEraser(p, point, radius)) {
-					current.push(p);
+	/**
+	 * Remove portions of pen strokes that fall inside the eraser circle.
+	 *
+	 * KEY INSIGHT — Bezier flattening before splitting:
+	 *
+	 *   `drawStroke` renders quadratic Bezier curves where recorded points are
+	 *   **control points** — the rendered curve does NOT pass through them.
+	 *   If the eraser splits on the raw recorded points, removing a control
+	 *   point changes the Bezier for adjacent curve segments, causing a visible
+	 *   "shape shift" on the remaining strokes.
+	 *
+	 *   We solve this by FLATTENING the Bezier into a dense polyline (~3 px
+	 *   spacing) that follows the actual rendered path.  The eraser then
+	 *   operates on these dense on-curve points.  Because consecutive points
+	 *   are so close together, the Bezier smoothing applied by `drawStroke`
+	 *   when re-rendering the split segments produces a curve that is
+	 *   virtually identical to the original — no flinching.
+	 *
+	 * ALGORITHM — circle–segment intersection with boundary interpolation:
+	 *     ① Both outside       — keep (or split if segment crosses the circle).
+	 *     ② Both inside        — discard.
+	 *     ③ Outside → Inside   — add boundary point, flush run.
+	 *     ④ Inside  → Outside  — start new run from boundary point.
+	 *
+	 * Rules:
+	 *   • Only pen strokes (`tool === 'pen'`) are affected.
+	 *   • Elements (shapes / text / images) are never touched.
+	 *   • The visual eraser circle IS the detection boundary (no hidden margin).
+	 */
+	const _eraseAtCenter = (inputStrokes: Stroke[], center: Point, eraserRadius: number): Stroke[] => {
+		const r2 = eraserRadius * eraserRadius;
+		const ptIn = (p: Point) => (p.x - center.x) ** 2 + (p.y - center.y) ** 2 <= r2;
+		const result: Stroke[] = [];
+
+		for (const stroke of inputStrokes) {
+			// ❶ Only pen strokes are erasable
+			if (stroke.tool !== 'pen') { result.push(stroke); continue; }
+			const rawPts = stroke.points;
+			if (rawPts.length === 0) continue;
+
+			// ❷ Fast rejection using raw points (cheap — avoids flattening)
+			let anyHit = false;
+			for (let i = 0; i < rawPts.length; i++) {
+				if (ptIn(rawPts[i])) { anyHit = true; break; }
+				if (i > 0 && _segDistSq(rawPts[i - 1], rawPts[i], center) <= r2) { anyHit = true; break; }
+			}
+			if (!anyHit) { result.push(stroke); continue; }
+
+			// ❸ Flatten Bezier → dense on-curve polyline (only for hit strokes)
+			const pts = _flattenBezier(rawPts);
+
+			// ❹ Walk every segment, building runs of "outside" points with
+			//    precise boundary points interpolated at circle crossings.
+			const segs: Point[][] = [];
+			let seg: Point[] = [];
+
+			// Seed the first point
+			if (!ptIn(pts[0])) seg.push(pts[0]);
+
+			for (let i = 1; i < pts.length; i++) {
+				const a = pts[i - 1];
+				const b = pts[i];
+				const aIn = ptIn(a);
+				const bIn = ptIn(b);
+
+				if (!aIn && !bIn) {
+					// ① Both outside — check if segment passes through the circle
+					const ts = _circleTs(a, b, center, r2);
+					if (ts.length >= 2) {
+						seg.push(_lerp(a, b, ts[0]));
+						if (seg.length >= 2) segs.push(seg);
+						seg = [_lerp(a, b, ts[1]), b];
+					} else {
+						seg.push(b);
+					}
+				} else if (aIn && bIn) {
+					// ② Both inside → discard
+				} else if (!aIn && bIn) {
+					// ③ Outside → Inside
+					const ts = _circleTs(a, b, center, r2);
+					if (ts.length > 0) seg.push(_lerp(a, b, ts[0]));
+					if (seg.length >= 2) segs.push(seg);
+					seg = [];
 				} else {
-					if (current.length >= 2) segments.push(current);
-					current = [];
+					// ④ Inside → Outside
+					const ts = _circleTs(a, b, center, r2);
+					seg = ts.length > 0 ? [_lerp(a, b, ts[ts.length - 1])] : [];
+					seg.push(b);
 				}
 			}
-			if (current.length >= 2) segments.push(current);
+			if (seg.length >= 2) segs.push(seg);
 
-			if (segments.length === 0) continue;
-
-			if (segments.length === 1 && segments[0].length === stroke.points.length) {
-				nextStrokes.push(stroke);
-			} else {
-				for (const seg of segments) {
-					nextStrokes.push({ ...stroke, id: nextId(), points: seg });
-				}
+			// Convert surviving runs back into stroke objects
+			for (const s of segs) {
+				result.push({ ...stroke, id: nextId(), points: s });
 			}
 		}
 
-		strokes = nextStrokes;
+		return result;
+	};
+
+	/**
+	 * Erase along the path from _prevEraserPt to `point`.
+	 *
+	 * Intermediate circles are placed at most `radius` px apart, which
+	 * guarantees full coverage (every point on the path is within radius
+	 * of at least one circle centre).  The cap of 200 prevents lag for
+	 * extremely fast mouse jumps while keeping gaps negligible.
+	 */
+	const eraseAt = (point: Point) => {
+		const radius = eraserSize / 2;
+		let current = strokes;
+
+		if (_prevEraserPt) {
+			const dx = point.x - _prevEraserPt.x;
+			const dy = point.y - _prevEraserPt.y;
+			const dist = Math.hypot(dx, dy);
+			const step = Math.max(2, radius);
+			const numSteps = Math.min(Math.ceil(dist / step), 200);
+			for (let i = 1; i <= numSteps; i++) {
+				const t = i / numSteps;
+				const c = { x: _prevEraserPt.x + dx * t, y: _prevEraserPt.y + dy * t };
+				current = _eraseAtCenter(current, c, radius);
+			}
+		} else {
+			current = _eraseAtCenter(current, point, radius);
+		}
+
+		_prevEraserPt = point;
+		strokes = current;
+
+		// Redraw immediately — no $effect frame delay.
+		redrawCanvas();
 	};
 
 	/* ── Pointer handlers ── */
@@ -556,6 +837,7 @@
 		editingElementId = null;
 
 		if (activeTool === 'eraser') {
+			_prevEraserPt = null; // fresh sweep for each new press
 			eraseAt(point);
 			interaction = { kind: 'erasing', pointerId: event.pointerId };
 			return;
@@ -732,12 +1014,32 @@
 		}
 
 		if (currentInteraction.kind === 'resize') {
-			const dw = point.x - currentInteraction.start.x;
-			const dh = point.y - currentInteraction.start.y;
+			const dx = point.x - currentInteraction.start.x;
+			const dy = point.y - currentInteraction.start.y;
+			const { handle, originX, originY, originWidth, originHeight } = currentInteraction;
+
+			// Compute the four edges based on which handle is dragged
+			let left = originX;
+			let top = originY;
+			let right = originX + originWidth;
+			let bottom = originY + originHeight;
+			if (handle.includes('e')) right = originX + originWidth + dx;
+			if (handle.includes('w')) left = originX + dx;
+			if (handle.includes('s')) bottom = originY + originHeight + dy;
+			if (handle.includes('n')) top = originY + dy;
+
+			// Normalise: support flipping when an edge crosses its opposite
+			const newX = Math.min(left, right);
+			const newY = Math.min(top, bottom);
+			const newW = Math.max(10, Math.abs(right - left));
+			const newH = Math.max(10, Math.abs(bottom - top));
+
 			updateElement(currentInteraction.elementId, (item) => ({
 				...item,
-				width: Math.max(28, currentInteraction.originWidth + dw),
-				height: Math.max(24, currentInteraction.originHeight + dh)
+				x: newX,
+				y: newY,
+				width: newW,
+				height: newH
 			}));
 			return;
 		}
@@ -767,7 +1069,15 @@
 
 	const onStagePointerUp = (event: PointerEvent) => {
 		if (!interaction || interaction.pointerId !== event.pointerId) return;
-		if (interaction.kind === 'marquee') {
+
+		if (interaction.kind === 'drawing') {
+			// Commit the live stroke to reactive state, then snapshot for undo
+			commitLiveStroke();
+			commitSnapshot();
+		} else if (interaction.kind === 'erasing') {
+			_prevEraserPt = null; // end sweep session
+			commitSnapshot();
+		} else if (interaction.kind === 'marquee') {
 			const x1 = Math.min(interaction.start.x, interaction.current.x);
 			const y1 = Math.min(interaction.start.y, interaction.current.y);
 			const x2 = Math.max(interaction.start.x, interaction.current.x);
@@ -788,12 +1098,13 @@
 		} else {
 			commitSnapshot();
 		}
+
 		guideLines = [];
 		guideDistances = [];
 		interaction = null;
 	};
 
-	const beginResize = (event: PointerEvent, elementId: string) => {
+	const beginResize = (event: PointerEvent, elementId: string, handle: ResizeHandle) => {
 		if (activeTool !== 'select' || selectedElementIds.length !== 1) return;
 		event.stopPropagation();
 		const element = elements.find((item) => item.id === elementId);
@@ -803,7 +1114,10 @@
 			kind: 'resize',
 			pointerId: event.pointerId,
 			elementId,
+			handle,
 			start: point,
+			originX: element.x,
+			originY: element.y,
 			originWidth: element.width,
 			originHeight: element.height
 		};
@@ -1162,6 +1476,7 @@
 			{gridSize}
 			{activeTool}
 			{eraserSize}
+			isErasing={interaction?.kind === 'erasing'}
 			{stageWidth}
 			{stageHeight}
 			{elements}
@@ -1258,23 +1573,23 @@
 				<!-- prettier-ignore -->
 				<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
 			</div>
-			<h2 id="unsaved-title">저장되지 않은 변경사항</h2>
-			<p>보드에 저장되지 않은 내용이 있습니다.<br />저장하지 않고 나가면 변경사항이 사라집니다.</p>
+			<h2 id="unsaved-title">Unsaved Changes</h2>
+			<p>You have unsaved changes on this board.<br />If you leave without saving, your changes will be lost.</p>
 			<div class="unsaved-actions">
 				<button type="button" class="btn-save" onclick={handleSaveAndLeave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-					저장하고 나가기
+					Save &amp; Leave
 				</button>
 				<button type="button" class="btn-discard" onclick={handleLeaveWithoutSave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-					저장 없이 나가기
+					Leave without saving
 				</button>
 				<button type="button" class="btn-cancel" onclick={handleCancelLeave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-					취소
+					Cancel
 				</button>
 			</div>
 		</div>
@@ -1296,7 +1611,7 @@
 
 	.workspace {
 		display: grid;
-		grid-template-columns: 92px 1fr 260px;
+		grid-template-columns: auto 1fr 260px;
 		height: calc(100vh - 68px);
 		gap: 0.7rem;
 		padding: 0.7rem;

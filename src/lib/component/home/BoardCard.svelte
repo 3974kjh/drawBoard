@@ -10,7 +10,7 @@
 	let { board, onOpen, onDelete }: Props = $props();
 
 	const formatDate = (isoDate: string) =>
-		new Intl.DateTimeFormat('ko-KR', {
+		new Intl.DateTimeFormat('en-US', {
 			year: 'numeric',
 			month: '2-digit',
 			day: '2-digit',
@@ -39,7 +39,7 @@
 	<!-- Thumbnail or grid-pattern fallback -->
 	<div class="thumb-area">
 		{#if board.thumbnail}
-			<img class="thumb-img" src={board.thumbnail} alt="{board.title} 미리보기" />
+			<img class="thumb-img" src={board.thumbnail} alt="{board.title} preview" />
 		{:else}
 			<div
 				class="thumb-placeholder"
@@ -54,12 +54,12 @@
 		<button
 			type="button"
 			class="delete-btn"
-			title="보드 삭제"
-			onclick={(e) => {
-				e.stopPropagation();
-				onDelete(board.id);
-			}}
-			aria-label="보드 삭제"
+		title="Delete board"
+		onclick={(e) => {
+			e.stopPropagation();
+			onDelete(board.id);
+		}}
+		aria-label="Delete board"
 		>
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>

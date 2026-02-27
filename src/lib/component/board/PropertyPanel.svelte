@@ -121,17 +121,17 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-			색상
+			Color
 		</div>
 		<div class="color-row">
 			<button
 				type="button"
 				class="swatch"
-				title="선(Stroke) 색상"
+				title="Stroke color"
 				style="background:{penColor}"
 				onclick={() => strokeColorRef?.click()}
 			></button>
-			<span class="color-label">선</span>
+			<span class="color-label">Stroke</span>
 			<input
 				type="color"
 				class="hidden-color"
@@ -147,11 +147,11 @@
 			<button
 				type="button"
 				class="swatch"
-				title="채우기(Fill) 색상"
+				title="Fill color"
 				style="background:{fillColor};{fillColor === 'transparent' ? 'background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,4px 4px;' : ''}"
 				onclick={() => fillColorRef?.click()}
 			></button>
-			<span class="color-label">채우기</span>
+			<span class="color-label">Fill</span>
 			<input
 				type="color"
 				class="hidden-color"
@@ -171,7 +171,7 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-			테두리 <span class="badge">{borderWidth}px</span>
+			Border <span class="badge">{borderWidth}px</span>
 		</div>
 		<input
 			type="range"
@@ -181,7 +181,7 @@
 			oninput={() => onBorderWidthChange(borderWidth)}
 		/>
 		{#if singleElement?.type === 'text'}
-			<p class="hint-note">0으로 설정하면 점선 테두리가 숨겨집니다</p>
+			<p class="hint-note">Set to 0 to hide the text border</p>
 		{/if}
 	</div>
 
@@ -191,7 +191,7 @@
 			<div class="section-title">
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-				폰트 크기 <span class="badge">{fontSize}px</span>
+				Font Size <span class="badge">{fontSize}px</span>
 			</div>
 			<input
 				type="range"
@@ -219,17 +219,17 @@
 			<div class="section-title">
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-				이미지
+				Image
 			</div>
 			<button type="button" class="upload-btn" onclick={() => imageFileRef?.click()}>
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-				이미지 불러오기
+				Import Image
 			</button>
 			{#if singleElement.imageDataUrl}
-				<p class="hint-note">✓ 이미지가 로드되었습니다</p>
+				<p class="hint-note">✓ Image loaded</p>
 			{:else}
-				<p class="hint-note">위 버튼으로 이미지를 선택하세요</p>
+				<p class="hint-note">Select an image using the button above</p>
 			{/if}
 			<input
 				type="file"
@@ -246,7 +246,7 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
-			펜 크기 <span class="badge">{penSize}px</span>
+			Pen Size <span class="badge">{penSize}px</span>
 		</div>
 		<input type="range" min="1" max="20" bind:value={penSize} />
 	</div>
@@ -256,10 +256,10 @@
 			<div class="section-title">
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/></svg>
-				지우개 <span class="badge">{eraserSize}px</span>
-			</div>
-			<input type="range" min="8" max="80" bind:value={eraserSize} />
-			<p class="hint">🧹 드래그하여 펜 선 지우기</p>
+		Eraser <span class="badge">{eraserSize}px</span>
+		</div>
+		<input type="range" min="8" max="80" bind:value={eraserSize} />
+		<p class="hint">Drag to erase pen strokes</p>
 		</div>
 	{/if}
 
@@ -268,9 +268,10 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3H3v18h18V3z"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
-			스냅 <span class="badge">{snapThreshold}px</span>
+			Snap Threshold <span class="badge">{snapThreshold}px</span>
 		</div>
 		<input type="range" min="1" max="24" bind:value={snapThreshold} />
+		<p class="hint-note">Sensitivity for snapping to guides and elements</p>
 	</div>
 
 	<!-- ─── Theme ─── -->
@@ -278,7 +279,7 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-			테마
+			Theme
 		</div>
 		<select bind:value={themeId} onchange={onThemeChange}>
 			{#each BOARD_THEMES as theme}
@@ -292,23 +293,23 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-			격자
+			Grid
 		</div>
 		<label class="grid-toggle-row">
-			<span>격자 표시</span>
+			<span>Show Grid</span>
 			<button
 				type="button"
 				class="toggle-btn"
 				class:active={gridEnabled}
 				onclick={() => onGridEnabledChange(!gridEnabled)}
-				title={gridEnabled ? '격자 숨기기' : '격자 표시'}
+				title={gridEnabled ? 'Hide Grid' : 'Show Grid'}
 			>
 				<span class="toggle-knob"></span>
 			</button>
 		</label>
 		{#if gridEnabled}
 			<div class="grid-size-row">
-				<span class="grid-size-label">간격 <strong>{gridSize}px</strong></span>
+				<span class="grid-size-label">Spacing <strong>{gridSize}px</strong></span>
 				<input
 					type="range"
 					min="8"
@@ -319,9 +320,9 @@
 					onchange={(e) => onGridSizeChange(Number(e.currentTarget.value))}
 				/>
 				<div class="grid-presets">
-					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>촘촘</button>
-					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>보통</button>
-					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>넓게</button>
+					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>Small</button>
+					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>Medium</button>
+					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>Large</button>
 				</div>
 			</div>
 		{/if}
@@ -331,8 +332,8 @@
 
 	<!-- ─── Selection info ─── -->
 	<p class="selection-info">
-		선택: {selectedElementIds.length}개
-		<span class="hint-inline">(Shift+클릭 다중선택)</span>
+		Selected: {selectedElementIds.length} item{selectedElementIds.length !== 1 ? 's' : ''}
+		<span class="hint-inline">(Shift+Click to multi-select)</span>
 	</p>
 
 	{#if singleElement}
@@ -348,7 +349,7 @@
 	<div class="action-grid">
 		<button
 			type="button"
-			title="선택 요소 복제 (Duplicate)"
+			title="Duplicate selected"
 			onclick={onDuplicate}
 			disabled={selectedElementIds.length === 0}
 		>
@@ -357,20 +358,20 @@
 		</button>
 		<button
 			type="button"
-			title="선택 요소 삭제 (Delete)"
+			title="Delete selected"
 			onclick={onDelete}
 			disabled={selectedElementIds.length === 0}
 		>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
 		</button>
-		<button type="button" title="그룹 만들기 (Group)" onclick={onGroup} disabled={!canGroup}>
+		<button type="button" title="Group" onclick={onGroup} disabled={!canGroup}>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M6 14v-4h4"/><path d="M18 10v4h-4"/></svg>
 		</button>
 		<button
 			type="button"
-			title="그룹 해제 (Ungroup)"
+			title="Ungroup"
 			onclick={onUngroup}
 			disabled={!canUngroup}
 		>
@@ -382,89 +383,89 @@
 	<!-- ─── Align (multi-select) ─── -->
 	{#if selectedElementIds.length > 1}
 		<div class="sub-section">
-			<div class="section-title small">정렬</div>
-			<div class="action-grid six">
-				<button type="button" title="좌측 정렬" onclick={() => onAlign('left')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="2" x2="4" y2="22"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
-				</button>
-				<button type="button" title="가운데 정렬 (수평)" onclick={() => onAlign('center')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="6" y="14" width="12" height="4" rx="1"/></svg>
-				</button>
-				<button type="button" title="우측 정렬" onclick={() => onAlign('right')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="2" x2="20" y2="22"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
-				</button>
-				<button type="button" title="상단 정렬" onclick={() => onAlign('top')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="22" y2="4"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
-				</button>
-				<button type="button" title="가운데 정렬 (수직)" onclick={() => onAlign('middle')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="6" width="4" height="12" rx="1"/></svg>
-				</button>
-				<button type="button" title="하단 정렬" onclick={() => onAlign('bottom')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
-				</button>
-			</div>
+		<div class="section-title small">Align</div>
+		<div class="action-grid six">
+			<button type="button" title="Align Left" onclick={() => onAlign('left')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="2" x2="4" y2="22"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Center (Horizontal)" onclick={() => onAlign('center')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="6" y="14" width="12" height="4" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Right" onclick={() => onAlign('right')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="2" x2="20" y2="22"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Top" onclick={() => onAlign('top')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="22" y2="4"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Middle (Vertical)" onclick={() => onAlign('middle')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="6" width="4" height="12" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Bottom" onclick={() => onAlign('bottom')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
+			</button>
+		</div>
 		</div>
 	{/if}
 
 	<!-- ─── Distribute ─── -->
 	{#if canDistribute}
 		<div class="sub-section">
-			<div class="section-title small">간격 분배</div>
-			<div class="action-grid">
-				<button type="button" title="가로 균등 분배" onclick={() => onDistribute('horizontal')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/></svg>
-				</button>
-				<button type="button" title="세로 균등 분배" onclick={() => onDistribute('vertical')}>
-					<!-- prettier-ignore -->
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg>
-				</button>
-			</div>
+		<div class="section-title small">Distribute</div>
+		<div class="action-grid">
+			<button type="button" title="Distribute Horizontally" onclick={() => onDistribute('horizontal')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/></svg>
+			</button>
+			<button type="button" title="Distribute Vertically" onclick={() => onDistribute('vertical')}>
+				<!-- prettier-ignore -->
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg>
+			</button>
+		</div>
 		</div>
 	{/if}
 
 	<!-- ─── Text align ─── -->
 	{#if isTextAlignVisible}
 		<div class="sub-section">
-			<div class="section-title small">텍스트 가로 정렬</div>
-			<div class="text-align-row">
-				<button type="button" title="왼쪽 정렬" onclick={() => onTextAlign('left')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
-				</button>
-				<button type="button" title="가운데 정렬" onclick={() => onTextAlign('center')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-				</button>
-				<button type="button" title="오른쪽 정렬" onclick={() => onTextAlign('right')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
-				</button>
-			</div>
+		<div class="section-title small">Text Horizontal Align</div>
+		<div class="text-align-row">
+			<button type="button" title="Align Left" onclick={() => onTextAlign('left')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+			</button>
+			<button type="button" title="Align Center" onclick={() => onTextAlign('center')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+			</button>
+			<button type="button" title="Align Right" onclick={() => onTextAlign('right')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+			</button>
 		</div>
-		<div class="sub-section">
-			<div class="section-title small">텍스트 세로 정렬</div>
-			<div class="text-align-row">
-				<button type="button" title="상단 정렬" onclick={() => onTextVerticalAlign('top')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-				</button>
-				<button type="button" title="중간 정렬" onclick={() => onTextVerticalAlign('middle')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-				</button>
-				<button type="button" title="하단 정렬" onclick={() => onTextVerticalAlign('bottom')}>
-					<!-- prettier-ignore -->
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-				</button>
-			</div>
+	</div>
+	<div class="sub-section">
+		<div class="section-title small">Text Vertical Align</div>
+		<div class="text-align-row">
+			<button type="button" title="Align Top" onclick={() => onTextVerticalAlign('top')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Middle" onclick={() => onTextVerticalAlign('middle')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+			</button>
+			<button type="button" title="Align Bottom" onclick={() => onTextVerticalAlign('bottom')}>
+				<!-- prettier-ignore -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+			</button>
 		</div>
+	</div>
 	{/if}
 
 	<div class="divider"></div>
@@ -474,19 +475,19 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
-			보드 크기
+			Board Size
 		</div>
 		<div class="size-display">
 			<span>{stageWidth} × {stageHeight}</span>
 		</div>
 		<div class="expand-grid">
-			<button type="button" title="위로 200px 확장" onclick={() => onExpandBoard('top', 200)}>
+			<button type="button" title="Expand Top by 200px" onclick={() => onExpandBoard('top', 200)}>
 				<!-- prettier-ignore -->
 				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 			</button>
 			<button
 				type="button"
-				title="아래로 200px 확장"
+				title="Expand Bottom by 200px"
 				onclick={() => onExpandBoard('bottom', 200)}
 			>
 				<!-- prettier-ignore -->
@@ -494,7 +495,7 @@
 			</button>
 			<button
 				type="button"
-				title="왼쪽으로 200px 확장"
+				title="Expand Left by 200px"
 				onclick={() => onExpandBoard('left', 200)}
 			>
 				<!-- prettier-ignore -->
@@ -502,7 +503,7 @@
 			</button>
 			<button
 				type="button"
-				title="오른쪽으로 200px 확장"
+				title="Expand Right by 200px"
 				onclick={() => onExpandBoard('right', 200)}
 			>
 				<!-- prettier-ignore -->

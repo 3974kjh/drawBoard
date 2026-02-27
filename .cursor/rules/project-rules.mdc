@@ -1,0 +1,173 @@
+---
+description: DrawDashBoard – project-wide coding rules and conventions. Always apply.
+alwaysApply: true
+---
+
+# DrawDashBoard – Project Rules
+
+## Stack
+
+- **Framework**: SvelteKit (latest) with `@sveltejs/adapter-cloudflare` for Cloudflare Pages deployment
+- **UI language**: Svelte 5 with **Runes syntax only** (`$state`, `$derived`, `$effect`, `$props`, `$bindable`)
+- **Typed language**: TypeScript (strict)
+- **Package manager**: npm
+
+---
+
+## Svelte 5 / Runes Conventions
+
+- Use `$state`, `$derived`, `$effect`, `$props`, `$bindable` exclusively – **never** legacy `export let` reactivity
+- Components receive props via `let { ... }: Props = $props()`
+- Mutable props that the parent binds to use `$bindable(defaultValue)`
+- Events are passed as **callback props** (e.g. `onSave`, `onClick`) – never use `createEventDispatcher`
+- All reactive state must be declared with `$state()`
+- **Performance-critical, non-reactive data** (e.g. live-drawing point buffer, eraser previous position) uses plain `let` variables – **not** `$state`
+- `$effect` is for side-effects only; never mutate other `$state` variables inside an effect
+
+---
+
+## File & Folder Naming
+
+| Item | Convention | Example |
+|---|---|---|
+| Route files | SvelteKit convention | `+page.svelte`, `+layout.svelte` |
+| Components | **PascalCase** | `BoardCard.svelte`, `PropertyPanel.svelte` |
+| Component folders | `src/lib/component/<page>/` | `src/lib/component/board/`, `src/lib/component/home/` |
+| Library / utility files | **kebab-case** | `board-types.ts`, `canvas-renderer.ts`, `snap-engine.ts` |
+| Static assets | `static/` (served from site root) | `static/robots.txt`, `static/sitemap.xml` |
+
+---
+
+## TypeScript
+
+- All shared types / interfaces live in **`src/lib/board-types.ts`**
+- Use `interface` for object shapes, `type` for unions and aliases
+- Avoid `any`; prefer `unknown` + narrowing / type guards
+- Derived / computed values → `$derived`, not a raw `const` inside `$effect`
+
+---
+
+## Canvas & Rendering
+
+- `drawCanvas` (`HTMLCanvasElement`) holds the **committed** board state (background + saved strokes + elements)
+- `redrawCanvas()` in `+page.svelte` does a **full clear + redraw** and is triggered by `$effect` whenever reactive board state changes
+- **Live drawing** (in-progress pen stroke) bypasses Svelte reactivity:
+  - Store points in plain `let _livePoints: Point[]`
+  - Snapshot canvas with `ctx.getImageData()` when stroke starts
+  - Each RAF frame: `ctx.putImageData(snapshot)` then draw smooth live stroke
+  - On pointer-up: commit to reactive `strokes` state once → `$effect` fires → `redrawCanvas()`
+- Stroke smoothing: **quadratic Bezier with midpoint control** (`ctx.quadraticCurveTo`)
+- Canvas renderer pure functions (`src/lib/canvas-renderer.ts`):
+  - `drawThemeBackground` – fills background + optional grid
+  - `drawStroke` – draws a committed stroke with Bezier smoothing
+  - `drawElementToCanvas` – draws a board element (shapes, text, image)
+  - `renderThumbnail` – creates a scaled JPEG thumbnail
+  - `loadImages` – pre-loads image elements for export
+
+---
+
+## State Architecture
+
+| Concern | Location |
+|---|---|
+| Board state (`strokes`, `elements`, `themeId`, …) | `src/routes/board/[id]/+page.svelte` |
+| Child components | Receive **read-only props + callback props**; own no board state |
+| History (undo/redo) | `history: Snapshot[]` + `historyIndex` in `+page.svelte` |
+| Persistence | `localStorage` via `src/lib/board-storage.ts` |
+
+- Call `commitSnapshot()` after **every** user action that modifies the board
+- `isDirty` flag tracks unsaved changes → reset to `false` after `saveBoard()` and `loadBoard()`
+
+---
+
+## Component Props Pattern (board page)
+
+| Component | Responsibility |
+|---|---|
+| `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing |
+| `ToolPanel.svelte` | Tool selection |
+| `PropertyPanel.svelte` | Per-selection property controls |
+| `Topbar.svelte` | Save, undo/redo, export, back-navigation |
+| `ImportModal.svelte` | Import boards modal |
+| `MinimapThumbnail.svelte` | Mini preview |
+
+All board-page components live in **`src/lib/component/board/`**.
+
+---
+
+## Eraser Logic
+
+- Eraser tracks the **previous pointer position** (`_prevEraserPt`) and sweeps intermediate circles along the path (step = `radius / 2`) to avoid gaps from fast mouse movement
+- Each erase circle uses **segment-level intersection** (`_circleTs`) to split strokes at exact entry/exit points rather than just discarding entire points
+- `_eraseAtCenter(strokes, center, radius)` is a **pure function** returning a new stroke array
+- Reset `_prevEraserPt = null` at the start and end of each erase session
+
+---
+
+## Resize Handles
+
+- Every selected element shows **8 handles**: `nw | n | ne | w | e | sw | s | se`
+- `InteractionState.resize` stores `handle`, `originX`, `originY`, `originWidth`, `originHeight`
+- Resize math computes new `left / top / right / bottom` edges independently per handle direction
+- **Flipping is supported**: when the dragged edge passes the opposite edge, `x = min(left, right)`, `y = min(top, bottom)`, `width = |right - left|`, `height = |bottom - top|`
+- Minimum element size is **10 × 10 px**
+
+---
+
+## UI / Styling
+
+- All styles are **scoped** inside `<style>` blocks (no global CSS framework)
+- Design reference: **Canva Draw** – clean, minimal, tool-focused
+- Use CSS custom properties for dynamic per-element styles: `--fill`, `--stroke`, `--border-w`, `--text-valign`
+- Glassmorphism for floating action buttons:
+  ```css
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  ```
+- Fonts: `'Caveat'` (brand/logo), `'DM Sans'` (UI text) — loaded via Google Fonts in `src/app.html`
+
+---
+
+## Accessibility
+
+- Interactive `<div>`/`<article>` elements must have `role` + `tabindex`
+- Buttons without visible text must have `aria-label`
+- Modal overlays: `role="dialog" aria-modal="true"`
+
+---
+
+## Performance Guidelines
+
+- **During pointer-move**: avoid writing to `$state` – use plain variables + direct DOM/canvas calls
+- Use `requestAnimationFrame` for canvas animation (batch frames, don't draw on every event)
+- Use `ImageData` (`getImageData` / `putImageData`) for fast canvas snapshots – faster than `toDataURL`
+- Avoid deep-cloning large arrays in hot paths
+
+---
+
+## SEO
+
+- `src/app.html` – all meta tags, Open Graph, Twitter Card, JSON-LD (`WebApplication` schema)
+- `static/robots.txt` – crawler rules; disallows `/board/` (local-storage data)
+- `static/sitemap.xml` – site structure (update `<lastmod>` after significant changes)
+- `static/og-image.svg` – Open Graph preview image
+
+---
+
+## Board Data Model (key types)
+
+```typescript
+// src/lib/board-types.ts (simplified)
+interface BoardElement {
+  id: string; groupId?: string;
+  type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image';
+  x: number; y: number; width: number; height: number; rotation: number;
+  strokeColor: string; fillColor: string; borderWidth: number;
+  text: string; textAlign: TextAlign; textVerticalAlign: TextVerticalAlign;
+  fontSize: number; imageDataUrl?: string;
+}
+interface Stroke { id: string; tool: 'pen' | 'eraser'; color: string; size: number; points: Point[]; }
+interface BoardData { id: string; title: string; themeId: ThemeId; strokes: Stroke[]; elements: BoardElement[]; width?: number; height?: number; gridEnabled?: boolean; gridSize?: number; thumbnail?: string; }
+type ResizeHandle = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
+```

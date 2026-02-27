@@ -16,7 +16,7 @@
 	};
 
 	const openCreateModal = () => {
-		newBoardTitle = `새 보드 ${boards.length + 1}`;
+		newBoardTitle = `New Board ${boards.length + 1}`;
 		selectedThemeId = 'whiteboard';
 		showCreateModal = true;
 	};
@@ -26,14 +26,14 @@
 	};
 
 	const handleCreateBoard = () => {
-		const nextTitle = newBoardTitle.trim() || `새 보드 ${boards.length + 1}`;
+		const nextTitle = newBoardTitle.trim() || `New Board ${boards.length + 1}`;
 		const board = createBoard(nextTitle, selectedThemeId);
 		showCreateModal = false;
 		goto(`/board/${board.id}`);
 	};
 
 	const handleDeleteBoard = (boardId: string) => {
-		if (!confirm('이 보드를 삭제할까요?')) return;
+		if (!confirm('Delete this board?')) return;
 		deleteBoard(boardId);
 		refreshBoards();
 	};
@@ -79,17 +79,17 @@
 	<!-- ── Board grid (always shown, first card = add new) ── -->
 	<section class="boards-section">
 		{#if boards.length > 0}
-			<p class="board-count">{boards.length}개의 보드</p>
+			<p class="board-count">{boards.length} board{boards.length !== 1 ? 's' : ''}</p>
 		{/if}
 
 		<div class="boards-grid">
-			<!-- "새 보드 만들기" card – always first -->
+			<!-- "New Board" card – always first -->
 			<button type="button" class="add-card" onclick={openCreateModal}>
 				<div class="add-icon">
 					<!-- prettier-ignore -->
 					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 				</div>
-				<span class="add-label">새 보드 만들기</span>
+				<span class="add-label">New Board</span>
 			</button>
 
 			{#each boards as board (board.id)}

@@ -18,7 +18,6 @@
 			title={item.label}
 		>
 			<span class="icon">{@html item.icon}</span>
-			<span>{item.label}</span>
 		</button>
 	{/each}
 
@@ -29,84 +28,96 @@
 		class={`tool-btn lock-btn ${keepToolActive ? 'active' : ''}`}
 		onclick={() => (keepToolActive = !keepToolActive)}
 		title={keepToolActive
-			? '도구 고정 중 — 도형 추가 후 도구가 유지됩니다 (클릭하여 해제)'
-			: '도구 고정 해제 — 도형 추가 후 선택 도구로 전환됩니다 (클릭하여 고정)'}
+			? 'Tool locked — stays active after placing a shape (click to unlock)'
+			: 'Tool unlocked — switches to Select after placing a shape (click to lock)'}
 	>
 		<span class="icon">
 			{#if keepToolActive}
 				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 			{:else}
 				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
 			{/if}
 		</span>
-		<span>고정</span>
 	</button>
 </aside>
 
 <style>
+	/* Panel width is fixed — buttons fill it and are forced square via height = width */
 	.tool-panel {
+		width: 48px;
 		background: #ffffffd9;
 		backdrop-filter: blur(8px);
 		border: 1px solid #cbd5e1;
-		border-radius: 16px;
-		padding: 0.55rem;
-		display: grid;
-		align-content: start;
-		gap: 0.45rem;
-	}
-
-	.tool-btn {
-		display: grid;
-		justify-items: center;
+		border-radius: 14px;
+		padding: 0.3rem;
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
 		gap: 0.25rem;
-		border: 1px solid #cbd5e1;
-		background: #fff;
-		border-radius: 12px;
-		padding: 0.45rem 0.3rem;
-		font-size: 0.74rem;
-		cursor: pointer;
-		transition: background 0.12s, border-color 0.12s;
 	}
 
-	.tool-btn .icon {
-		width: 28px;
-		height: 28px;
-		border-radius: 8px;
-		background: #eff6ff;
-		color: #1d4ed8;
+	/* width: 100% = fills the 48px panel; height = width makes it a true square */
+	.tool-btn {
+		width: 100%;
+		aspect-ratio: 1 / 1;
 		display: grid;
 		place-items: center;
-		font-size: 0.72rem;
-		font-weight: 700;
+		border: 1px solid #cbd5e1;
+		background: #fff;
+		border-radius: 8px;
+		padding: 0;
+		cursor: pointer;
+		transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+		color: #1d4ed8;
 		line-height: 0;
+		overflow: hidden;
+	}
+
+	/* Icon wrapper: fixed pixel size so emoji + SVG both render at the same size */
+	.tool-btn .icon {
+		width: 22px;
+		height: 22px;
+		display: grid;
+		place-items: center;
+		line-height: 0;
+		font-size: 0.95rem; /* emoji size */
 	}
 
 	.tool-btn .icon :global(svg) {
 		display: block;
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+	}
+
+	.tool-btn:hover {
+		background: #eff6ff;
+		border-color: #93c5fd;
 	}
 
 	.tool-btn.active {
+		background: #dbeafe;
 		border-color: #2563eb;
-		box-shadow: 0 0 0 1px #2563eb inset;
+		box-shadow: 0 0 0 1.5px #2563eb inset;
+		color: #1d4ed8;
 	}
 
 	/* ── Divider between tools and lock button ── */
 	.tool-divider {
 		height: 1px;
 		background: #e2e8f0;
-		margin: 0.1rem 0.2rem;
+		margin: 0.1rem 0.15rem;
+		flex-shrink: 0;
 	}
 
 	/* ── Lock button specific styling ── */
-	.lock-btn .icon {
-		background: #f1f5f9;
+	.lock-btn {
 		color: #64748b;
 	}
 
-	.lock-btn.active .icon {
-		background: #dbeafe;
+	.lock-btn.active {
 		color: #1d4ed8;
 	}
 </style>

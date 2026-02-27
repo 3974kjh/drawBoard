@@ -256,14 +256,14 @@
 		<span class="minimap-title">
 			<!-- prettier-ignore -->
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-			미니맵
+			Minimap
 		</span>
 		<button
 			class="collapse-btn"
 			type="button"
 			onclick={() => (collapsed = !collapsed)}
-			title={collapsed ? '미니맵 펼치기' : '미니맵 접기'}
-			aria-label={collapsed ? '미니맵 펼치기' : '미니맵 접기'}
+			title={collapsed ? 'Expand minimap' : 'Collapse minimap'}
+			aria-label={collapsed ? 'Expand minimap' : 'Collapse minimap'}
 		>
 			{#if collapsed}
 				<!-- prettier-ignore -->
