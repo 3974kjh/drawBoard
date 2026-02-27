@@ -1,7 +1,27 @@
 # DrawDashBoard
 
-> **Sketch ideas · organize visually**  
-> SvelteKit + Svelte 5 Runes 기반 드로잉 보드 툴 — Cloudflare Pages 배포 지원
+<div align="center">
+
+![DrawDashBoard Logo](static/favicon.svg)
+
+**Sketch ideas · organize visually**  
+SvelteKit + Svelte 5 Runes 기반 드로잉 보드 툴 — Cloudflare Pages 배포 지원
+
+</div>
+
+---
+
+## 🎨 브랜딩 & 로고
+
+DrawDashBoard의 로고는 손그림 스타일의 'D' 이니셜과 물결선으로 구성되어 있습니다.
+
+- **디자인 컨셉**: 드로잉 보드와 다이어그램 그리기 도구라는 특성을 반영한 손그림 스타일
+- **로고 파일**: `static/favicon.svg` (배경 없는 SVG, 파비콘 및 메인 로고로 사용)
+- **색상**: 파란색→보라색 그라디언트 (D 이니셜) + 주황색 물결선 (밑줄)
+- **사용 위치**: 
+  - 브라우저 파비콘 (`+layout.svelte`, `app.html`)
+  - 메인 페이지 헤더 로고 (`+page.svelte`)
+  - 소셜 공유 이미지 (`og-image.svg`)
 
 ---
 
@@ -204,29 +224,35 @@
 ## 🏗️ 프로젝트 구조
 
 ```
-src/
-├── app.html                        # Google Fonts (Caveat, DM Sans) 로드
-├── routes/
-│   ├── +layout.svelte              # 파비콘, 전역 설정
-│   ├── +page.svelte                # 메인 (보드 목록)
-│   └── board/[id]/
-│       └── +page.svelte            # 보드 편집 (핵심 로직)
-└── lib/
-    ├── board-types.ts              # 전체 타입 정의 + 상수 (Snapshot 포함)
-    ├── board-storage.ts            # LocalStorage CRUD
-    ├── canvas-renderer.ts          # Canvas 렌더링 (획·도형·텍스트·썸네일)
-    ├── snap-engine.ts              # 스냅·가이드 계산 엔진
-    └── component/
-        ├── home/
-        │   ├── BoardCard.svelte         # 보드 카드 (썸네일, 삭제 버튼)
-        │   └── CreateBoardModal.svelte  # 새 보드 생성 모달
-        └── board/
-            ├── Topbar.svelte            # 상단 툴바 (아이콘 버튼 + 툴팁)
-            ├── ToolPanel.svelte         # 좌측 도구 패널 (도구 고정 토글 포함)
-            ├── PropertyPanel.svelte     # 우측 속성 패널 (격자 설정 포함)
-            ├── BoardStage.svelte        # 드로잉 영역 (canvas + HTML overlay)
-            ├── MinimapThumbnail.svelte  # 미니맵 (실시간 썸네일 + 뷰포트 인디케이터)
-            └── ImportModal.svelte       # 보드 불러오기 모달 (썸네일 포함)
+drawBoard/
+├── static/                          # 정적 파일 (루트에 서빙)
+│   ├── favicon.svg                 # 로고 (손그림 스타일 'D' + 물결선)
+│   ├── og-image.svg                # 소셜 공유 이미지 (Open Graph)
+│   ├── robots.txt                  # 검색 엔진 크롤러 규칙
+│   └── sitemap.xml                 # 사이트맵
+└── src/
+    ├── app.html                    # Google Fonts (Caveat, DM Sans) 로드, SEO 메타 태그
+    ├── routes/
+    │   ├── +layout.svelte          # 파비콘 설정 (static/favicon.svg 참조)
+    │   ├── +page.svelte            # 메인 (보드 목록, 로고 표시)
+    │   └── board/[id]/
+    │       └── +page.svelte        # 보드 편집 (핵심 로직)
+    └── lib/
+        ├── board-types.ts          # 전체 타입 정의 + 상수 (Snapshot 포함)
+        ├── board-storage.ts        # LocalStorage CRUD
+        ├── canvas-renderer.ts      # Canvas 렌더링 (획·도형·텍스트·썸네일)
+        ├── snap-engine.ts          # 스냅·가이드 계산 엔진
+        └── component/
+            ├── home/
+            │   ├── BoardCard.svelte         # 보드 카드 (썸네일, 삭제 버튼)
+            │   └── CreateBoardModal.svelte  # 새 보드 생성 모달
+            └── board/
+                ├── Topbar.svelte            # 상단 툴바 (아이콘 버튼 + 툴팁)
+                ├── ToolPanel.svelte         # 좌측 도구 패널 (도구 고정 토글 포함)
+                ├── PropertyPanel.svelte     # 우측 속성 패널 (격자 설정 포함)
+                ├── BoardStage.svelte        # 드로잉 영역 (canvas + HTML overlay)
+                ├── MinimapThumbnail.svelte  # 미니맵 (실시간 썸네일 + 뷰포트 인디케이터)
+                └── ImportModal.svelte       # 보드 불러오기 모달 (썸네일 포함)
 ```
 
 ---
@@ -297,3 +323,17 @@ npm run deploy
 
 > **Tech Stack** : SvelteKit · Svelte 5 Runes · TypeScript · jsPDF · Cloudflare Pages (`@sveltejs/adapter-cloudflare`)  
 > **데이터 저장** : `localStorage` (서버 없음, 완전 클라이언트 사이드)
+
+---
+
+## 📝 최근 변경 사항
+
+### 로고 시스템 개선 (2025)
+
+- **로고 통합**: 인라인 SVG 로고를 `static/favicon.svg` 파일로 통합하여 중복 제거 및 유지보수성 향상
+- **파비콘 적용**: `+layout.svelte`와 `app.html`에서 `static/favicon.svg`를 직접 참조하도록 변경
+- **로고 디자인**: 손그림 스타일의 'D' 이니셜 + 물결선 밑줄로 드로잉 보드 특성 반영
+- **사용 위치**:
+  - 브라우저 탭 파비콘
+  - 메인 페이지 헤더 로고 (`<img src="/favicon.svg">`)
+  - 소셜 공유 이미지 (og-image.svg)
