@@ -43,6 +43,7 @@
 	import BoardStage from '$lib/component/board/BoardStage.svelte';
 	import ImportModal from '$lib/component/board/ImportModal.svelte';
 	import MinimapThumbnail from '$lib/component/board/MinimapThumbnail.svelte';
+	import toast from 'svelte-french-toast';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -84,7 +85,6 @@
 	let showUnsavedModal = $state(false);
 	let showSavedModal = $state(false);
 	let showClearConfirmModal = $state(false);
-	let showAutoSavedToast = $state(false);
 	let interaction = $state<InteractionState>(null);
 	let history = $state<Snapshot[]>([]);
 	let historyIndex = $state(-1);
@@ -1534,10 +1534,7 @@
 		void boardTitle;
 		const id = setTimeout(() => {
 			saveBoard(true).then(() => {
-				showAutoSavedToast = true;
-				setTimeout(() => {
-					showAutoSavedToast = false;
-				}, 2000);
+				toast.success('Auto-saved');
 			});
 		}, 1000);
 		return () => clearTimeout(id);
@@ -1545,13 +1542,6 @@
 </script>
 
 <main class="board-page">
-	{#if showAutoSavedToast}
-		<div class="auto-saved-toast" role="status" aria-live="polite">
-			<!-- prettier-ignore -->
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-			<span>Auto-saved</span>
-		</div>
-	{/if}
 	<Topbar
 		bind:boardTitle
 		{canUndo}
@@ -1757,42 +1747,6 @@
 		min-height: 100vh;
 		display: grid;
 		grid-template-rows: auto 1fr;
-	}
-
-	.auto-saved-toast {
-		position: fixed;
-		top: 12px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 10000;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: #fff;
-		border: 1px solid #e2e8f0;
-		border-radius: 10px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #334155;
-		animation: toast-in 0.25s ease;
-	}
-
-	.auto-saved-toast svg {
-		flex-shrink: 0;
-		color: #22c55e;
-	}
-
-	@keyframes toast-in {
-		from {
-			opacity: 0;
-			transform: translateX(-50%) translateY(-8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
-		}
 	}
 
 	.workspace {

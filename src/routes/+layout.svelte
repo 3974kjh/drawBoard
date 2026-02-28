@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Toaster } from 'svelte-french-toast';
 	let { children } = $props();
 </script>
 
@@ -7,6 +8,7 @@
 </svelte:head>
 
 {@render children()}
+<Toaster />
 
 <style>
 	/* Shared scrollbar style (board and all scrollable areas) */
