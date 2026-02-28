@@ -108,6 +108,8 @@ DrawDashBoard의 로고는 손그림 스타일의 'D' 이니셜과 물결선으�
 | 🖼️ 이미지 | 이미지 영역 추가 → 속성 패널에서 파일 선택, 영역에 fit |
 | 🔒 도구 고정 | 활성화 시 도구 사용 후 선택 도구로 자동 복귀하지 않음 |
 
+**연결선(Connector)** 은 별도 도구 없이 **선택 도구**에서 생성합니다. 도형에 마우스를 올리면 앵커(연결점)가 표시되고, 첫 번째 앵커 클릭 → 다른 도형의 앵커 클릭으로 연결선이 생성됩니다. 연결선 선택 시 속성 패널에서 스타일·화살표·크기 등을 설정할 수 있습니다.
+
 ### 미니맵 (우측 상단)
 
 속성 패널 위에 고정된 실시간 썸네일입니다.
@@ -154,6 +156,21 @@ DrawDashBoard의 로고는 손그림 스타일의 'D' 이니셜과 물결선으�
 | 텍스트 가로 정렬 | 텍스트 편집 요소 선택 시: 좌·중·우 |
 | 텍스트 세로 정렬 | 텍스트 편집 요소 선택 시: 상단·중간·하단 |
 | 보드 크기 | 현재 보드 너비 × 높이 표시, 상·하·좌·우 200px 확장 버튼 |
+| 연결선 (Line style) | 연결선 선택 시: Style(Solid/Dashed/Double), Arrow size(6–24), Start/End arrow(None/Arrow) 및 Direction(Auto/N/S/E/W). UI는 영어·아이콘 기준 |
+
+### 연결선(Connector) 동작
+
+| 항목 | 설명 |
+|------|------|
+| 생성 | 선택 도구에서 도형 호버 → 앵커 표시 → 앵커 클릭(시작) → 다른 도형 앵커 클릭(끝)으로 생성. 별도 연결선 도구 없음 |
+| 가상선(미리보기) | 첫 앵커 선택 후 마우스 이동 시 점선으로 시작점→커서 표시. **최상단 레이어**에 그려져 도형에 가리지 않음 |
+| 선 스타일 | 실선(Solid) / 점선(Dashed) / 두 줄선(Double). Path(직각/곡선) 옵션은 UI에서 제거됨(데이터는 유지) |
+| 화살표 위치 | 경로를 **7등분**했을 때 **1/7**(시작 쪽)에 Start 화살표, **6/7**(끝 쪽)에 End 화살표 표시 |
+| 화살표 방향 | Start/End 각각 None 또는 Arrow. Arrow 선택 시 Direction: Auto(경로 방향) 또는 North/South/East/West 고정 |
+| 화살표 크기 | Arrow size 슬라이더(6–24). 연결선별로 다르게 설정 가능 |
+| 화살표·선 색상 | 선 색상 변경 시 화살표 색상도 동일하게 적용. **선택 시** 선·화살표 모두 #2563eb로 표시 |
+| 자기 연결 | 같은 도형의 서로 다른 앵커에 연결 시 경로가 **도형 바깥**으로 우회. 선택 후 꺾임점(bend) 드래그로 형태 조정 가능 |
+| 앵커 (도형별) | **사각형/텍스트/이미지**: 4변 중앙 + 4모서리. **원(ellipse)**: 4변 중앙만(모서리 앵커 없음). **삼각형**: 꼭지점 3개 + 변 중앙 3개 |
 
 ### 지우개 알고리즘
 
@@ -282,7 +299,12 @@ BoardData
       ├── strokeColor, fillColor
       ├── text, textAlign, textVerticalAlign, fontSize  ← rect/ellipse/text 전용
       ├── imageDataUrl?      ← image 전용, base64 data-URL
-      └── groupId            ← 그룹화 연결 키
+      ├── groupId            ← 그룹화 연결 키
+      └── type: 'connector'  ← 연결선 전용
+           ├── startElementId, startAnchor, endElementId, endAnchor
+           ├── connectorStyle (solid|dashed|double), connectorType (orthogonal|curved)
+           ├── startArrow, endArrow (none|arrow), startArrowDirection, endArrowDirection (auto|n|s|e|w)
+           ├── connectorArrowSize (기본 10), connectorBendX, connectorSelfBendX/Y 등
 
 Snapshot (Undo/Redo 히스토리 단위)
  ├── strokes[]
@@ -334,6 +356,19 @@ npm run deploy
 ---
 
 ## 📝 최근 변경 사항
+
+### 연결선(Connector) 기능 및 개선 (2025)
+
+- **선택 도구에서 연결선 생성**: 연결선 전용 도구 제거. 선택 도구로 도형 호버 시 앵커 표시 → 두 앵커 클릭으로 연결선 생성
+- **도구 전환 시 선택 해제**: 도형/선분 선택 후 펜·지우개·도형 등 다른 도구 선택 시 선택 및 연결선 미리보기 해제
+- **미리보기 선 최상단 표시**: 첫 앵커 선택 후 마우스 따라가는 가상선을 도형 위에 그리도록 레이어(z-index) 조정
+- **화살표 위치**: 경로 7등분 기준 1/7·6/7 지점에 Start/End 화살표 표시 (앵커 끝이 아님)
+- **화살표 방향**: Start/End 각각 Auto 또는 North/South/East/West 고정 가능 (속성 패널)
+- **화살표 크기**: `connectorArrowSize`(6–24)로 연결선별 크기 조절, SVG 마커 scale 적용으로 시각적 반영
+- **선·화살표 색상 연동**: 선 색상 변경 시 화살표 동일 색; 선택 시 선·화살표 모두 #2563eb
+- **자기 연결**: 같은 도형의 두 앵커 연결 시 경로가 도형 바깥으로 우회, bend 핸들로 형태 조정
+- **속성 패널**: 연결선 섹션 영어·아이콘, Line style(Solid/Dashed/Double), Arrow size, Start/End arrow + Direction. Path(직각/곡선) 옵션은 UI에서 제거
+- **원(ellipse) 앵커**: 4방향(상하좌우)만 표시, 모서리(nw/ne/se/sw) 앵커 비표시
 
 ### 보드 카드 UI 개선 (2025)
 

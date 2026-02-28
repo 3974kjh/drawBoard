@@ -145,7 +145,7 @@
 
 		drawThemeBackground(ctx, stageWidth, stageHeight, themeBackground, themeGridColor);
 		strokes.forEach((s) => drawStroke(ctx, s));
-		elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap));
+		elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, elements));
 
 		ctx.restore();
 	});

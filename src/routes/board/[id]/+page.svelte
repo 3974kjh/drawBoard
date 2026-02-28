@@ -17,8 +17,14 @@
 		type Stroke,
 		type TextAlign,
 		type TextVerticalAlign,
-		type ThemeId
+		type ThemeId,
+		CONNECTABLE_TYPES,
+		type ConnectorStyle,
+		type ConnectorType,
+		type ConnectorArrow,
+		type ConnectorArrowDirection
 	} from '$lib/board-types';
+	import { getConnectorPath, updateConnectorBounds } from '$lib/connector-geometry';
 	import { getBoardById, getBoards, upsertBoard } from '$lib/board-storage';
 	import {
 		getBounds,
@@ -71,6 +77,17 @@
 	let gridEnabled = $state(true);
 	let gridSize = $state(32);
 	let keepToolActive = $state(false);
+	let connectorStyle = $state<ConnectorStyle>('solid');
+	let connectorType = $state<ConnectorType>('orthogonal');
+	let startArrow = $state<ConnectorArrow>('none');
+	let endArrow = $state<ConnectorArrow>('arrow');
+	let startArrowDirection = $state<ConnectorArrowDirection>('auto');
+	let endArrowDirection = $state<ConnectorArrowDirection>('auto');
+	let connectorArrowSize = $state(10);
+	/** When connector tool: { startElementId, startAnchor } or null */
+	let pendingConnector = $state<{ startElementId: string; startAnchor: string } | null>(null);
+	/** Preview end point while drawing connector (start anchor → mouse) */
+	let connectorPreviewEnd = $state<Point | null>(null);
 	let showImportModal = $state(false);
 	let importBoards = $state<BoardData[]>([]);
 	/** true = unsaved content (strokes/elements/settings) */
@@ -409,6 +426,13 @@
 		);
 	};
 
+	/** Recompute x,y,width,height for all connectors from their start/end anchors */
+	const refreshConnectorBounds = () => {
+		elements = elements.map((item) =>
+			item.type === 'connector' ? updateConnectorBounds(item, elements) : item
+		);
+	};
+
 	const addElementAt = (type: BoardElement['type'], point: Point) => {
 		const isLineH = type === 'line-h';
 		const isLineV = type === 'line-v';
@@ -446,12 +470,22 @@
 	/* ── Sync property panel with selected element ── */
 	let _prevSelectedId: string | null = null;
 	$effect(() => {
-		const id = selectedSingleElement?.id ?? null;
+		const el = selectedSingleElement;
+		const id = el?.id ?? null;
 		if (id && id !== _prevSelectedId) {
-			penColor = selectedSingleElement!.strokeColor;
-			fillColor = selectedSingleElement!.fillColor;
-			borderWidth = selectedSingleElement!.borderWidth ?? 2;
-			fontSize = selectedSingleElement!.fontSize ?? 18;
+			penColor = el!.strokeColor;
+			fillColor = el!.fillColor;
+			borderWidth = el!.borderWidth ?? 2;
+			fontSize = el!.fontSize ?? 18;
+			if (el!.type === 'connector') {
+				connectorStyle = el!.connectorStyle ?? 'solid';
+				connectorType = el!.connectorType ?? 'orthogonal';
+				startArrow = el!.startArrow ?? 'none';
+				endArrow = el!.endArrow ?? 'arrow';
+				startArrowDirection = el!.startArrowDirection ?? 'auto';
+				endArrowDirection = el!.endArrowDirection ?? 'auto';
+				connectorArrowSize = el!.connectorArrowSize ?? 10;
+			}
 		}
 		_prevSelectedId = id;
 	});
@@ -479,6 +513,101 @@
 			updateSelectedElements((item) => ({ ...item, borderWidth: w }));
 			commitSnapshot();
 		}
+	};
+
+	const handleConnectorStyleChange = (v: ConnectorStyle) => {
+		connectorStyle = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, connectorStyle: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleConnectorTypeChange = (v: ConnectorType) => {
+		connectorType = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, connectorType: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleStartArrowChange = (v: ConnectorArrow) => {
+		startArrow = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, startArrow: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleEndArrowChange = (v: ConnectorArrow) => {
+		endArrow = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, endArrow: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleStartArrowDirectionChange = (v: ConnectorArrowDirection) => {
+		startArrowDirection = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, startArrowDirection: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleEndArrowDirectionChange = (v: ConnectorArrowDirection) => {
+		endArrowDirection = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, endArrowDirection: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+	const handleConnectorArrowSizeChange = (v: number) => {
+		connectorArrowSize = v;
+		updateSelectedElements((item) =>
+			item.type === 'connector' ? { ...item, connectorArrowSize: v } : item
+		);
+		if (selectedElementIds.length > 0) commitSnapshot();
+	};
+
+	/** Connector tool: first click sets start anchor, second click sets end and creates connector */
+	const handleConnectorAnchorClick = (elementId: string, anchorId: string) => {
+		if (!pendingConnector) {
+			pendingConnector = { startElementId: elementId, startAnchor: anchorId };
+			return;
+		}
+		if (pendingConnector.startElementId === elementId && pendingConnector.startAnchor === anchorId) {
+			pendingConnector = null;
+			return;
+		}
+		const connector: BoardElement = {
+			id: nextId(),
+			type: 'connector',
+			x: 0,
+			y: 0,
+			width: 0,
+			height: 0,
+			rotation: 0,
+			strokeColor: penColor,
+			fillColor: 'transparent',
+			borderWidth,
+			text: '',
+			textAlign: 'left',
+			textVerticalAlign: 'top',
+			fontSize: 18,
+			startElementId: pendingConnector.startElementId,
+			startAnchor: pendingConnector.startAnchor,
+			endElementId: elementId,
+			endAnchor: anchorId,
+			connectorStyle,
+			connectorType,
+			startArrow,
+			endArrow,
+			startArrowDirection,
+			endArrowDirection,
+			connectorArrowSize
+		};
+		const updated = updateConnectorBounds(connector, elements);
+		elements = [...elements, updated];
+		setSelection([updated.id]);
+		pendingConnector = null;
+		commitSnapshot();
+		if (!keepToolActive) activeTool = 'select';
 	};
 
 	const handleFontSizeChange = (size: number) => {
@@ -874,13 +1003,61 @@
 		guideLines = [];
 		guideDistances = [];
 
+		/* 연결선: 선택 도구에서 도형 호버 시 앵커 클릭으로 연결선 생성 (별도 connector 도구 없음) */
+		if (activeTool === 'select' || activeTool === 'connector') {
+			const anchorEl = (event.target as HTMLElement).closest?.('[data-anchor-id]');
+			if (anchorEl) {
+				const elId = anchorEl.getAttribute('data-element-id');
+				const anchorId = anchorEl.getAttribute('data-anchor-id');
+				if (elId && anchorId) {
+					handleConnectorAnchorClick(elId, anchorId);
+					return;
+				}
+			}
+			if (pendingConnector && !anchorEl) pendingConnector = null;
+			if (activeTool === 'connector') return;
+		}
+
+		/* 연결선 꺾임점/컨트롤 핸들 드래그 */
+		const bendHandle = (event.target as HTMLElement).closest?.('[data-connector-bend]');
+		if (bendHandle) {
+			const connectorId = bendHandle.getAttribute('data-connector-id');
+			if (connectorId && activeTool === 'select') {
+				const conn = elements.find((e) => e.id === connectorId && e.type === 'connector');
+				if (conn) {
+					const pathData = getConnectorPath(conn, elements);
+					const bend = pathData?.bendPoint;
+					if (bend) {
+						event.preventDefault();
+						const isSelfConnector = conn.startElementId === conn.endElementId;
+						interaction = {
+							kind: 'connector-bend',
+							pointerId: event.pointerId,
+							connectorId,
+							start: point,
+							originalBendX: isSelfConnector ? bend.x : (conn.connectorType === 'curved' ? undefined : bend.x),
+							originalBendY: isSelfConnector ? bend.y : undefined,
+							originalControlX: !isSelfConnector && conn.connectorType === 'curved' ? bend.x : undefined,
+							originalControlY: !isSelfConnector && conn.connectorType === 'curved' ? bend.y : undefined
+						};
+					}
+					return;
+				}
+			}
+		}
+
 		if (editingElementId && clickedElementId === editingElementId) {
 			return;
 		}
 		editingElementId = null;
 
+		/* 도형 클릭 시 펜/지우개여도 선택 모드로 전환하고 해당 도형 선택 */
+		if (clickedElementId && (activeTool === 'pen' || activeTool === 'eraser')) {
+			activeTool = 'select';
+		}
+
 		if (activeTool === 'eraser') {
-			_prevEraserPt = null; // fresh sweep for each new press
+			_prevEraserPt = null;
 			eraseAt(point);
 			interaction = { kind: 'erasing', pointerId: event.pointerId };
 			return;
@@ -962,9 +1139,15 @@
 	};
 
 	const onStagePointerMove = (event: PointerEvent) => {
+		const point = getPointFromPointer(event);
+		if ((activeTool === 'select' || activeTool === 'connector') && pendingConnector) {
+			connectorPreviewEnd = point;
+		} else {
+			connectorPreviewEnd = null;
+		}
+
 		if (!interaction || interaction.pointerId !== event.pointerId) return;
 		const currentInteraction = interaction;
-		const point = getPointFromPointer(event);
 
 		if (currentInteraction.kind === 'drawing') {
 			pushPointToStroke(point);
@@ -1105,6 +1288,33 @@
 			return;
 		}
 
+		if (currentInteraction.kind === 'connector-bend') {
+			const dx = point.x - currentInteraction.start.x;
+			const dy = point.y - currentInteraction.start.y;
+			updateElement(currentInteraction.connectorId, (c) => {
+				if (c.type !== 'connector') return c;
+				if (c.startElementId === c.endElementId) {
+					return {
+						...c,
+						connectorSelfBendX: (currentInteraction.originalBendX ?? 0) + dx,
+						connectorSelfBendY: (currentInteraction.originalBendY ?? 0) + dy
+					};
+				}
+				if (c.connectorType === 'curved') {
+					return {
+						...c,
+						connectorControlX: (currentInteraction.originalControlX ?? 0) + dx,
+						connectorControlY: (currentInteraction.originalControlY ?? 0) + dy
+					};
+				}
+				return {
+					...c,
+					connectorBendX: (currentInteraction.originalBendX ?? 0) + dx
+				};
+			});
+			return;
+		}
+
 		if (currentInteraction.kind === 'marquee') {
 			interaction = { ...currentInteraction, current: point };
 		}
@@ -1138,7 +1348,11 @@
 			setSelection(
 				interaction.append ? [...selectedElementIds, ...expandedHits] : expandedHits
 			);
+		} else if (interaction.kind === 'connector-bend') {
+			refreshConnectorBounds();
+			commitSnapshot();
 		} else {
+			refreshConnectorBounds();
 			commitSnapshot();
 		}
 
@@ -1280,9 +1494,21 @@
 	const deleteSelectedElement = () => {
 		if (selectedElementIds.length === 0) return;
 		const selected = new Set(selectedElementIds);
-		elements = elements.filter((item) => !selected.has(item.id));
+		// Remove connectors attached to any deleted element
+		const idsToDelete = new Set(selected);
+		elements
+			.filter(
+				(el) =>
+					el.type === 'connector' &&
+					el.startElementId != null &&
+					el.endElementId != null &&
+					(selected.has(el.startElementId) || selected.has(el.endElementId))
+			)
+			.forEach((c) => idsToDelete.add(c.id));
+		elements = elements.filter((item) => !idsToDelete.has(item.id));
 		selectedElementIds = [];
 		editingElementId = null;
+		pendingConnector = null;
 		commitSnapshot();
 	};
 
@@ -1308,6 +1534,7 @@
 			};
 		});
 		elements = [...elements, ...duplicated];
+		refreshConnectorBounds();
 		setSelection(duplicated.map((item) => item.id));
 		commitSnapshot();
 	};
@@ -1346,7 +1573,7 @@
 			gridSize
 		);
 		strokes.forEach((stroke) => drawStroke(ctx, stroke));
-		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap));
+		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap, elements));
 		const orientation = stageWidth > stageHeight ? 'landscape' : 'portrait';
 		const pdf = new jsPDF({ orientation, unit: 'px', format: [stageWidth, stageHeight] });
 		pdf.addImage(
@@ -1370,7 +1597,7 @@
 		if (!ctx) return;
 		drawThemeBackground(ctx, stageWidth, stageHeight, currentTheme.background, currentTheme.gridColor, gridEnabled, gridSize);
 		strokes.forEach((stroke) => drawStroke(ctx, stroke));
-		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap));
+		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap, elements));
 		renderCanvas.toBlob(
 			(blob) => {
 				if (!blob) return;
@@ -1562,7 +1789,17 @@
 	/>
 
 	<div class="workspace">
-		<ToolPanel bind:activeTool bind:keepToolActive />
+		<ToolPanel
+			bind:activeTool
+			bind:keepToolActive
+			onToolChange={(tool) => {
+				if (tool !== 'select') {
+					selectedElementIds = [];
+					editingElementId = null;
+					pendingConnector = null;
+				}
+			}}
+		/>
 
 		<div class="stage-container">
 		<BoardStage
@@ -1589,12 +1826,15 @@
 			onPointerDown={onStagePointerDown}
 			onPointerMove={onStagePointerMove}
 			onPointerUp={onStagePointerUp}
+			onPointerLeave={() => (connectorPreviewEnd = null)}
 			onDblClickElement={startTextEdit}
 			onBeginResize={beginResize}
 			onBeginRotate={beginRotate}
 			onElementTextChange={handleElementTextChange}
 			onElementTextBlur={handleElementTextBlur}
 			onExpandBoard={expandBoard}
+			{pendingConnector}
+			{connectorPreviewEnd}
 		/>
 		</div>
 
@@ -1646,6 +1886,20 @@
 			{gridSize}
 			onGridEnabledChange={(v) => { gridEnabled = v; commitSnapshot(); }}
 			onGridSizeChange={(v) => { gridSize = v; commitSnapshot(); }}
+			connectorStyle={connectorStyle}
+			connectorType={connectorType}
+			startArrow={startArrow}
+			endArrow={endArrow}
+			startArrowDirection={startArrowDirection}
+			endArrowDirection={endArrowDirection}
+			onConnectorStyleChange={handleConnectorStyleChange}
+			onConnectorTypeChange={handleConnectorTypeChange}
+			onStartArrowChange={handleStartArrowChange}
+			onEndArrowChange={handleEndArrowChange}
+			onStartArrowDirectionChange={handleStartArrowDirectionChange}
+			onEndArrowDirectionChange={handleEndArrowDirectionChange}
+			connectorArrowSize={connectorArrowSize}
+			onConnectorArrowSizeChange={handleConnectorArrowSizeChange}
 		/>
 		</div>
 	</div>

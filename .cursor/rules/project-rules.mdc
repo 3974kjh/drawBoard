@@ -104,6 +104,22 @@ All board-page components live in **`src/lib/component/board/`**.
 
 ---
 
+## Connectors (연결선)
+
+- **Creation**: Connectors are created **only in select mode** – no separate connector tool. Hover a connectable shape to show anchors; click first anchor then second (same or different shape) to create. Toolbar has no connector item (`TOOL_ITEMS` in `board-types.ts`).
+- **Deselect on tool change**: When switching from select to any other tool (pen, eraser, shape, etc.), clear `selectedElementIds`, `editingElementId`, and `pendingConnector` (e.g. via `onToolChange` from ToolPanel).
+- **Preview line**: After first anchor click, a dashed preview from start to pointer is drawn on a **top layer** (`connector-preview-layer`, z-index above elements) so it is never covered. Set `connectorPreviewEnd` only when `(activeTool === 'select' || activeTool === 'connector') && pendingConnector` in the page pointer-move handler.
+- **Path**: Connector path is anchor-to-anchor (no end trim). Implement in `src/lib/connector-geometry.ts` (`getConnectorPath`, `ConnectorPathData`). Self-connection (same shape): path goes outside the shape; bend controlled by `connectorSelfBendX`, `connectorSelfBendY`; mid-point draggable in page connector-bend handler.
+- **Arrows**: Position at **1/7** and **6/7** along the path (`arrowAt1`, `arrowAt2` from `getPointOnPath(path, 1/7)` and `6/7` in `connector-geometry.ts`). Start arrow at 1/7 (near start), End arrow at 6/7 (near end). Arrow segments use `stroke="none"` so only marker heads are drawn; main path is the single stroke.
+- **Arrow direction**: Per-connector `startArrowDirection` / `endArrowDirection`: Auto | North | South | East | West. BoardStage marker defs use correct `orient` and IDs like `arrow-start-{id}`, `arrow-end-{id}` (and `-n`, `-s`, `-e`, `-w` for fixed directions).
+- **Arrow size**: `connectorArrowSize` (default 10, range 6–24 in PropertyPanel). Markers scale with `transform="scale(arrowSize/10)"` and `refX`/`refY` from `arrowSize`. Connector section has “Arrow size” slider; page syncs and passes to BoardStage and canvas/export.
+- **Arrow color**: Marker `fill` uses `connector.strokeColor`. When connector is **selected**, use `#2563eb` for both path stroke and marker fill (e.g. `connectorStroke` variable in BoardStage).
+- **Anchors**: Hit area 24×24 px centered on anchor (`left: anchor.x - 12`, `top: anchor.y - 12`) in BoardStage. **Ellipse**: only **4 edge anchors** (n, s, e, w); **no corner anchors** (nw, ne, se, sw) – see `getAnchorPointsLocal` for `element.type === 'ellipse'` in `connector-geometry.ts`.
+- **PropertyPanel**: Connector section uses **English** labels and icons (Line style, Style, Start/End arrow, Direction, Arrow size). Path type (Orthogonal/Curved) is **not** shown in UI; `connectorType` remains in data model.
+- **Export**: `canvas-renderer.ts` (and PDF/PNG export) must use same path and arrow positions (arrowAt1, arrowAt2) and `connectorArrowSize`.
+
+---
+
 ## Resize Handles
 
 - Every selected element shows **8 handles**: `nw | n | ne | w | e | sw | s | se`
@@ -160,11 +176,13 @@ All board-page components live in **`src/lib/component/board/`**.
 // src/lib/board-types.ts (simplified)
 interface BoardElement {
   id: string; groupId?: string;
-  type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image';
+  type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image' | 'connector';
   x: number; y: number; width: number; height: number; rotation: number;
   strokeColor: string; fillColor: string; borderWidth: number;
   text: string; textAlign: TextAlign; textVerticalAlign: TextVerticalAlign;
   fontSize: number; imageDataUrl?: string;
+  // connector-only: startElementId, startAnchor, endElementId, endAnchor, connectorStyle, connectorType,
+  // startArrow, endArrow, startArrowDirection, endArrowDirection, connectorArrowSize, connectorSelfBendX/Y, etc.
 }
 interface Stroke { id: string; tool: 'pen' | 'eraser'; color: string; size: number; points: Point[]; }
 interface BoardData { id: string; title: string; themeId: ThemeId; strokes: Stroke[]; elements: BoardElement[]; width?: number; height?: number; gridEnabled?: boolean; gridSize?: number; thumbnail?: string; }

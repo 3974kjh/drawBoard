@@ -4,9 +4,18 @@
 	interface Props {
 		activeTool: DrawingTool;
 		keepToolActive: boolean;
+		/** Called when user picks a different tool; e.g. clear selection when switching away from select */
+		onToolChange?: (tool: DrawingTool) => void;
 	}
 
-	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false) }: Props = $props();
+	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false), onToolChange }: Props = $props();
+
+	function selectTool(tool: DrawingTool) {
+		if (tool !== activeTool) {
+			activeTool = tool;
+			onToolChange?.(tool);
+		}
+	}
 </script>
 
 <aside class="tool-panel">
@@ -14,7 +23,7 @@
 		<button
 			type="button"
 			class={`tool-btn ${activeTool === item.tool ? 'active' : ''}`}
-			onclick={() => (activeTool = item.tool)}
+			onclick={() => selectTool(item.tool)}
 			title={item.label}
 		>
 			<span class="icon">{@html item.icon}</span>

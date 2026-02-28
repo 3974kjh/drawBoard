@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		CONNECTABLE_TYPES,
 		TEXT_EDITABLE_TYPES,
 		type BoardElement,
 		type DrawingTool,
@@ -9,6 +10,7 @@
 		type Point,
 		type ResizeHandle
 	} from '$lib/board-types';
+	import { getAnchorPoints, getAnchorPosition, getConnectorPath } from '$lib/connector-geometry';
 
 	/** All 8 resize handle positions (compass directions). */
 	const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
@@ -41,6 +43,7 @@
 		onPointerDown: (e: PointerEvent) => void;
 		onPointerMove: (e: PointerEvent) => void;
 		onPointerUp: (e: PointerEvent) => void;
+		onPointerLeave?: () => void;
 		onDblClickElement: (id: string) => void;
 		onBeginResize: (e: PointerEvent, id: string, handle: ResizeHandle) => void;
 		onBeginRotate: (e: PointerEvent, id: string) => void;
@@ -49,6 +52,9 @@
 		onExpandBoard: (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => void;
 		gridEnabled: boolean;
 		gridSize: number;
+		/** Connector tool: first anchor chosen, show preview to mouse */
+		pendingConnector: { startElementId: string; startAnchor: string } | null;
+		connectorPreviewEnd: Point | null;
 	}
 
 	let {
@@ -75,16 +81,22 @@
 		onPointerDown,
 		onPointerMove,
 		onPointerUp,
+		onPointerLeave,
 		onDblClickElement,
 		onBeginResize,
 		onBeginRotate,
 		onElementTextChange,
 		onElementTextBlur,
-		onExpandBoard
+		onExpandBoard,
+		pendingConnector = null,
+		connectorPreviewEnd = null
 	}: Props = $props();
 
 	/* ── Internal eraser cursor tracking ── */
 	let eraserPos = $state<{ x: number; y: number } | null>(null);
+
+	/* ── Connector tool: which connectable element is hovered (for anchor display) ── */
+	let hoveredConnectableId = $state<string | null>(null);
 
 	/* ── Edge hover for expand buttons (visible-viewport coords) ── */
 	let hoverEdge = $state<'top' | 'bottom' | 'left' | 'right' | null>(null);
@@ -120,15 +132,38 @@
 	});
 
 	function handlePointerMove(event: PointerEvent) {
-		const rect = stageRef?.getBoundingClientRect();
+		const wrap = wrapRef;
+		const rect = wrap?.getBoundingClientRect();
 		if (rect) {
 			const bx = event.clientX - rect.left;
 			const by = event.clientY - rect.top;
+			const stageX = bx + (wrap?.scrollLeft ?? 0);
+			const stageY = by + (wrap?.scrollTop ?? 0);
 
 			if (activeTool === 'eraser') {
 				eraserPos = { x: bx, y: by };
 			} else {
 				eraserPos = null;
+			}
+
+			/* 선택 도구 또는 연결선 모드: 도형 호버 시 앵커 표시용 */
+			if (activeTool === 'select' || activeTool === 'connector') {
+				const connectable = elements.filter((e) => CONNECTABLE_TYPES.includes(e.type));
+				let found: string | null = null;
+				for (const el of connectable) {
+					if (
+						stageX >= el.x &&
+						stageX <= el.x + el.width &&
+						stageY >= el.y &&
+						stageY <= el.y + el.height
+					) {
+						found = el.id;
+						break;
+					}
+				}
+				hoveredConnectableId = found;
+			} else {
+				hoveredConnectableId = null;
 			}
 
 			/* Determine which VISIBLE VIEWPORT edge (if any) the pointer is near */
@@ -144,6 +179,8 @@
 	function handlePointerLeave() {
 		eraserPos = null;
 		hoverEdge = null;
+		hoveredConnectableId = null;
+		onPointerLeave?.();
 	}
 
 	/* ── Auto-focus action for textarea (preventScroll for tablet: avoid page scroll on focus) ── */
@@ -222,7 +259,142 @@
 		{/if}
 		<canvas bind:this={drawCanvas}></canvas>
 
+		<!-- Connector tool: anchor points on hovered shape -->
+		{#if (activeTool === 'select' || activeTool === 'connector') && hoveredConnectableId}
+			{@const hoveredEl = elements.find((e) => e.id === hoveredConnectableId)}
+			{#if hoveredEl}
+				<div class="connector-anchors" style="width:{stageWidth}px;height:{stageHeight}px;">
+					{#each getAnchorPoints(hoveredEl) as anchor (anchor.anchorId)}
+						<button
+							type="button"
+							class="connector-anchor-dot"
+							style="left:{anchor.x - 12}px;top:{anchor.y - 12}px;"
+							data-element-id={hoveredEl.id}
+							data-anchor-id={anchor.anchorId}
+							title="Connect here"
+						><span class="connector-anchor-dot-visual"></span></button>
+					{/each}
+				</div>
+			{/if}
+		{/if}
+
+		<!-- Connector lines (SVG layer; hit area per connector for selection) -->
+		<svg
+			class="connector-layer"
+			width={stageWidth}
+			height={stageHeight}
+			aria-hidden="true"
+		>
+			{#each elements.filter((e) => e.type === 'connector') as connector (connector.id)}
+				{@const pathData = getConnectorPath(connector, elements)}
+				{@const hasArrows = (connector.startArrow === 'arrow' || connector.endArrow === 'arrow') && pathData?.arrowAt1 && pathData?.arrowAt2}
+				{@const arrowSize = connector.connectorArrowSize ?? 10}
+				{@const startMarkerId = connector.startArrow === 'arrow' ? (connector.startArrowDirection && connector.startArrowDirection !== 'auto' ? `arrow-start-${connector.startArrowDirection}-${connector.id}` : `arrow-start-${connector.id}`) : ''}
+				{@const endMarkerId = connector.endArrow === 'arrow' ? (connector.endArrowDirection && connector.endArrowDirection !== 'auto' ? `arrow-end-${connector.endArrowDirection}-${connector.id}` : `arrow-end-${connector.id}`) : ''}
+				{#if pathData}
+					{@const connectorSelected = selectedElementIds.includes(connector.id)}
+					{@const connectorStroke = connectorSelected ? '#2563eb' : connector.strokeColor}
+					<g class="connector-group" style="color: {connector.strokeColor}">
+						{#if hasArrows}
+							{@const scale = arrowSize / 10}
+							{@const refY = arrowSize * 0.4}
+							<defs>
+								<marker id="arrow-start-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={arrowSize} refY={refY} orient="auto" markerUnits="userSpaceOnUse"><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-start-n-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={arrowSize} refY={refY} orient="270" markerUnits="userSpaceOnUse"><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-start-s-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={arrowSize} refY={refY} orient="90" markerUnits="userSpaceOnUse"><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-start-e-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={arrowSize} refY={refY} orient="0" markerUnits="userSpaceOnUse"><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-start-w-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={arrowSize} refY={refY} orient="180" markerUnits="userSpaceOnUse"><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-end-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={0} refY={refY} orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-end-n-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={0} refY={refY} orient="270" markerUnits="userSpaceOnUse"><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-end-s-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={0} refY={refY} orient="90" markerUnits="userSpaceOnUse"><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-end-e-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={0} refY={refY} orient="0" markerUnits="userSpaceOnUse"><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+								<marker id="arrow-end-w-{connector.id}" markerWidth={arrowSize} markerHeight={arrowSize * 0.8} refX={0} refY={refY} orient="180" markerUnits="userSpaceOnUse"><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker>
+							</defs>
+						{/if}
+						{#if connector.connectorStyle === 'double'}
+							<path
+								class="connector-path double-line"
+								class:selected={selectedElementIds.includes(connector.id)}
+								style="--connector-stroke: {connector.strokeColor}"
+								d={pathData.path}
+								stroke={connector.strokeColor}
+								stroke-width={Math.max(1, (connector.borderWidth ?? 2) / 2)}
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								fill="none"
+								transform="translate(-1,0)"
+							/>
+							<path
+								class="connector-path double-line"
+								class:selected={selectedElementIds.includes(connector.id)}
+								style="--connector-stroke: {connector.strokeColor}"
+								d={pathData.path}
+								stroke={connector.strokeColor}
+								stroke-width={Math.max(1, (connector.borderWidth ?? 2) / 2)}
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								fill="none"
+								transform="translate(1,0)"
+							/>
+						{:else}
+							<path
+								class="connector-path"
+								class:selected={selectedElementIds.includes(connector.id)}
+								style="--connector-stroke: {connector.strokeColor}"
+								d={pathData.path}
+								stroke={connector.strokeColor}
+								stroke-width={connector.borderWidth ?? 2}
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								fill="none"
+								stroke-dasharray={connector.connectorStyle === 'dashed' ? '6 4' : ''}
+							></path>
+						{/if}
+						{#if hasArrows && pathData.arrowAt1 && pathData.arrowAt2}
+							{@const a1 = pathData.arrowAt1}
+							{@const a2 = pathData.arrowAt2}
+							<!-- a1 at 1/7 (near start) = start arrow; a2 at 6/7 (near end) = end arrow. Markers only (no stroke). -->
+							{#if connector.connectorStyle === 'double'}
+								<path class="connector-arrow-segment" d="M {a1.x} {a1.y} L {pathData.start.x} {pathData.start.y}" stroke="none" fill="none" transform="translate(-1,0)" marker-start={startMarkerId ? `url(#${startMarkerId})` : ''} />
+								<path class="connector-arrow-segment" d="M {a1.x} {a1.y} L {pathData.start.x} {pathData.start.y}" stroke="none" fill="none" transform="translate(1,0)" marker-start={startMarkerId ? `url(#${startMarkerId})` : ''} />
+								<path class="connector-arrow-segment" d="M {a2.x} {a2.y} L {pathData.end.x} {pathData.end.y}" stroke="none" fill="none" transform="translate(-1,0)" marker-start={endMarkerId ? `url(#${endMarkerId})` : ''} />
+								<path class="connector-arrow-segment" d="M {a2.x} {a2.y} L {pathData.end.x} {pathData.end.y}" stroke="none" fill="none" transform="translate(1,0)" marker-start={endMarkerId ? `url(#${endMarkerId})` : ''} />
+							{:else}
+								<path class="connector-arrow-segment" d="M {a1.x} {a1.y} L {pathData.start.x} {pathData.start.y}" stroke="none" fill="none" marker-start={startMarkerId ? `url(#${startMarkerId})` : ''} />
+								<path class="connector-arrow-segment" d="M {a2.x} {a2.y} L {pathData.end.x} {pathData.end.y}" stroke="none" fill="none" marker-start={endMarkerId ? `url(#${endMarkerId})` : ''} />
+							{/if}
+						{/if}
+						<rect
+							class="connector-hit"
+							data-element-id={connector.id}
+							x={pathData.bounds.x}
+							y={pathData.bounds.y}
+							width={pathData.bounds.width}
+							height={pathData.bounds.height}
+							fill="transparent"
+						/>
+						{#if pathData.bendPoint && selectedElementIds.includes(connector.id)}
+							<circle
+								class="connector-bend-handle"
+								data-connector-bend
+								data-connector-id={connector.id}
+								cx={pathData.bendPoint.x}
+								cy={pathData.bendPoint.y}
+								r="6"
+								fill="#2563eb"
+								stroke="#fff"
+								stroke-width="2"
+							/>
+						{/if}
+					</g>
+				{/if}
+			{/each}
+		</svg>
+
 		{#each elements as element (element.id)}
+			{#if element.type === 'connector'}
+				<!-- Connectors rendered in SVG layer above -->
+			{:else}
 			{@const isSelected = selectedElementIds.includes(element.id)}
 			{@const isSingleSelected =
 				selectedSingleElement && selectedSingleElement.id === element.id}
@@ -322,6 +494,7 @@
 				{/each}
 			{/if}
 			</div>
+			{/if}
 		{/each}
 
 		{#if marquee}
@@ -370,6 +543,27 @@
 				{/if}
 			</div>
 		{/if}
+
+		<!-- Connector preview line: on top of everything so it’s not hidden by shapes -->
+		{#if pendingConnector && connectorPreviewEnd}
+			{@const startEl = elements.find((e) => e.id === pendingConnector.startElementId)}
+			{#if startEl}
+				{@const startPt = getAnchorPosition(startEl, pendingConnector.startAnchor, elements)}
+				{#if startPt}
+					<svg class="connector-preview-layer" width={stageWidth} height={stageHeight} aria-hidden="true">
+						<path
+							class="connector-preview"
+							d="M {startPt.x} {startPt.y} L {connectorPreviewEnd.x} {connectorPreviewEnd.y}"
+							stroke="#2563eb"
+							stroke-width="2"
+							stroke-dasharray="6 4"
+							stroke-linecap="round"
+							fill="none"
+						/>
+					</svg>
+				{/if}
+			{/if}
+		{/if}
 	</section>
 </section>
 
@@ -413,6 +607,62 @@
 		inset: 0;
 		width: 100%;
 		height: 100%;
+	}
+
+	.connector-layer {
+		position: absolute;
+		left: 0;
+		top: 0;
+		pointer-events: none;
+	}
+	.connector-layer .connector-hit {
+		pointer-events: all;
+		cursor: pointer;
+	}
+	.connector-path.selected {
+		stroke: #2563eb;
+		filter: drop-shadow(0 0 2px rgba(37, 99, 235, 0.6));
+	}
+	.connector-preview-layer {
+		position: absolute;
+		left: 0;
+		top: 0;
+		pointer-events: none;
+		z-index: 25;
+	}
+	.connector-preview {
+		pointer-events: none;
+	}
+	.connector-bend-handle {
+		pointer-events: all;
+		cursor: move;
+	}
+
+	.connector-anchors {
+		position: absolute;
+		left: 0;
+		top: 0;
+		pointer-events: none;
+		z-index: 15;
+	}
+	.connector-anchor-dot {
+		position: absolute;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: transparent;
+		cursor: crosshair;
+		pointer-events: all;
+	}
+	.connector-anchor-dot-visual {
+		position: absolute;
+		inset: 6px;
+		border-radius: 50%;
+		background: #2563eb;
+		border: 2px solid #fff;
+		box-shadow: 0 0 0 1px #1d4ed8;
 	}
 
 	/* ── Expand buttons – glassmorphism ── */

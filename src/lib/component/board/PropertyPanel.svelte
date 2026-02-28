@@ -3,6 +3,10 @@
 		BOARD_THEMES,
 		type AlignMode,
 		type BoardElement,
+		type ConnectorArrow,
+		type ConnectorArrowDirection,
+		type ConnectorStyle,
+		type ConnectorType,
 		type DistributeMode,
 		type DrawingTool,
 		type TextAlign,
@@ -47,6 +51,20 @@
 		gridSize: number;
 		onGridEnabledChange: (v: boolean) => void;
 		onGridSizeChange: (v: number) => void;
+		connectorStyle: ConnectorStyle;
+		connectorType: ConnectorType;
+		startArrow: ConnectorArrow;
+		endArrow: ConnectorArrow;
+		startArrowDirection: ConnectorArrowDirection;
+		endArrowDirection: ConnectorArrowDirection;
+		onConnectorStyleChange: (v: ConnectorStyle) => void;
+		onConnectorTypeChange: (v: ConnectorType) => void;
+		onStartArrowChange: (v: ConnectorArrow) => void;
+		onEndArrowChange: (v: ConnectorArrow) => void;
+		onStartArrowDirectionChange: (v: ConnectorArrowDirection) => void;
+		onEndArrowDirectionChange: (v: ConnectorArrowDirection) => void;
+		connectorArrowSize: number;
+		onConnectorArrowSizeChange: (v: number) => void;
 	}
 
 	let {
@@ -85,7 +103,21 @@
 		gridEnabled,
 		gridSize,
 		onGridEnabledChange,
-		onGridSizeChange
+		onGridSizeChange,
+		connectorStyle = 'solid',
+		connectorType = 'orthogonal',
+		startArrow = 'none',
+		endArrow = 'arrow',
+		startArrowDirection = 'auto',
+		endArrowDirection = 'auto',
+		onConnectorStyleChange,
+		onConnectorTypeChange,
+		onStartArrowChange,
+		onEndArrowChange,
+		onStartArrowDirectionChange,
+		onEndArrowDirectionChange,
+		connectorArrowSize = 10,
+		onConnectorArrowSizeChange
 	}: Props = $props();
 
 	const singleElement = $derived(
@@ -93,6 +125,8 @@
 			? selectedElements.find((el) => el.id === selectedElementIds[0])
 			: null
 	);
+
+	const showConnectorSection = $derived(singleElement?.type === 'connector');
 
 	/* Hidden input refs for custom color swatches */
 	let strokeColorRef = $state<HTMLInputElement | null>(null);
@@ -183,7 +217,110 @@
 		{#if singleElement?.type === 'text'}
 			<p class="hint-note">Set to 0 to hide the text border</p>
 		{/if}
+		{#if singleElement?.type === 'connector'}
+			<p class="hint-note">Line weight</p>
+		{/if}
 	</div>
+
+	<!-- ─── Connector: style, type, arrows ─── -->
+	{#if showConnectorSection}
+		<div class="section">
+			<div class="section-title">
+				<!-- Line style icon -->
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+				Line style
+			</div>
+			<div class="connector-options">
+				<label class="connector-option-row">
+					<span class="connector-option-label">Style</span>
+					<select
+						class="connector-option-select"
+						value={connectorStyle}
+						onchange={(e) => onConnectorStyleChange((e.currentTarget as HTMLSelectElement).value as ConnectorStyle)}
+					>
+						<option value="solid">Solid</option>
+						<option value="dashed">Dashed</option>
+						<option value="double">Double</option>
+					</select>
+				</label>
+				<label class="connector-option-row">
+					<span class="connector-option-label">Arrow size</span>
+					<div class="connector-option-right">
+						<input
+							type="range"
+							class="connector-option-range"
+							min="6"
+							max="24"
+							step="1"
+							value={connectorArrowSize}
+							oninput={(e) => onConnectorArrowSizeChange(Number((e.currentTarget as HTMLInputElement).value))}
+						/>
+						<span class="connector-option-badge">{connectorArrowSize}</span>
+					</div>
+				</label>
+				<label class="connector-option-row">
+					<span class="connector-option-label">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 4 12 12 22 12 12 20 12 12 2"/></svg>
+						Start arrow
+					</span>
+					<select
+						class="connector-option-select"
+						value={startArrow}
+						onchange={(e) => onStartArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
+					>
+						<option value="none">None</option>
+						<option value="arrow">Arrow</option>
+					</select>
+				</label>
+				{#if startArrow === 'arrow'}
+					<label class="connector-option-row connector-option-row-indent">
+						<span class="connector-option-label">Direction</span>
+						<select
+							class="connector-option-select"
+							value={startArrowDirection}
+							onchange={(e) => onStartArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
+						>
+							<option value="auto">Auto</option>
+							<option value="n">North</option>
+							<option value="s">South</option>
+							<option value="e">East</option>
+							<option value="w">West</option>
+						</select>
+					</label>
+				{/if}
+				<label class="connector-option-row">
+					<span class="connector-option-label">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 20 12 12 22 12 12 4 12 12 2"/></svg>
+						End arrow
+					</span>
+					<select
+						class="connector-option-select"
+						value={endArrow}
+						onchange={(e) => onEndArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
+					>
+						<option value="none">None</option>
+						<option value="arrow">Arrow</option>
+					</select>
+				</label>
+				{#if endArrow === 'arrow'}
+					<label class="connector-option-row connector-option-row-indent">
+						<span class="connector-option-label">Direction</span>
+						<select
+							class="connector-option-select"
+							value={endArrowDirection}
+							onchange={(e) => onEndArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
+						>
+							<option value="auto">Auto</option>
+							<option value="n">North</option>
+							<option value="s">South</option>
+							<option value="e">East</option>
+							<option value="w">West</option>
+						</select>
+					</label>
+				{/if}
+			</div>
+		</div>
+	{/if}
 
 	<!-- ─── Font size (text-editable elements only) ─── -->
 	{#if singleElement && TEXT_TYPES.includes(singleElement.type)}
@@ -748,6 +885,52 @@
 		color: #ef4444;
 		margin: 0.25rem 0 0;
 		font-weight: 500;
+	}
+
+	.connector-options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.connector-option-row {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+		min-height: 1.75rem;
+	}
+	.connector-option-label {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+	.connector-option-select {
+		width: 7.5rem;
+		font-size: 0.75rem;
+		padding: 0.25rem 0.4rem;
+		border: 1px solid #cbd5e1;
+		border-radius: 6px;
+		background: #fff;
+	}
+	.connector-option-right {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.connector-option-range {
+		width: 5rem;
+		accent-color: #2563eb;
+	}
+	.connector-option-badge {
+		font-size: 0.75rem;
+		min-width: 1.5rem;
+		text-align: right;
+		color: #64748b;
+	}
+	.connector-option-row-indent {
+		padding-left: 1.25rem;
 	}
 
 	.hint-note {

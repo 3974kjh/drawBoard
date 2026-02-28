@@ -1,5 +1,6 @@
 import type { BoardElement, Stroke } from './board-types';
 import { TEXT_EDITABLE_TYPES } from './board-types';
+import { getConnectorPath } from './connector-geometry';
 
 export const drawThemeBackground = (
 	ctx: CanvasRenderingContext2D,
@@ -99,12 +100,78 @@ export const loadImages = async (
 	return map;
 };
 
-/** Draw a board element to canvas (used for PDF export & thumbnail). */
+/** Direction angle in radians: 0 = E, π/2 = S, π = W, -π/2 = N */
+const ARROW_DIR_ANGLES: Record<string, number> = {
+	e: 0,
+	s: Math.PI / 2,
+	w: Math.PI,
+	n: -Math.PI / 2
+};
+
+/** Draw arrow head at (x,y). If angleRad is set, use it; else point from (fromX, fromY) toward (x,y). */
+function drawArrowHead(
+	ctx: CanvasRenderingContext2D,
+	x: number,
+	y: number,
+	fromX: number,
+	fromY: number,
+	size: number,
+	fillStyle: string,
+	angleRad?: number
+) {
+	const angle = angleRad ?? Math.atan2(y - fromY, x - fromX);
+	const a1 = angle + Math.PI * 0.8;
+	const a2 = angle - Math.PI * 0.8;
+	ctx.save();
+	ctx.fillStyle = fillStyle;
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	ctx.lineTo(x - size * Math.cos(a1), y - size * Math.sin(a1));
+	ctx.lineTo(x - size * Math.cos(a2), y - size * Math.sin(a2));
+	ctx.closePath();
+	ctx.fill();
+	ctx.restore();
+}
+
+/** Draw a board element to canvas (used for PDF export & thumbnail). allElements required when drawing connectors. */
 export const drawElementToCanvas = (
 	ctx: CanvasRenderingContext2D,
 	element: BoardElement,
-	imageMap?: Map<string, HTMLImageElement>
+	imageMap?: Map<string, HTMLImageElement>,
+	allElements?: BoardElement[]
 ): void => {
+	if (element.type === 'connector') {
+		if (!allElements) return;
+		const data = getConnectorPath(element, allElements);
+		if (!data) return;
+		ctx.save();
+		const bw = element.borderWidth ?? 2;
+		ctx.strokeStyle = element.strokeColor;
+		ctx.lineWidth = bw;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		const style = element.connectorStyle ?? 'solid';
+		if (style === 'dashed') ctx.setLineDash([6, 4]);
+		const path2d = new Path2D(data.path);
+		if (style === 'double') {
+			ctx.lineWidth = Math.max(1, Math.floor(bw / 2));
+			ctx.stroke(path2d);
+			ctx.translate(2, 0);
+			ctx.stroke(path2d);
+			ctx.translate(-2, 0);
+			ctx.lineWidth = bw;
+		} else {
+			ctx.stroke(path2d);
+		}
+		const arrowSize = element.connectorArrowSize ?? 10;
+		const startDir = element.startArrowDirection && element.startArrowDirection !== 'auto' ? ARROW_DIR_ANGLES[element.startArrowDirection] : undefined;
+		const endDir = element.endArrowDirection && element.endArrowDirection !== 'auto' ? ARROW_DIR_ANGLES[element.endArrowDirection] : undefined;
+		if (element.startArrow === 'arrow' && data.arrowAt1) drawArrowHead(ctx, data.arrowAt1.x, data.arrowAt1.y, data.start.x, data.start.y, arrowSize * 0.5, element.strokeColor, startDir);
+		if (element.endArrow === 'arrow' && data.arrowAt2) drawArrowHead(ctx, data.arrowAt2.x, data.arrowAt2.y, data.end.x, data.end.y, arrowSize * 0.5, element.strokeColor, endDir);
+		ctx.restore();
+		return;
+	}
+
 	ctx.save();
 
 	/* Apply rotation around the element centre */
@@ -252,7 +319,7 @@ export const renderThumbnail = (
 	ctx.scale(scale, scale);
 	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
 	strokes.forEach((s) => drawStroke(ctx, s));
-	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap));
+	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, elements));
 	ctx.restore();
 
 	return canvas.toDataURL('image/jpeg', 0.72);

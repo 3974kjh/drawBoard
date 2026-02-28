@@ -10,7 +10,19 @@ export type DrawingTool =
 	| 'line-h'
 	| 'line-v'
 	| 'text'
-	| 'image';
+	| 'image'
+	| 'connector';
+
+/** Line style for connector: solid, dashed, or double line */
+export type ConnectorStyle = 'solid' | 'dashed' | 'double';
+/** Path type: orthogonal (right-angle) or curved (wavy) */
+export type ConnectorType = 'orthogonal' | 'curved';
+/** Arrow at start/end of connector */
+export type ConnectorArrow = 'none' | 'arrow';
+/** Arrow direction: auto (along path) or fixed n/s/e/w */
+export type ConnectorArrowDirection = 'auto' | 'n' | 's' | 'e' | 'w';
+/** Anchor id on a shape edge (e.g. "n", "s", "n-mid" for rect; "0", "1-mid" for triangle) */
+export type ConnectorAnchorId = string;
 
 export type TextAlign = 'left' | 'center' | 'right';
 export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
@@ -37,7 +49,7 @@ export interface Stroke {
 export interface BoardElement {
 	id: string;
 	groupId?: string;
-	type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image';
+	type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image' | 'connector';
 	x: number;
 	y: number;
 	width: number;
@@ -52,6 +64,30 @@ export interface BoardElement {
 	fontSize: number;
 	/** base64 data-URL stored when type === 'image' */
 	imageDataUrl?: string;
+	/** Connector-only: start shape and anchor */
+	startElementId?: string;
+	startAnchor?: ConnectorAnchorId;
+	/** Connector-only: end shape and anchor */
+	endElementId?: string;
+	endAnchor?: ConnectorAnchorId;
+	connectorStyle?: ConnectorStyle;
+	connectorType?: ConnectorType;
+	startArrow?: ConnectorArrow;
+	endArrow?: ConnectorArrow;
+	/** Start arrow fixed direction (when startArrow === 'arrow') */
+	startArrowDirection?: ConnectorArrowDirection;
+	/** End arrow fixed direction (when endArrow === 'arrow') */
+	endArrowDirection?: ConnectorArrowDirection;
+	/** Orthogonal: x of the vertical segment (default: midpoint). Dragging the bend updates this. */
+	connectorBendX?: number;
+	/** Curved: quadratic bezier control point. When set, path uses this instead of default. */
+	connectorControlX?: number;
+	connectorControlY?: number;
+	/** Self-connection: bend point (when startElementId === endElementId). Dragging updates this. */
+	connectorSelfBendX?: number;
+	connectorSelfBendY?: number;
+	/** Arrow head size (user units). Default 10. */
+	connectorArrowSize?: number;
 }
 
 export interface BoardData {
@@ -140,7 +176,17 @@ export type InteractionState =
 			startAngle: number;
 			originRotation: number;
 	  }
-	| { kind: 'marquee'; pointerId: number; start: Point; current: Point; append: boolean };
+	| { kind: 'marquee'; pointerId: number; start: Point; current: Point; append: boolean }
+	| {
+			kind: 'connector-bend';
+			pointerId: number;
+			connectorId: string;
+			start: Point;
+			originalBendX?: number;
+			originalBendY?: number;
+			originalControlX?: number;
+			originalControlY?: number;
+	  };
 
 export interface Snapshot {
 	strokes: Stroke[];
@@ -169,6 +215,7 @@ const LINE_H_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
 const LINE_V_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/></svg>`;
 const TEXT_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
 const IMAGE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+const CONNECTOR_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l5-5 5 5V4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>`;
 
 export const TOOL_ITEMS: ToolItem[] = [
 	{ tool: 'select', label: 'Select', icon: SELECT_ICON },
@@ -182,6 +229,9 @@ export const TOOL_ITEMS: ToolItem[] = [
 	{ tool: 'text', label: 'Text', icon: TEXT_ICON },
 	{ tool: 'image', label: 'Image', icon: IMAGE_ICON }
 ];
+
+/** Element types that can have connectors attached (anchors) */
+export const CONNECTABLE_TYPES: BoardElement['type'][] = ['rect', 'ellipse', 'triangle', 'text', 'image'];
 
 export const BOARD_THEMES: BoardTheme[] = [
 	{
