@@ -43,7 +43,7 @@
 	import BoardStage from '$lib/component/board/BoardStage.svelte';
 	import ImportModal from '$lib/component/board/ImportModal.svelte';
 	import MinimapThumbnail from '$lib/component/board/MinimapThumbnail.svelte';
-	import toast from 'svelte-french-toast';
+	import toast from 'svelte-hot-french-toast';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';

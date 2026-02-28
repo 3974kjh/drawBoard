@@ -207,10 +207,13 @@ export const drawElementToCanvas = (
 /** Fixed thumbnail size matching minimap proportions (letterboxed full board) */
 const THUMB_W = 280;
 const THUMB_H = 148;
+/** Match minimap DPR for sharp thumbnails on high-DPI (main list & import modal) */
+const THUMB_DPR = 2;
 
 /**
  * Render a JPEG thumbnail of the board identical to the minimap: fixed size,
- * letterbox background, board scaled to fit inside. Used for main list and import modal.
+ * letterbox background, board scaled to fit inside. Rendered at THUMB_DPR× resolution
+ * for sharpness on retina displays. Used for main list and import modal.
  */
 export const renderThumbnail = (
 	stageWidth: number,
@@ -224,10 +227,12 @@ export const renderThumbnail = (
 	gridSize = 32
 ): string => {
 	const canvas = document.createElement('canvas');
-	canvas.width = THUMB_W;
-	canvas.height = THUMB_H;
+	canvas.width = THUMB_W * THUMB_DPR;
+	canvas.height = THUMB_H * THUMB_DPR;
 	const ctx = canvas.getContext('2d');
 	if (!ctx) return '';
+
+	ctx.scale(THUMB_DPR, THUMB_DPR);
 
 	const scale = Math.min(THUMB_W / stageWidth, THUMB_H / stageHeight);
 	const boardW = stageWidth * scale;
@@ -250,5 +255,5 @@ export const renderThumbnail = (
 	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap));
 	ctx.restore();
 
-	return canvas.toDataURL('image/jpeg', 0.55);
+	return canvas.toDataURL('image/jpeg', 0.72);
 };
