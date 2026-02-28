@@ -43,7 +43,6 @@
 	import BoardStage from '$lib/component/board/BoardStage.svelte';
 	import ImportModal from '$lib/component/board/ImportModal.svelte';
 	import MinimapThumbnail from '$lib/component/board/MinimapThumbnail.svelte';
-	import toast from 'svelte-hot-french-toast';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -1525,6 +1524,15 @@
 		};
 	});
 
+	/* Tablet: prevent page scroll when drawing/dragging on stage so touch stays on board */
+	$effect(() => {
+		const active = interaction;
+		if (!active) return;
+		const onTouchMove = (e: TouchEvent) => e.preventDefault();
+		document.addEventListener('touchmove', onTouchMove, { passive: false });
+		return () => document.removeEventListener('touchmove', onTouchMove);
+	});
+
 	/* Auto-save 5 seconds after last change (debounced): re-run on every edit to reset timer */
 	$effect(() => {
 		if (!isDirty) return;
@@ -1533,9 +1541,7 @@
 		void historyIndex;
 		void boardTitle;
 		const id = setTimeout(() => {
-			saveBoard(true).then(() => {
-				toast.success('Auto-saved');
-			});
+			saveBoard(true);
 		}, 1000);
 		return () => clearTimeout(id);
 	});

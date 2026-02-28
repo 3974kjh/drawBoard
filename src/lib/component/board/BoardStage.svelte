@@ -146,9 +146,9 @@
 		hoverEdge = null;
 	}
 
-	/* ── Auto-focus action for textarea ── */
+	/* ── Auto-focus action for textarea (preventScroll for tablet: avoid page scroll on focus) ── */
 	function autoFocus(node: HTMLTextAreaElement) {
-		requestAnimationFrame(() => node.focus());
+		requestAnimationFrame(() => node.focus({ preventScroll: true }));
 	}
 
 	/** Check if an element type supports text editing */
@@ -390,6 +390,7 @@
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
+		touch-action: manipulation; /* tablet: no double-tap zoom, stable touch for drawing */
 		background:
 			repeating-linear-gradient(0deg, var(--grid-color) 0 1px, transparent 1px var(--grid-size)),
 			repeating-linear-gradient(90deg, var(--grid-color) 0 1px, transparent 1px var(--grid-size)),
