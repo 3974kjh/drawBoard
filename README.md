@@ -198,7 +198,7 @@ DrawDashBoard의 로고는 손그림 스타일의 'D' 이니셜과 물결선으�
 
 | 방식 | 형식 | 특징 |
 |------|------|------|
-| 저장 | LocalStorage | 썸네일 자동 생성 후 저장 (격자 설정 반영) |
+| 저장 | IndexedDB | 썸네일 자동 생성 후 저장 (격자 설정 반영), 대용량 보드 지원 |
 | PDF 내보내기 | `.pdf` | jsPDF, 보드 크기 그대로 (격자 설정 반영) |
 | 이미지 내보내기 | `.png` | 전체 해상도 PNG 다운로드 (격자 설정 반영) |
 | 보드 불러오기 | 복사 붙여넣기 | 다른 보드 내용을 현재 보드로 병합 |
@@ -239,9 +239,14 @@ drawBoard/
     │       └── +page.svelte        # 보드 편집 (핵심 로직)
     └── lib/
         ├── board-types.ts          # 전체 타입 정의 + 상수 (Snapshot 포함)
-        ├── board-storage.ts        # LocalStorage CRUD
+        ├── board-storage.ts        # 보드 CRUD (IndexedDB 사용, 비동기 API)
         ├── canvas-renderer.ts      # Canvas 렌더링 (획·도형·텍스트·썸네일)
         ├── snap-engine.ts          # 스냅·가이드 계산 엔진
+        ├── db/                     # IndexedDB 레이어
+        │   ├── schema.ts           # DB 이름, 스토어 이름, 버전
+        │   ├── client.ts            # DB 연결 열기/닫기
+        │   ├── boards.ts            # 보드 스토어 getAll/get/put/delete
+        │   └── index.ts             # re-export
         └── component/
             ├── home/
             │   ├── BoardCard.svelte         # 보드 카드 (썸네일, 삭제 버튼)
@@ -322,7 +327,7 @@ npm run deploy
 ```
 
 > **Tech Stack** : SvelteKit · Svelte 5 Runes · TypeScript · jsPDF · Cloudflare Pages (`@sveltejs/adapter-cloudflare`)  
-> **데이터 저장** : `localStorage` (서버 없음, 완전 클라이언트 사이드)
+> **데이터 저장** : IndexedDB (브라우저 내장, 용량 제한 완화). 기존 localStorage 데이터는 최초 로드 시 자동 이전 후 삭제됨.
 
 ---
 

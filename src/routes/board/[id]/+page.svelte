@@ -200,8 +200,9 @@
 	};
 
 	/* ── Board I/O ── */
-	const refreshImportBoards = () => {
-		importBoards = getBoards().filter((item) => item.id !== boardId);
+	const refreshImportBoards = async () => {
+		const all = await getBoards();
+		importBoards = all.filter((item) => item.id !== boardId);
 	};
 
 	/** Migrate legacy element data (handles old 'line' type, missing rotation/borderWidth) */
@@ -226,8 +227,8 @@
 		h: Math.max(300, Math.floor(stageWrapRef?.clientHeight || 700))
 	});
 
-	const loadBoard = () => {
-		const board = getBoardById(boardId);
+	const loadBoard = async () => {
+		const board = await getBoardById(boardId);
 		if (!board) {
 			goto('/');
 			return;
@@ -251,11 +252,11 @@
 		historyIndex = -1;
 		commitSnapshot();
 		isDirty = false; // initial load is not a user change
-		refreshImportBoards();
+		await refreshImportBoards();
 	};
 
 	const saveBoard = async () => {
-		const original = getBoardById(boardId);
+		const original = await getBoardById(boardId);
 		if (!original) return;
 		/* Pre-load images so the thumbnail captures them */
 		const imageMap = await loadImages(elements);
@@ -270,7 +271,7 @@
 			gridEnabled,
 			gridSize
 		);
-		upsertBoard({
+		await upsertBoard({
 			...original,
 			title: boardTitle.trim() || original.title,
 			themeId,
@@ -283,7 +284,7 @@
 			gridSize
 		});
 		isDirty = false;
-		refreshImportBoards();
+		await refreshImportBoards();
 		alert('Board saved.');
 	};
 
@@ -1409,7 +1410,7 @@
 	});
 
 	onMount(() => {
-		loadBoard();
+		loadBoard().then(() => updateCanvasSize());
 		const observer = new ResizeObserver(() => {
 			updateCanvasSize();
 		});

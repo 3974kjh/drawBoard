@@ -11,8 +11,8 @@
 	let newBoardTitle = $state('');
 	let selectedThemeId = $state<ThemeId>('whiteboard');
 
-	const refreshBoards = () => {
-		boards = getBoards();
+	const refreshBoards = async () => {
+		boards = await getBoards();
 	};
 
 	const openCreateModal = () => {
@@ -25,17 +25,17 @@
 		showCreateModal = false;
 	};
 
-	const handleCreateBoard = () => {
+	const handleCreateBoard = async () => {
 		const nextTitle = newBoardTitle.trim() || `New Board ${boards.length + 1}`;
-		const board = createBoard(nextTitle, selectedThemeId);
+		const board = await createBoard(nextTitle, selectedThemeId);
 		showCreateModal = false;
 		goto(`/board/${board.id}`);
 	};
 
-	const handleDeleteBoard = (boardId: string) => {
+	const handleDeleteBoard = async (boardId: string) => {
 		if (!confirm('Delete this board?')) return;
-		deleteBoard(boardId);
-		refreshBoards();
+		await deleteBoard(boardId);
+		await refreshBoards();
 	};
 
 	const openBoard = (boardId: string) => {

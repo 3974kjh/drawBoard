@@ -1,52 +1,57 @@
 import { browser } from '$app/environment';
 import type { BoardData, ThemeId } from '$lib/board-types';
+import { getAllBoards, getBoardById as dbGetBoardById, putBoard, deleteBoardById as dbDeleteBoardById } from '$lib/db';
 
-const STORAGE_KEY = 'drawboard.boards.v1';
+const LEGACY_STORAGE_KEY = 'drawboard.boards.v1';
+let migratedFromLocalStorage = false;
 
-const createId = () => {
+/** One-time migration: copy boards from localStorage to IndexedDB and clear the key. */
+async function migrateFromLocalStorageIfNeeded(): Promise<void> {
+	if (!browser || migratedFromLocalStorage) return;
+	migratedFromLocalStorage = true;
+	const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+	if (!raw) return;
+	try {
+		const parsed = JSON.parse(raw);
+		const boards = Array.isArray(parsed) ? (parsed as BoardData[]) : [];
+		for (const board of boards) {
+			await putBoard(board);
+		}
+		localStorage.removeItem(LEGACY_STORAGE_KEY);
+	} catch {
+		// ignore parse/put errors; leave localStorage as-is
+	}
+}
+
+const createId = (): string => {
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 		return crypto.randomUUID();
 	}
 	return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 };
 
-const safeParse = (value: string | null): BoardData[] => {
-	if (!value) return [];
-	try {
-		const parsed = JSON.parse(value);
-		return Array.isArray(parsed) ? (parsed as BoardData[]) : [];
-	} catch {
-		return [];
-	}
-};
-
-const sortByUpdatedAt = (boards: BoardData[]) =>
-	boards.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-export const getBoards = (): BoardData[] => {
+/** Returns all boards sorted by updatedAt descending. */
+export async function getBoards(): Promise<BoardData[]> {
 	if (!browser) return [];
-	return sortByUpdatedAt(safeParse(localStorage.getItem(STORAGE_KEY)));
-};
+	await migrateFromLocalStorageIfNeeded();
+	return getAllBoards();
+}
 
-export const getBoardById = (id: string): BoardData | null => {
-	return getBoards().find((board) => board.id === id) ?? null;
-};
+/** Returns a single board by id, or null. */
+export async function getBoardById(id: string): Promise<BoardData | null> {
+	if (!browser) return null;
+	await migrateFromLocalStorageIfNeeded();
+	return dbGetBoardById(id);
+}
 
-export const upsertBoard = (board: BoardData): BoardData => {
-	if (!browser) return board;
-	const boards = getBoards();
-	const nextBoard = { ...board, updatedAt: new Date().toISOString() };
-	const idx = boards.findIndex((item) => item.id === nextBoard.id);
-	if (idx > -1) {
-		boards[idx] = nextBoard;
-	} else {
-		boards.push(nextBoard);
-	}
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(sortByUpdatedAt(boards)));
-	return nextBoard;
-};
+/** Inserts or updates a board. Returns the saved board. */
+export async function upsertBoard(board: BoardData): Promise<BoardData> {
+	if (!browser) return { ...board, updatedAt: new Date().toISOString() };
+	return putBoard(board);
+}
 
-export const createBoard = (title: string, themeId: ThemeId): BoardData => {
+/** Creates a new board and saves it. Returns the created board. */
+export async function createBoard(title: string, themeId: ThemeId): Promise<BoardData> {
 	const now = new Date().toISOString();
 	const board: BoardData = {
 		id: createId(),
@@ -58,10 +63,10 @@ export const createBoard = (title: string, themeId: ThemeId): BoardData => {
 		elements: []
 	};
 	return upsertBoard(board);
-};
+}
 
-export const deleteBoard = (id: string): void => {
+/** Deletes a board by id. */
+export async function deleteBoard(id: string): Promise<void> {
 	if (!browser) return;
-	const boards = getBoards().filter((board) => board.id !== id);
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(boards));
-};
+	await dbDeleteBoardById(id);
+}
