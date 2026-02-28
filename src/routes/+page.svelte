@@ -10,6 +10,8 @@
 	let showCreateModal = $state(false);
 	let newBoardTitle = $state('');
 	let selectedThemeId = $state<ThemeId>('whiteboard');
+	let showDeleteConfirmModal = $state(false);
+	let pendingDeleteId = $state<string | null>(null);
 
 	const refreshBoards = async () => {
 		boards = await getBoards();
@@ -32,10 +34,21 @@
 		goto(`/board/${board.id}`);
 	};
 
-	const handleDeleteBoard = async (boardId: string) => {
-		if (!confirm('Delete this board?')) return;
-		await deleteBoard(boardId);
+	const openDeleteConfirmModal = (boardId: string) => {
+		pendingDeleteId = boardId;
+		showDeleteConfirmModal = true;
+	};
+
+	const closeDeleteConfirmModal = () => {
+		showDeleteConfirmModal = false;
+		pendingDeleteId = null;
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!pendingDeleteId) return;
+		await deleteBoard(pendingDeleteId);
 		await refreshBoards();
+		closeDeleteConfirmModal();
 	};
 
 	const openBoard = (boardId: string) => {
@@ -77,7 +90,7 @@
 			</button>
 
 			{#each boards as board (board.id)}
-				<BoardCard {board} onOpen={openBoard} onDelete={handleDeleteBoard} />
+				<BoardCard {board} onOpen={openBoard} onDelete={openDeleteConfirmModal} />
 			{/each}
 		</div>
 	</section>
@@ -90,6 +103,31 @@
 	onCreate={handleCreateBoard}
 	onClose={closeCreateModal}
 />
+
+{#if showDeleteConfirmModal}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="delete-modal-title"
+		onkeydown={(e) => e.key === 'Escape' && closeDeleteConfirmModal()}
+		tabindex="-1"
+	>
+		<div class="modal-dialog">
+			<h2 id="delete-modal-title" class="modal-title">Delete this board?</h2>
+			<p class="modal-message">This action cannot be undone.</p>
+			<div class="modal-actions">
+				<button type="button" class="modal-btn secondary" onclick={closeDeleteConfirmModal}>
+					Cancel
+				</button>
+				<button type="button" class="modal-btn danger" onclick={handleConfirmDelete}>
+					Delete
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	:global(body) {
@@ -258,5 +296,72 @@
 		font-size: 0.9rem;
 		font-weight: 600;
 		letter-spacing: -0.01em;
+	}
+
+	/* ── Delete confirm modal ── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		background: rgba(15, 23, 42, 0.55);
+		backdrop-filter: blur(6px);
+		display: grid;
+		place-items: center;
+	}
+
+	.modal-dialog {
+		background: #fff;
+		border-radius: 20px;
+		padding: 2rem 2.2rem;
+		width: min(380px, 92vw);
+		box-shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+	}
+
+	.modal-title {
+		margin: 0 0 0.5rem;
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: #1e293b;
+	}
+
+	.modal-message {
+		margin: 0 0 1.5rem;
+		font-size: 0.88rem;
+		color: #64748b;
+		line-height: 1.5;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 0.6rem;
+		justify-content: flex-end;
+	}
+
+	.modal-btn {
+		padding: 0.6rem 1rem;
+		border-radius: 10px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		border: none;
+		transition: filter 0.15s;
+	}
+
+	.modal-btn.secondary {
+		background: #f1f5f9;
+		color: #475569;
+	}
+
+	.modal-btn.secondary:hover {
+		filter: brightness(0.96);
+	}
+
+	.modal-btn.danger {
+		background: #dc2626;
+		color: #fff;
+	}
+
+	.modal-btn.danger:hover {
+		filter: brightness(1.08);
 	}
 </style>

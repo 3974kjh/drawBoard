@@ -210,7 +210,7 @@
 		transform: translateX(2px);
 	}
 
-	/* Thumbnail cell */
+	/* Thumbnail cell – same letterbox as minimap */
 	.item-thumb {
 		position: relative;
 		width: 90px;
@@ -218,7 +218,7 @@
 		flex-shrink: 0;
 		border-radius: 10px;
 		overflow: hidden;
-		background: var(--bg, #f1f5f9);
+		background: #dbe3ef;
 		border: 1px solid rgba(0, 0, 0, 0.06);
 		margin-left: 0.55rem;
 	}
@@ -226,7 +226,7 @@
 	.thumb-img {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		display: block;
 	}
 

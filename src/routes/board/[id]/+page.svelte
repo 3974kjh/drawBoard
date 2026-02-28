@@ -73,11 +73,18 @@
 	let keepToolActive = $state(false);
 	let showImportModal = $state(false);
 	let importBoards = $state<BoardData[]>([]);
-	/** true = unsaved changes exist */
-	let isDirty = $state(false);
+	/** true = unsaved content (strokes/elements/settings) */
+	let _contentDirty = $state(false);
+	/** title at last load or save (so title change counts as dirty) */
+	let _lastSavedTitle = $state('');
+	/** true when there are unsaved changes (content or title) */
+	const isDirty = $derived(_contentDirty || boardTitle !== _lastSavedTitle);
 	/** URL to navigate to after handling the unsaved-changes dialog */
 	let _pendingNavUrl = $state<string | null>(null);
 	let showUnsavedModal = $state(false);
+	let showSavedModal = $state(false);
+	let showClearConfirmModal = $state(false);
+	let showAutoSavedToast = $state(false);
 	let interaction = $state<InteractionState>(null);
 	let history = $state<Snapshot[]>([]);
 	let historyIndex = $state(-1);
@@ -167,7 +174,7 @@
 		};
 		history = [...history.slice(0, historyIndex + 1), snapshot];
 		historyIndex = history.length - 1;
-		isDirty = true;
+		_contentDirty = true;
 	};
 
 	const applySnapshot = (snapshot: Snapshot) => {
@@ -235,10 +242,16 @@
 		}
 		boardTitle = board.title;
 		themeId = board.themeId;
-		/* Restore saved canvas size; fall back to viewport dimensions for new boards */
-		const vp = getViewportSize();
-		stageWidth = board.width ?? vp.w;
-		stageHeight = board.height ?? vp.h;
+		const hasSavedSize = board.width != null && board.height != null;
+		/* Restore saved canvas size; for new boards use viewport (same as clearBoard) after layout */
+		if (hasSavedSize) {
+			stageWidth = board.width ?? stageWidth;
+			stageHeight = board.height ?? stageHeight;
+		} else {
+			const vp = getViewportSize();
+			stageWidth = vp.w;
+			stageHeight = vp.h;
+		}
 		gridEnabled = board.gridEnabled ?? true;
 		gridSize = board.gridSize ?? 32;
 		strokes = deepClone(board.strokes).filter((s: Stroke) => s.tool !== 'eraser');
@@ -251,11 +264,28 @@
 		history = [];
 		historyIndex = -1;
 		commitSnapshot();
-		isDirty = false; // initial load is not a user change
+		_contentDirty = false;
+		_lastSavedTitle = board.title;
 		await refreshImportBoards();
+		/* New board: apply viewport size after layout (same as clearBoard) so no scroll on first paint */
+		if (!hasSavedSize) {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					const vp = getViewportSize();
+					stageWidth = vp.w;
+					stageHeight = vp.h;
+					if (drawCanvas) {
+						drawCanvas.width = stageWidth;
+						drawCanvas.height = stageHeight;
+					}
+					redrawCanvas();
+					commitSnapshot();
+				});
+			});
+		}
 	};
 
-	const saveBoard = async () => {
+	const saveBoard = async (silent = false) => {
 		const original = await getBoardById(boardId);
 		if (!original) return;
 		/* Pre-load images so the thumbnail captures them */
@@ -271,9 +301,10 @@
 			gridEnabled,
 			gridSize
 		);
+		const savedTitle = boardTitle.trim() || original.title;
 		await upsertBoard({
 			...original,
-			title: boardTitle.trim() || original.title,
+			title: savedTitle,
 			themeId,
 			strokes: deepClone(strokes),
 			elements: deepClone(elements),
@@ -283,13 +314,21 @@
 			gridEnabled,
 			gridSize
 		});
-		isDirty = false;
+		_contentDirty = false;
+		_lastSavedTitle = savedTitle;
 		await refreshImportBoards();
-		alert('Board saved.');
+		if (!silent) showSavedModal = true;
+	};
+
+	const openClearConfirmModal = () => {
+		showClearConfirmModal = true;
+	};
+
+	const closeClearConfirmModal = () => {
+		showClearConfirmModal = false;
 	};
 
 	const clearBoard = () => {
-		if (!confirm('Clear the board?\nAll content and board size will be reset.')) return;
 		const vp = getViewportSize();
 		strokes = [];
 		elements = [];
@@ -306,6 +345,7 @@
 		history = [];
 		historyIndex = -1;
 		commitSnapshot();
+		showClearConfirmModal = false;
 	};
 
 	const importBoardContent = (source: BoardData) => {
@@ -1390,7 +1430,8 @@
 	};
 
 	const handleLeaveWithoutSave = () => {
-		isDirty = false;            // clear flag so beforeNavigate doesn't re-intercept
+		_contentDirty = false;
+		_lastSavedTitle = boardTitle; // treat current title as "saved" so we don't re-intercept
 		showUnsavedModal = false;
 		if (_pendingNavUrl) goto(_pendingNavUrl);
 		_pendingNavUrl = null;
@@ -1483,18 +1524,42 @@
 			window.removeEventListener('beforeunload', onBeforeUnload);
 		};
 	});
+
+	/* Auto-save 5 seconds after last change (debounced): re-run on every edit to reset timer */
+	$effect(() => {
+		if (!isDirty) return;
+		/* Depend on values that change when user edits so timer resets each time */
+		void history.length;
+		void historyIndex;
+		void boardTitle;
+		const id = setTimeout(() => {
+			saveBoard(true).then(() => {
+				showAutoSavedToast = true;
+				setTimeout(() => {
+					showAutoSavedToast = false;
+				}, 2000);
+			});
+		}, 1000);
+		return () => clearTimeout(id);
+	});
 </script>
 
 <main class="board-page">
+	{#if showAutoSavedToast}
+		<div class="auto-saved-toast" role="status" aria-live="polite">
+			<!-- prettier-ignore -->
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+			<span>Auto-saved</span>
+		</div>
+	{/if}
 	<Topbar
 		bind:boardTitle
 		{canUndo}
 		{canRedo}
 		onGoBack={() => goto('/')}
-		onSave={saveBoard}
 		onDownloadPdf={downloadPdf}
 		onDownloadImage={downloadBoardImage}
-		onClear={clearBoard}
+		onClear={openClearConfirmModal}
 		onShowImport={() => (showImportModal = true)}
 		onUndo={undo}
 		onRedo={redo}
@@ -1635,6 +1700,52 @@
 	</div>
 {/if}
 
+{#if showSavedModal}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="saved-modal-title"
+		onkeydown={(e) => e.key === 'Escape' && (showSavedModal = false)}
+		tabindex="-1"
+	>
+		<div class="modal-dialog modal-dialog-sm">
+			<h2 id="saved-modal-title" class="modal-title">Board saved.</h2>
+			<div class="modal-actions modal-actions-single">
+				<button type="button" class="modal-btn primary" onclick={() => (showSavedModal = false)}>
+					OK
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showClearConfirmModal}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="clear-modal-title"
+		onkeydown={(e) => e.key === 'Escape' && closeClearConfirmModal()}
+		tabindex="-1"
+	>
+		<div class="modal-dialog">
+			<h2 id="clear-modal-title" class="modal-title">Clear the board?</h2>
+			<p class="modal-message">All content and board size will be reset.</p>
+			<div class="modal-actions">
+				<button type="button" class="modal-btn secondary" onclick={closeClearConfirmModal}>
+					Cancel
+				</button>
+				<button type="button" class="modal-btn danger" onclick={clearBoard}>
+					Clear
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	:global(body) {
 		margin: 0;
@@ -1646,6 +1757,42 @@
 		min-height: 100vh;
 		display: grid;
 		grid-template-rows: auto 1fr;
+	}
+
+	.auto-saved-toast {
+		position: fixed;
+		top: 12px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 10000;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		background: #fff;
+		border: 1px solid #e2e8f0;
+		border-radius: 10px;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #334155;
+		animation: toast-in 0.25s ease;
+	}
+
+	.auto-saved-toast svg {
+		flex-shrink: 0;
+		color: #22c55e;
+	}
+
+	@keyframes toast-in {
+		from {
+			opacity: 0;
+			transform: translateX(-50%) translateY(-8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
+		}
 	}
 
 	.workspace {
@@ -1773,5 +1920,88 @@
 	.btn-cancel {
 		background: #f1f5f9;
 		color: #64748b;
+	}
+
+	/* ── Saved / Clear confirm modals ── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		background: rgba(15, 23, 42, 0.55);
+		backdrop-filter: blur(6px);
+		display: grid;
+		place-items: center;
+	}
+
+	.modal-dialog {
+		background: #fff;
+		border-radius: 20px;
+		padding: 2rem 2.2rem;
+		width: min(420px, 92vw);
+		box-shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+	}
+
+	.modal-dialog-sm {
+		padding: 1.5rem 2rem;
+		width: min(320px, 92vw);
+	}
+
+	.modal-title {
+		margin: 0 0 0.5rem;
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: #1e293b;
+	}
+
+	.modal-message {
+		margin: 0 0 1.5rem;
+		font-size: 0.88rem;
+		color: #64748b;
+		line-height: 1.5;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 0.6rem;
+		justify-content: flex-end;
+	}
+
+	.modal-actions-single {
+		justify-content: center;
+		margin-top: 0.5rem;
+	}
+
+	.modal-btn {
+		padding: 0.6rem 1.2rem;
+		border-radius: 10px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		border: none;
+		transition: filter 0.15s;
+	}
+
+	.modal-btn.secondary {
+		background: #f1f5f9;
+		color: #475569;
+	}
+
+	.modal-btn.primary {
+		background: #2563eb;
+		color: #fff;
+	}
+
+	.modal-btn.danger {
+		background: #dc2626;
+		color: #fff;
+	}
+
+	.modal-btn:hover {
+		filter: brightness(0.96);
+	}
+
+	.modal-btn.primary:hover,
+	.modal-btn.danger:hover {
+		filter: brightness(1.08);
 	}
 </style>

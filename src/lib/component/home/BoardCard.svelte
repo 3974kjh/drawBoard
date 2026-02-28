@@ -89,7 +89,6 @@
 	.board-card {
 		background: #fff;
 		border-radius: 16px;
-		border: 1px solid #e2e8f0;
 		overflow: hidden;
 		cursor: pointer;
 		transition: box-shadow 0.18s, transform 0.12s;
@@ -97,6 +96,35 @@
 		flex-direction: column;
 		text-align: left;
 		outline-offset: 3px;
+		/* Border only at each corner (L-shaped) */
+		--corner: 2px;
+		--corner-len: 20px;
+		--corner-color: #334155;
+		background-image:
+			linear-gradient(to right, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to bottom, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to left, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to bottom, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to left, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to top, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to right, var(--corner-color) var(--corner), transparent var(--corner)),
+			linear-gradient(to top, var(--corner-color) var(--corner), transparent var(--corner));
+		background-size:
+			var(--corner-len) var(--corner), var(--corner) var(--corner-len),
+			var(--corner-len) var(--corner), var(--corner) var(--corner-len),
+			var(--corner-len) var(--corner), var(--corner) var(--corner-len),
+			var(--corner-len) var(--corner), var(--corner) var(--corner-len);
+		background-position:
+			0 0, 0 0,
+			100% 0, 100% 0,
+			100% 100%, 100% 100%,
+			0 100%, 0 100%;
+		background-repeat: no-repeat;
+		box-shadow:
+			0 1px 2px rgba(0, 0, 0, 0.04),
+			0 4px 12px rgba(0, 0, 0, 0.06),
+			0 8px 24px rgba(15, 23, 42, 0.1),
+			0 2px 6px rgba(0, 0, 0, 0.05);
 	}
 
 	.board-card:focus-visible {
@@ -104,7 +132,10 @@
 	}
 
 	.board-card:hover {
-		box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+		box-shadow:
+			0 2px 8px rgba(0, 0, 0, 0.08),
+			0 12px 32px rgba(15, 23, 42, 0.14),
+			0 6px 16px rgba(0, 0, 0, 0.08);
 		transform: translateY(-3px);
 	}
 
@@ -114,7 +145,7 @@
 		width: 100%;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		background: #f1f5f9;
+		background: #dbe3ef;
 		border-bottom: 1px solid #e2e8f0;
 		flex-shrink: 0;
 	}
@@ -122,7 +153,7 @@
 	.thumb-img {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		display: block;
 		transition: transform 0.25s ease;
 	}

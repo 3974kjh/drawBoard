@@ -204,9 +204,13 @@ export const drawElementToCanvas = (
 	ctx.restore();
 };
 
+/** Fixed thumbnail size matching minimap proportions (letterboxed full board) */
+const THUMB_W = 280;
+const THUMB_H = 148;
+
 /**
- * Render a small JPEG thumbnail of the board for card previews.
- * Returns a data-URL string.
+ * Render a JPEG thumbnail of the board identical to the minimap: fixed size,
+ * letterbox background, board scaled to fit inside. Used for main list and import modal.
  */
 export const renderThumbnail = (
 	stageWidth: number,
@@ -219,16 +223,32 @@ export const renderThumbnail = (
 	gridEnabled = true,
 	gridSize = 32
 ): string => {
-	const thumbW = 280;
-	const thumbH = Math.round(thumbW * (stageHeight / stageWidth));
 	const canvas = document.createElement('canvas');
-	canvas.width = thumbW;
-	canvas.height = thumbH;
+	canvas.width = THUMB_W;
+	canvas.height = THUMB_H;
 	const ctx = canvas.getContext('2d');
 	if (!ctx) return '';
-	ctx.scale(thumbW / stageWidth, thumbH / stageHeight);
+
+	const scale = Math.min(THUMB_W / stageWidth, THUMB_H / stageHeight);
+	const boardW = stageWidth * scale;
+	const boardH = stageHeight * scale;
+	const ox = (THUMB_W - boardW) / 2;
+	const oy = (THUMB_H - boardH) / 2;
+
+	/* Letterbox (same as minimap) */
+	ctx.fillStyle = '#dbe3ef';
+	ctx.fillRect(0, 0, THUMB_W, THUMB_H);
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(ox, oy, boardW, boardH);
+	ctx.clip();
+	ctx.translate(ox, oy);
+	ctx.scale(scale, scale);
 	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
 	strokes.forEach((s) => drawStroke(ctx, s));
 	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap));
+	ctx.restore();
+
 	return canvas.toDataURL('image/jpeg', 0.55);
 };
