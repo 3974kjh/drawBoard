@@ -51,7 +51,7 @@
 			</div>
 
 			<!-- Board list -->
-			<div class="import-list">
+			<div class="import-list scrollbar-theme">
 				{#if boards.length === 0}
 					<div class="empty-wrap">
 						<!-- prettier-ignore -->

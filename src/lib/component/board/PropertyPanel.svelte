@@ -115,7 +115,7 @@
 	};
 </script>
 
-<aside class="property-panel">
+<aside class="property-panel scrollbar-theme">
 	<!-- ─── Color section ─── -->
 	<div class="section">
 		<div class="section-title">

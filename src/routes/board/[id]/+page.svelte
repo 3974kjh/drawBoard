@@ -1503,6 +1503,7 @@
 	<div class="workspace">
 		<ToolPanel bind:activeTool bind:keepToolActive />
 
+		<div class="stage-container">
 		<BoardStage
 			bind:stageRef
 			bind:drawCanvas
@@ -1534,6 +1535,7 @@
 			onElementTextBlur={handleElementTextBlur}
 			onExpandBoard={expandBoard}
 		/>
+		</div>
 
 		<div class="right-col">
 			<MinimapThumbnail
@@ -1653,6 +1655,13 @@
 		gap: 0.7rem;
 		padding: 0.7rem;
 		box-sizing: border-box;
+	}
+
+	/* Constrain stage area so scroll only appears when board content exceeds viewport */
+	.stage-container {
+		min-height: 0;
+		min-width: 0;
+		overflow: hidden;
 	}
 
 	.right-col {

@@ -157,7 +157,7 @@
 	}
 </script>
 
-<section class="stage-wrap" bind:this={wrapRef}>
+<section class="stage-wrap scrollbar-theme" bind:this={wrapRef}>
 	<section
 		class="board-stage"
 		class:eraser-active={activeTool === 'eraser'}
@@ -376,41 +376,13 @@
 <style>
 	.stage-wrap {
 		position: relative;
+		width: 100%;
+		height: 100%;
+		min-height: 0;
+		min-width: 0;
 		overflow: auto;
 		border: 1px solid #cbd5e1;
 		background: #f8fafc;
-		/* Firefox */
-		scrollbar-width: thin;
-		scrollbar-color: #94a3b8 transparent;
-	}
-
-	/* Webkit (Chrome, Safari, Edge) */
-	.stage-wrap::-webkit-scrollbar {
-		width: 7px;
-		height: 7px;
-	}
-
-	.stage-wrap::-webkit-scrollbar-track {
-		background: transparent;
-		border-radius: 99px;
-	}
-
-	.stage-wrap::-webkit-scrollbar-thumb {
-		background: #94a3b8;
-		border-radius: 99px;
-		border: 2px solid transparent;
-		background-clip: padding-box;
-		transition: background 0.2s;
-	}
-
-	.stage-wrap::-webkit-scrollbar-thumb:hover {
-		background: #64748b;
-		border: 2px solid transparent;
-		background-clip: padding-box;
-	}
-
-	.stage-wrap::-webkit-scrollbar-corner {
-		background: transparent;
 	}
 
 	.board-stage {

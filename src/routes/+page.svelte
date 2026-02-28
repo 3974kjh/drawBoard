@@ -61,7 +61,7 @@
 	</header>
 
 	<!-- ── Board grid (always shown, first card = add new) ── -->
-	<section class="boards-section">
+	<section class="boards-section scrollbar-theme">
 		{#if boards.length > 0}
 			<p class="board-count">{boards.length} board{boards.length !== 1 ? 's' : ''}</p>
 		{/if}
