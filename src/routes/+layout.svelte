@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { Toaster } from 'svelte-hot-french-toast';
 	let { children } = $props();
 </script>
 
+<Toaster />
 <svelte:head>
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </svelte:head>

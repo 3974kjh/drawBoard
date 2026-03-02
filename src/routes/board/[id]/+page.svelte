@@ -42,6 +42,7 @@
 	} from '$lib/canvas-renderer';
 	import { onMount } from 'svelte';
 	import { jsPDF } from 'jspdf';
+	import toast from 'svelte-hot-french-toast';
 
 	import Topbar from '$lib/component/board/Topbar.svelte';
 	import ToolPanel from '$lib/component/board/ToolPanel.svelte';
@@ -217,12 +218,14 @@
 		if (!canUndo) return;
 		historyIndex -= 1;
 		applySnapshot(history[historyIndex]);
+		toast.success('Undone.');
 	};
 
 	const redo = () => {
 		if (!canRedo) return;
 		historyIndex += 1;
 		applySnapshot(history[historyIndex]);
+		toast.success('Redone.');
 	};
 
 	/* ── Board I/O ── */
@@ -365,6 +368,7 @@
 		historyIndex = -1;
 		commitSnapshot();
 		showClearConfirmModal = false;
+		toast.success('Board cleared.');
 	};
 
 	const importBoardContent = (source: BoardData) => {
@@ -375,6 +379,7 @@
 		editingElementId = null;
 		showImportModal = false;
 		commitSnapshot();
+		toast.success('Board content imported.');
 	};
 
 	/* ── Element helpers ── */
@@ -1621,6 +1626,7 @@
 			stageHeight
 		);
 		pdf.save(`${boardTitle || 'board'}.pdf`);
+		toast.success('Exported as PDF.');
 	};
 
 	/** Export the full board as a PNG image file. */
@@ -1643,6 +1649,7 @@
 				a.download = `${boardTitle || 'board'}.png`;
 				a.click();
 				URL.revokeObjectURL(url);
+				toast.success('Exported as image.');
 			},
 			'image/png'
 		);
