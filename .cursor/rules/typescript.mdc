@@ -5,7 +5,7 @@ alwaysApply: true
 
 # TypeScript
 
-- Shared types/interfaces: 프로젝트 규칙에 따라 **`type` 폴더** 또는 `src/lib/board-types.ts` 등 한곳에서 관리. (see **coding-rules.mdc** – Type 폴더)
+- Shared types/interfaces: **`src/lib/Type/`** 폴더에서 타입별 파일로 관리. `Type/index.ts`에서 re-export. 사용처: `import type { ... } from '$lib/Type'`. (기존 호환용 `board-types.ts`는 Type+Enum re-export)
 - Use `interface` for object shapes, `type` for unions and aliases
 - Avoid `any`; prefer `unknown` + narrowing / type guards
 - Derived / computed values → `$derived`, not a raw `const` inside `$effect`

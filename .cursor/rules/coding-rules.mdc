@@ -23,28 +23,26 @@ Svelte 컴포넌트(`.svelte`) 내부에서는 아래 순서로 코드를 작성
 
 ## 로직 분리 (Core 파일)
 
-- **비즈니스/도메인 로직**은 해당 컴포넌트와 같은 계층에 **`{ComponentName}Core`** 별칭의 파일에 정의한다.
-  - 예: `BoardStage.svelte` → `BoardStageCore.ts` (같은 폴더 또는 `core/` 하위)
-- 컴포넌트에서는 해당 Core를 **import**해서 사용하고, Svelte 파일에는 뷰/바인딩 위주만 둔다.
-- 관련 파일: `src/lib/component/board/`, `src/lib/component/home/` 등에서 Core 파일 import 경로 유지.
+- **비즈니스/도메인 로직**은 해당 컴포넌트와 **같은 폴더**에 **`{ComponentName}Core.ts`** 로 정의한다.
+  - 예: `ToolPanel.svelte` → `ToolPanelCore.ts` (`src/lib/component/board/`)
+- 컴포넌트에서는 `import { ... } from './ToolPanelCore'` 로 Core를 사용하고, Svelte에는 뷰/바인딩 위주만 둔다.
 
 ---
 
 ## 타입 정의 (Type 폴더)
 
-- **타입/인터페이스**는 전용 **`type`** 폴더에서 관리한다.
-- 폴더명: **PascalCase** (예: `Type`, `Types` 등 프로젝트 규칙에 맞게).
-- 타입별로 **별칭 파일**을 두고, 해당 파일 안에만 그 타입 관련 정의를 둔다.
-- 사용처에서는 **type 폴더(또는 index)를 import**해서 사용한다.
-  - 예: `import type { BoardElement } from '$lib/Type/BoardElement';` 또는 `from '$lib/Type'`
+- **타입/인터페이스**는 전용 **`src/lib/Type/`** 폴더에서 관리한다.
+- 폴더명: **PascalCase** (`Type`).
+- 타입별로 **별도 파일** (Point.ts, Stroke.ts, BoardElement.ts, AliasTypes.ts 등)을 두고, **Type/index.ts**에서 re-export.
+- 사용처: `import type { BoardElement, Point } from '$lib/Type';` 또는 `from '$lib/board-types'` (레거시 호환)
 
 ---
 
 ## Enum 정의 (Enum 폴더)
 
-- **enum**은 전용 **`enum`** 폴더를 두고, **하나의 파일**에서 일괄 관리한다.
-- 폴더명: **PascalCase** (예: `Enum`, `Enums`).
-- 사용처에서는 enum 폴더(또는 해당 파일)를 **import**해서 사용한다.
+- **enum/상수**는 전용 **`src/lib/Enum/`** 폴더에서 **하나의 파일**(constants.ts)로 일괄 관리하고, **Enum/index.ts**에서 re-export한다.
+- 폴더명: **PascalCase** (`Enum`).
+- 사용처: `import { TOOL_ITEMS, BOARD_THEMES } from '$lib/Enum';` 또는 `from '$lib/board-types'` (레거시)
 
 ---
 

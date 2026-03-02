@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Board Data Model (key types)
 
-타입 정의 위치: **coding-rules.mdc**의 Type 폴더 규칙에 따라 `type` 폴더 또는 `src/lib/board-types.ts` 등에서 관리.
+타입 정의 위치: **`src/lib/Type/`** (Point, Stroke, BoardElement, BoardData, AliasTypes 등 별도 파일) + `Type/index.ts` 배럴. 사용: `import type { ... } from '$lib/Type'`.
 
 ```typescript
 // Simplified – 실제는 type/BoardElement 등에서 import

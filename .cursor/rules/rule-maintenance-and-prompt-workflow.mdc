@@ -26,3 +26,20 @@ alwaysApply: true
 - **인덱스 활용**: 어떤 .mdc가 어떤 파일/기능을 다루는지 모를 때는 **index.mdc**와 **project-rules.mdc**를 참고해 관련 규칙 파일을 선택한다.
 
 이 규칙은 코드 변경과 AI 프롬프트 실행 모두에 적용된다.
+
+---
+
+## 3. 작업 완료 후 커밋 메시지 형식 (Commit Message After Prompt Tasks)
+
+- **프롬프트로 수행한 작업을 해결한 뒤**에는, **어떤 것을 변경·개선했는지**를 **git commit 메시지 형식**으로 정리해서 사용자에게 알려준다.
+- **형식 예시**:
+  ```
+  feat(scope): 한 줄 요약
+
+  - 변경/개선 내용 1 (파일 또는 기능 단위)
+  - 변경/개선 내용 2
+  - (필요 시) 규칙·문서 반영 사항
+  ```
+- **제목**: `feat`, `fix`, `docs`, `style`, `refactor`, `chore` 등 conventional commits 스타일 권장. 괄호 안 scope는 선택(예: `board`, `image`, `rules`).
+- **본문**: 변경·추가·삭제한 파일과 동작을 짧은 항목으로 나열. 사용자가 이 내용을 그대로 또는 수정해 `git commit -m "..."` 또는 `git commit` 본문으로 사용할 수 있도록 한다.
+- 규칙 유지보수(관련 .mdc 수정)를 함께 했으면 본문에 "rules: ..." 항목으로 명시한다.

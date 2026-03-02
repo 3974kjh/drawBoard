@@ -1,21 +1,24 @@
 <script lang="ts">
-	import { TOOL_ITEMS, type DrawingTool } from '$lib/board-types';
+	// 1. import
+	import { TOOL_ITEMS } from '$lib/Enum';
+	import type { DrawingTool } from '$lib/Type';
+	import { selectTool } from './ToolPanelCore';
 
+	// 2. props
 	interface Props {
 		activeTool: DrawingTool;
 		keepToolActive: boolean;
-		/** Called when user picks a different tool; e.g. clear selection when switching away from select */
 		onToolChange?: (tool: DrawingTool) => void;
 	}
-
 	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false), onToolChange }: Props = $props();
 
-	function selectTool(tool: DrawingTool) {
-		if (tool !== activeTool) {
-			activeTool = tool;
-			onToolChange?.(tool);
-		}
-	}
+	// 8. HTML 이벤트에 바인딩하는 함수
+	const handleToolClick = (tool: DrawingTool) => {
+		activeTool = selectTool(activeTool, tool, onToolChange);
+	};
+	const handleLockClick = () => {
+		keepToolActive = !keepToolActive;
+	};
 </script>
 
 <aside class="tool-panel">
@@ -23,7 +26,7 @@
 		<button
 			type="button"
 			class={`tool-btn ${activeTool === item.tool ? 'active' : ''}`}
-			onclick={() => selectTool(item.tool)}
+			onclick={() => handleToolClick(item.tool)}
 			title={item.label}
 		>
 			<span class="icon">{@html item.icon}</span>
@@ -35,7 +38,7 @@
 	<button
 		type="button"
 		class={`tool-btn lock-btn ${keepToolActive ? 'active' : ''}`}
-		onclick={() => (keepToolActive = !keepToolActive)}
+		onclick={handleLockClick}
 		title={keepToolActive
 			? 'Tool locked — stays active after placing a shape (click to unlock)'
 			: 'Tool unlocked — switches to Select after placing a shape (click to lock)'}
@@ -53,7 +56,6 @@
 </aside>
 
 <style>
-	/* Panel width is fixed — buttons fill it and are forced square via height = width */
 	.tool-panel {
 		width: 48px;
 		background: #ffffffd9;
@@ -67,7 +69,6 @@
 		gap: 0.25rem;
 	}
 
-	/* width: 100% = fills the 48px panel; height = width makes it a true square */
 	.tool-btn {
 		width: 100%;
 		aspect-ratio: 1 / 1;
@@ -84,14 +85,13 @@
 		overflow: hidden;
 	}
 
-	/* Icon wrapper: fixed pixel size so emoji + SVG both render at the same size */
 	.tool-btn .icon {
 		width: 22px;
 		height: 22px;
 		display: grid;
 		place-items: center;
 		line-height: 0;
-		font-size: 0.95rem; /* emoji size */
+		font-size: 0.95rem;
 	}
 
 	.tool-btn .icon :global(svg) {
@@ -113,7 +113,6 @@
 		color: #1d4ed8;
 	}
 
-	/* ── Divider between tools and lock button ── */
 	.tool-divider {
 		height: 1px;
 		background: #e2e8f0;
@@ -121,7 +120,6 @@
 		flex-shrink: 0;
 	}
 
-	/* ── Lock button specific styling ── */
 	.lock-btn {
 		color: #64748b;
 	}

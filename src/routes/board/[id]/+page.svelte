@@ -67,6 +67,9 @@
 	let activeTool = $state<DrawingTool>('pen');
 	let selectedElementIds = $state<string[]>([]);
 	let editingElementId = $state<string | null>(null);
+	/** Image element id when opening file picker from double-click on image (replace image flow). */
+	let imageReplaceTargetId = $state<string | null>(null);
+	let imageFileInputRef = $state<HTMLInputElement | null>(null);
 	let penColor = $state('#111827');
 	let fillColor = $state('#ffffff');
 	let penSize = $state(3);
@@ -411,6 +414,39 @@
 		activeTool = 'select';
 		setSelection([id]);
 		editingElementId = id;
+	};
+
+	/** Double-click on element: image → open file picker (same as Import Image); otherwise start text edit. */
+	const handleDblClickElement = (id: string) => {
+		const element = elements.find((item) => item.id === id);
+		if (!element) return;
+		if (element.type === 'image') {
+			activeTool = 'select';
+			setSelection([id]);
+			imageReplaceTargetId = id;
+			setTimeout(() => imageFileInputRef?.click(), 0);
+			return;
+		}
+		startTextEdit(id);
+	};
+
+	const handleImageReplaceFromFile = (e: Event) => {
+		const file = (e.currentTarget as HTMLInputElement).files?.[0];
+		const targetId = imageReplaceTargetId;
+		imageReplaceTargetId = null;
+		(e.currentTarget as HTMLInputElement).value = '';
+		if (!file || !targetId) return;
+		const reader = new FileReader();
+		reader.onload = (ev) => {
+			const dataUrl = ev.target?.result as string;
+			if (dataUrl) {
+				elements = elements.map((item) =>
+					item.id === targetId && item.type === 'image' ? { ...item, imageDataUrl: dataUrl } : item
+				);
+				commitSnapshot();
+			}
+		};
+		reader.readAsDataURL(file);
 	};
 
 	const updateElement = (id: string, updater: (item: BoardElement) => BoardElement) => {
@@ -1827,7 +1863,7 @@
 			onPointerMove={onStagePointerMove}
 			onPointerUp={onStagePointerUp}
 			onPointerLeave={() => (connectorPreviewEnd = null)}
-			onDblClickElement={startTextEdit}
+			onDblClickElement={handleDblClickElement}
 			onBeginResize={beginResize}
 			onBeginRotate={beginRotate}
 			onElementTextChange={handleElementTextChange}
@@ -1835,6 +1871,16 @@
 			onExpandBoard={expandBoard}
 			{pendingConnector}
 			{connectorPreviewEnd}
+		/>
+		<!-- Hidden input for "replace image" when double-clicking an image element on the board -->
+		<input
+			type="file"
+			accept="image/*"
+			class="hidden-input"
+			bind:this={imageFileInputRef}
+			onchange={handleImageReplaceFromFile}
+			aria-hidden="true"
+			tabindex="-1"
 		/>
 		</div>
 
@@ -2007,6 +2053,15 @@
 		min-height: 100vh;
 		display: grid;
 		grid-template-rows: auto 1fr;
+	}
+
+	.hidden-input {
+		position: absolute;
+		width: 0;
+		height: 0;
+		opacity: 0;
+		pointer-events: none;
+		overflow: hidden;
 	}
 
 	.workspace {

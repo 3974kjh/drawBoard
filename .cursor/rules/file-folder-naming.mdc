@@ -10,7 +10,10 @@ alwaysApply: true
 | Route files | SvelteKit convention | `+page.svelte`, `+layout.svelte` |
 | Components | **PascalCase** | `BoardCard.svelte`, `PropertyPanel.svelte` |
 | Component folders | `src/lib/component/<page>/` | `src/lib/component/board/`, `src/lib/component/home/` |
-| Library / utility files | **kebab-case** | `board-types.ts`, `canvas-renderer.ts`, `snap-engine.ts` |
+| Library / utility files | **kebab-case** | `canvas-renderer.ts`, `connector-geometry.ts`, `snap-engine.ts`, `board-storage.ts` |
+| Type 폴더 | **PascalCase** | `src/lib/Type/` (Point.ts, BoardElement.ts, index.ts 등) |
+| Enum 폴더 | **PascalCase** | `src/lib/Enum/` (constants.ts, index.ts) |
+| Style 폴더 | **kebab-case** | `src/lib/style/` (ToolPanel.scss 등) |
 | Static assets | `static/` (served from site root) | `static/robots.txt`, `static/sitemap.xml` |
 
-폴더명·함수명 상세: **coding-rules.mdc** 참조 (컴포넌트 PascalCase, 함수 폴더 kebab-case, type/enum PascalCase, 함수명 lowerCamelCase).
+폴더명·함수명 상세: **coding-rules.mdc** 참조. **배럴**: `src/lib/index.ts`에서 Type, Enum, canvas-renderer, connector-geometry, snap-engine, board-storage 등 re-export.

@@ -364,9 +364,9 @@
 				Import Image
 			</button>
 			{#if singleElement.imageDataUrl}
-				<p class="hint-note">✓ Image loaded</p>
+				<p class="hint-note">✓ Image loaded. Double-click the image on the board to replace it.</p>
 			{:else}
-				<p class="hint-note">Select an image using the button above</p>
+				<p class="hint-note">Select an image with the button above, or double-click the image area on the board.</p>
 			{/if}
 			<input
 				type="file"

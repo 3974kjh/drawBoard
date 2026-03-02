@@ -28,6 +28,6 @@ alwaysApply: true
 | **performance.mdc** | pointer-move 시 state 회피, RAF, ImageData |
 | **seo.mdc** | app.html, robots.txt, sitemap.xml |
 | **board-data-model.mdc** | BoardElement, Stroke, BoardData, ResizeHandle |
-| **rule-maintenance-and-prompt-workflow.mdc** | 규칙 유지보수(변경 시 .mdc 반영), 프롬프트 실행 전 관련 .mdc 우선 읽기 |
+| **rule-maintenance-and-prompt-workflow.mdc** | 규칙 유지보수, 프롬프트 전 .mdc 우선 읽기, **작업 완료 후 커밋 메시지 형식** |
 
 하위 규칙에서 다른 규칙을 참조할 때는 위 파일명으로 교차 참조합니다. 프롬프트 실행 시에는 작업 대상 파일·기능에 맞는 .mdc를 먼저 읽고 진행합니다.

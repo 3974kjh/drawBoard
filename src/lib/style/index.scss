@@ -1,0 +1,4 @@
+/* style 폴더 진입점. 컴포넌트별 SCSS는 각 파일을 @use */
+@forward 'ToolPanel.scss';
+@forward 'BoardStage.scss';
+@forward 'PropertyPanel.scss';

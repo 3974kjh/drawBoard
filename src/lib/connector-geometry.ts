@@ -8,7 +8,7 @@ export interface AnchorPoint {
 }
 
 /** Get anchor points for a connectable element (in element-local coords before rotation). */
-function getAnchorPointsLocal(element: BoardElement): AnchorPoint[] {
+const getAnchorPointsLocal = (element: BoardElement): AnchorPoint[] => {
 	const { x, y, width, height } = element;
 	const cx = x + width / 2;
 	const cy = y + height / 2;
@@ -50,10 +50,10 @@ function getAnchorPointsLocal(element: BoardElement): AnchorPoint[] {
 		];
 	}
 	return [];
-}
+};
 
 /** Rotate a point around center (cx, cy) by angle in degrees */
-function rotatePoint(px: number, py: number, cx: number, cy: number, deg: number): Point {
+const rotatePoint = (px: number, py: number, cx: number, cy: number, deg: number): Point => {
 	const rad = (deg * Math.PI) / 180;
 	const cos = Math.cos(rad);
 	const sin = Math.sin(rad);
@@ -63,14 +63,14 @@ function rotatePoint(px: number, py: number, cx: number, cy: number, deg: number
 		x: cx + dx * cos - dy * sin,
 		y: cy + dx * sin + dy * cos
 	};
-}
+};
 
 /** Get anchor position in stage coordinates (with rotation applied) */
-export function getAnchorPosition(
+export const getAnchorPosition = (
 	element: BoardElement,
 	anchorId: ConnectorAnchorId,
 	elements: BoardElement[]
-): Point | null {
+): Point | null => {
 	if (!CONNECTABLE_TYPES.includes(element.type)) return null;
 	const locals = getAnchorPointsLocal(element);
 	const anchor = locals.find((a) => a.anchorId === anchorId);
@@ -79,10 +79,10 @@ export function getAnchorPosition(
 	const cy = element.y + element.height / 2;
 	const rot = element.rotation ?? 0;
 	return rotatePoint(anchor.x, anchor.y, cx, cy, rot);
-}
+};
 
 /** Get all anchor positions for an element in stage coordinates */
-export function getAnchorPoints(element: BoardElement): AnchorPoint[] {
+export const getAnchorPoints = (element: BoardElement): AnchorPoint[] => {
 	const locals = getAnchorPointsLocal(element);
 	const cx = element.x + element.width / 2;
 	const cy = element.y + element.height / 2;
@@ -91,16 +91,16 @@ export function getAnchorPoints(element: BoardElement): AnchorPoint[] {
 		const p = rotatePoint(a.x, a.y, cx, cy, rot);
 		return { anchorId: a.anchorId, x: p.x, y: p.y };
 	});
-}
+};
 
 /** Orthogonal path: start -> horizontal to bendX -> vertical -> horizontal to end */
-function orthogonalPathWithBend(
+const orthogonalPathWithBend = (
 	x1: number,
 	y1: number,
 	x2: number,
 	y2: number,
 	bendX?: number
-): { path: string; bounds: { x: number; y: number; width: number; height: number }; bendX: number } {
+): { path: string; bounds: { x: number; y: number; width: number; height: number }; bendX: number } => {
 	const midX = bendX ?? (x1 + x2) / 2;
 	const path = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
 	const minX = Math.min(x1, midX, x2);
@@ -112,17 +112,17 @@ function orthogonalPathWithBend(
 		bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
 		bendX: midX
 	};
-}
+};
 
 /** Curved path: quadratic bezier with optional control point */
-function curvedPathWithControl(
+const curvedPathWithControl = (
 	x1: number,
 	y1: number,
 	x2: number,
 	y2: number,
 	ctrlX?: number,
 	ctrlY?: number
-): { path: string; bounds: { x: number; y: number; width: number; height: number } } {
+): { path: string; bounds: { x: number; y: number; width: number; height: number } } => {
 	const midX = (x1 + x2) / 2;
 	const midY = (y1 + y2) / 2;
 	const dx = x2 - x1;
@@ -139,10 +139,10 @@ function curvedPathWithControl(
 		path,
 		bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 	};
-}
+};
 
 /** Outward direction from shape edge at anchor (before rotation). Used for self-connection path. */
-function getAnchorOutward(anchorId: string): Point {
+const getAnchorOutward = (anchorId: string): Point => {
 	if (anchorId === 'n') return { x: 0, y: -1 };
 	if (anchorId === 's') return { x: 0, y: 1 };
 	if (anchorId === 'e') return { x: 1, y: 0 };
@@ -158,18 +158,18 @@ function getAnchorOutward(anchorId: string): Point {
 	if (anchorId === '1-mid') return { x: 0, y: 1 };
 	if (anchorId === '2-mid') return { x: -1, y: 0 };
 	return { x: 0, y: -1 };
-}
+};
 
 /** Apply element rotation to a direction vector (keeps unit length) */
-function rotateDir(dx: number, dy: number, deg: number): Point {
+const rotateDir = (dx: number, dy: number, deg: number): Point => {
 	const rad = (deg * Math.PI) / 180;
 	const cos = Math.cos(rad);
 	const sin = Math.sin(rad);
 	return { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
-}
+};
 
 /** Get total length of path (orthogonal: 3 segments; Q: one bezier) */
-function getPathLength(parts: string[]): number {
+const getPathLength = (parts: string[]): number => {
 	if (parts[0] !== 'M' || parts.length < 4) return 0;
 	if (parts[3] === 'Q') {
 		const x1 = Number(parts[1]);
@@ -195,10 +195,10 @@ function getPathLength(parts: string[]): number {
 		py = ny;
 	}
 	return len;
-}
+};
 
 /** Get point at fraction t (0..1) along path */
-function getPointOnPath(path: string, t: number): Point | null {
+const getPointOnPath = (path: string, t: number): Point | null => {
 	const parts = path.split(/\s+/);
 	if (parts[0] !== 'M' || parts.length < 4) return null;
 	if (t <= 0) return { x: Number(parts[1]), y: Number(parts[2]) };
@@ -237,7 +237,7 @@ function getPointOnPath(path: string, t: number): Point | null {
 		py = ny;
 	}
 	return { x: px, y: py };
-}
+};
 
 export interface ConnectorPathData {
 	path: string;
@@ -250,10 +250,10 @@ export interface ConnectorPathData {
 	arrowAt2?: Point;
 }
 
-export function getConnectorPath(
+export const getConnectorPath = (
 	connector: BoardElement,
 	elements: BoardElement[]
-): ConnectorPathData | null {
+): ConnectorPathData | null => {
 	if (connector.type !== 'connector' || !connector.startElementId || !connector.endElementId) return null;
 	const startEl = elements.find((e) => e.id === connector.startElementId);
 	const endEl = elements.find((e) => e.id === connector.endElementId);
@@ -324,22 +324,21 @@ export function getConnectorPath(
 
 	const finalBounds = { ...bounds, x: bounds.x - pad, y: bounds.y - pad, width: bounds.width + pad * 2, height: bounds.height + pad * 2 };
 	const hasArrows = hasStartArrow || hasEndArrow;
-	const arrowAt1 = hasArrows ? getPointOnPath(path, 1 / 7) : undefined;
-	const arrowAt2 = hasArrows ? getPointOnPath(path, 6 / 7) : undefined;
+	const arrowAt1 = hasArrows ? (getPointOnPath(path, 1 / 7) ?? undefined) : undefined;
+	const arrowAt2 = hasArrows ? (getPointOnPath(path, 6 / 7) ?? undefined) : undefined;
 	return { path, start, end, bounds: finalBounds, bendPoint, arrowAt1, arrowAt2 };
-}
+};
 
 /** Update connector's x,y,width,height to match path bounds (for hit-test/selection) */
-export function updateConnectorBounds(
+export const updateConnectorBounds = (
 	connector: BoardElement,
 	elements: BoardElement[]
-): BoardElement {
+): BoardElement => {
 	const data = getConnectorPath(connector, elements);
 	if (!data) return connector;
 	return { ...connector, x: data.bounds.x, y: data.bounds.y, width: data.bounds.width, height: data.bounds.height };
-}
+};
 
 /** Check if element type is connectable */
-export function isConnectableType(type: BoardElement['type']): boolean {
-	return CONNECTABLE_TYPES.includes(type);
-}
+export const isConnectableType = (type: BoardElement['type']): boolean =>
+	CONNECTABLE_TYPES.includes(type);

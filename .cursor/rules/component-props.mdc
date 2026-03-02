@@ -8,7 +8,7 @@ alwaysApply: true
 | Component | Responsibility |
 |---|---|
 | `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors |
-| `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change) |
+| `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change). 로직: `ToolPanelCore.ts` (selectTool) |
 | `PropertyPanel.svelte` | Per-selection property controls, connector section (Line style, Arrow size, Direction) |
 | `Topbar.svelte` | Save, undo/redo, export, back-navigation |
 | `ImportModal.svelte` | Import boards modal |
