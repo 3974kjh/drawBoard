@@ -1,0 +1,10 @@
+---
+description: DrawDashBoard – SEO (app.html 메타, robots.txt, sitemap.xml). Always apply.
+alwaysApply: true
+---
+
+# SEO
+
+- `src/app.html` – all meta tags, Open Graph, Twitter Card, JSON-LD (`WebApplication` schema)
+- `static/robots.txt` – crawler rules; disallows `/board/` (local-storage data)
+- `static/sitemap.xml` – site structure (update `<lastmod>` after significant changes)

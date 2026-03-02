@@ -1,0 +1,14 @@
+---
+description: DrawDashBoard – Svelte 5 / Runes 규칙 (props, state, effect, 콜백 props). Always apply.
+alwaysApply: true
+---
+
+# Svelte 5 / Runes Conventions
+
+- Use `$state`, `$derived`, `$effect`, `$props`, `$bindable` exclusively – **never** legacy `export let` reactivity
+- Components receive props via `let { ... }: Props = $props()`
+- Mutable props that the parent binds to use `$bindable(defaultValue)`
+- Events are passed as **callback props** (e.g. `onSave`, `onClick`) – never use `createEventDispatcher`
+- All reactive state must be declared with `$state()`
+- **Performance-critical, non-reactive data** (e.g. live-drawing point buffer, eraser previous position) uses plain `let` variables – **not** `$state`
+- `$effect` is for side-effects only; never mutate other `$state` variables inside an effect

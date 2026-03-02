@@ -1,0 +1,33 @@
+---
+description: DrawDashBoard – 규칙 인덱스. 기능별로 쪼개진 규칙 목록. Always apply.
+alwaysApply: true
+---
+
+# DrawDashBoard – Rules Index
+
+프로젝트 규칙은 **기능별**로 분리되어 있습니다. 아래 규칙을 모두 적용하세요.
+
+- **필수 워크플로우**: (1) 파일/로직 변경 시 → 관련 .mdc 업데이트. (2) 프롬프트 실행 시 → 대상 파일·기능에 해당하는 .mdc를 **먼저 읽은 뒤** 실행. → **rule-maintenance-and-prompt-workflow.mdc**
+
+| 파일 | 내용 |
+|------|------|
+| **coding-rules.mdc** | Svelte 정의 순서(1~9), Core 로직 분리, Type/Enum 폴더, index.ts, 화살표 함수, 폴더명·함수명 |
+| **style-rules.mdc** | style 폴더, SCSS, 컴포넌트별 스타일 파일 |
+| **stack.mdc** | SvelteKit, Svelte 5 Runes, TypeScript, npm |
+| **svelte-runes.mdc** | $state/$derived/$effect/$props/$bindable, 콜백 props |
+| **typescript.mdc** | 타입 위치, interface/type, any 금지 |
+| **file-folder-naming.mdc** | 라우트·컴포넌트·라이브러리·정적 자산 파일/폴더 명명 |
+| **canvas-rendering.mdc** | drawCanvas, redrawCanvas, live drawing, canvas-renderer |
+| **state-architecture.mdc** | 보드 상태, 히스토리, commitSnapshot, 저장 |
+| **component-props.mdc** | BoardStage, ToolPanel, PropertyPanel 등 역할 |
+| **eraser.mdc** | 지우개 로직 |
+| **connectors.mdc** | 연결선 생성·경로·화살표·앵커·내보내기 |
+| **resize-handles.mdc** | 8방향 핸들, flipping, 최소 크기 |
+| **ui-styling.mdc** | scoped style, Canva Draw, CSS 변수, 글래스모피즘, 폰트 |
+| **accessibility.mdc** | role, tabindex, aria-label, modal |
+| **performance.mdc** | pointer-move 시 state 회피, RAF, ImageData |
+| **seo.mdc** | app.html, robots.txt, sitemap.xml |
+| **board-data-model.mdc** | BoardElement, Stroke, BoardData, ResizeHandle |
+| **rule-maintenance-and-prompt-workflow.mdc** | 규칙 유지보수(변경 시 .mdc 반영), 프롬프트 실행 전 관련 .mdc 우선 읽기 |
+
+하위 규칙에서 다른 규칙을 참조할 때는 위 파일명으로 교차 참조합니다. 프롬프트 실행 시에는 작업 대상 파일·기능에 맞는 .mdc를 먼저 읽고 진행합니다.

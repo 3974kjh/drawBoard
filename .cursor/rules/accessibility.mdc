@@ -1,0 +1,12 @@
+---
+description: DrawDashBoard – 접근성 (role, tabindex, aria-label, modal). Always apply.
+alwaysApply: true
+---
+
+# Accessibility
+
+- Interactive `<div>`/`<article>` elements must have `role` + `tabindex`
+- Buttons without visible text must have `aria-label`
+- Modal overlays: `role="dialog" aria-modal="true"`
+
+관련: `src/lib/component/board/ImportModal.svelte`, `src/lib/component/home/CreateBoardModal.svelte` 등 모달 컴포넌트.

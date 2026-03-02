@@ -1,0 +1,18 @@
+---
+description: DrawDashBoard – 상태 구조 (보드 상태, 히스토리, 저장, commitSnapshot). Always apply.
+alwaysApply: true
+---
+
+# State Architecture
+
+| Concern | Location |
+|---|---|
+| Board state (`strokes`, `elements`, `themeId`, …) | `src/routes/board/[id]/+page.svelte` |
+| Child components | Receive **read-only props + callback props**; own no board state |
+| History (undo/redo) | `history: Snapshot[]` + `historyIndex` in `+page.svelte` |
+| Persistence | IndexedDB via `src/lib/board-storage.ts`, `src/lib/db/` |
+
+- Call `commitSnapshot()` after **every** user action that modifies the board
+- `isDirty` flag tracks unsaved changes → reset to `false` after `saveBoard()` and `loadBoard()`
+
+관련: **component-props.mdc** (자식 컴포넌트는 보드 상태 소유하지 않음).

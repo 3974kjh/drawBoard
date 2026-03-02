@@ -1,0 +1,27 @@
+---
+description: DrawDashBoard – 스타일 규칙 (style 폴더, SCSS, 컴포넌트별 스타일 관리). Always apply.
+alwaysApply: true
+---
+
+# 스타일 규칙 (Style Rules)
+
+## 구조
+
+- **최상단**에 **`style`** 폴더를 두고, 그 하위에 스타일 정의를 관리한다.
+- **SCSS** 파일을 사용한다. (`.scss` 확장자)
+
+---
+
+## 컴포넌트별 스타일 파일
+
+- `style` 폴더 하위에 **각 컴포넌트에서 사용하는 스타일**을 해당하는 **SCSS 파일**로 정의한다.
+  - 예: `style/BoardStage.scss`, `style/PropertyPanel.scss`, `style/Topbar.scss`
+- 한 파일 안에 해당 컴포넌트 전용 클래스/변수/믹스인을 두고, 컴포넌트에서는 해당 SCSS를 **import**해서 사용한다.
+  - Svelte: `<style lang="scss"> @use '$lib/style/BoardStage.scss'; </style>` 또는 프로젝트 alias에 맞게 경로 지정.
+
+---
+
+## 적용 시 유의사항
+
+- 스타일이 **컴포넌트 스코프**를 유지해야 할 경우, Svelte의 scoped style과 병행하거나, SCSS에서 클래스 네이밍으로 스코프를 구분한다.
+- 관련 파일: `src/lib/component/board/*.svelte`, `src/lib/component/home/*.svelte` → 각각 대응하는 `style/*.scss` 참조.

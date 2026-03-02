@@ -1,0 +1,13 @@
+---
+description: DrawDashBoard – 성능 (pointer-move 시 state 회피, RAF, ImageData, deep-clone 회피). Always apply.
+alwaysApply: true
+---
+
+# Performance Guidelines
+
+- **During pointer-move**: avoid writing to `$state` – use plain variables + direct DOM/canvas calls
+- Use `requestAnimationFrame` for canvas animation (batch frames, don't draw on every event)
+- Use `ImageData` (`getImageData` / `putImageData`) for fast canvas snapshots – faster than `toDataURL`
+- Avoid deep-cloning large arrays in hot paths
+
+관련: **canvas-rendering.mdc** (live drawing 시 plain `let` 사용), **svelte-runes.mdc** (performance-critical 비반응 데이터).

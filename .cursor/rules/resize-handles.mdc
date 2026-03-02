@@ -1,0 +1,14 @@
+---
+description: DrawDashBoard – 리사이즈 핸들 (8방향, InteractionState.resize, flipping, 최소 크기). Always apply.
+alwaysApply: true
+---
+
+# Resize Handles
+
+- Every selected element shows **8 handles**: `nw | n | ne | w | e | sw | s | se`
+- `InteractionState.resize` stores `handle`, `originX`, `originY`, `originWidth`, `originHeight`
+- Resize math computes new `left / top / right / bottom` edges independently per handle direction
+- **Flipping is supported**: when the dragged edge passes the opposite edge, `x = min(left, right)`, `y = min(top, bottom)`, `width = |right - left|`, `height = |bottom - top|`
+- Minimum element size is **10 × 10 px**
+
+관련: `src/routes/board/[id]/+page.svelte` (InteractionState, resize 핸들 드래그). 타입 `ResizeHandle`: **board-data-model.mdc** 참조.

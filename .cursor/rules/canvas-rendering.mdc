@@ -1,0 +1,23 @@
+---
+description: DrawDashBoard – Canvas & 렌더링 (drawCanvas, redrawCanvas, live drawing, renderer). Always apply.
+alwaysApply: true
+---
+
+# Canvas & Rendering
+
+- `drawCanvas` (`HTMLCanvasElement`) holds the **committed** board state (background + saved strokes + elements)
+- `redrawCanvas()` in `+page.svelte` does a **full clear + redraw** and is triggered by `$effect` whenever reactive board state changes
+- **Live drawing** (in-progress pen stroke) bypasses Svelte reactivity:
+  - Store points in plain `let _livePoints: Point[]`
+  - Snapshot canvas with `ctx.getImageData()` when stroke starts
+  - Each RAF frame: `ctx.putImageData(snapshot)` then draw smooth live stroke
+  - On pointer-up: commit to reactive `strokes` state once → `$effect` fires → `redrawCanvas()`
+- Stroke smoothing: **quadratic Bezier with midpoint control** (`ctx.quadraticCurveTo`)
+- Canvas renderer pure functions (`src/lib/canvas-renderer.ts`):
+  - `drawThemeBackground` – fills background + optional grid
+  - `drawStroke` – draws a committed stroke with Bezier smoothing
+  - `drawElementToCanvas` – draws a board element (shapes, text, image, connector)
+  - `renderThumbnail` – creates a scaled JPEG thumbnail
+  - `loadImages` – pre-loads image elements for export
+
+연결선 내보내기: **connectors.mdc** 참조 (arrowAt1/arrowAt2, connectorArrowSize).

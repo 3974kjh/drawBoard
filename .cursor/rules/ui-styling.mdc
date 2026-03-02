@@ -1,0 +1,17 @@
+---
+description: DrawDashBoard – UI/스타일 (scoped, Canva Draw, CSS 변수, 글래스모피즘, 폰트). Always apply.
+alwaysApply: true
+---
+
+# UI / Styling
+
+- All styles are **scoped** inside `<style>` blocks (no global CSS framework). SCSS 사용 시 **style-rules.mdc** 참조 (style 폴더, 컴포넌트별 SCSS).
+- Design reference: **Canva Draw** – clean, minimal, tool-focused
+- Use CSS custom properties for dynamic per-element styles: `--fill`, `--stroke`, `--border-w`, `--text-valign`
+- Glassmorphism for floating action buttons:
+  ```css
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  ```
+- Fonts: `'Caveat'` (brand/logo), `'DM Sans'` (UI text) — loaded via Google Fonts in `src/app.html`

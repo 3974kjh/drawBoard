@@ -1,0 +1,11 @@
+---
+description: DrawDashBoard – 기술 스택 (Framework, UI, 언어, 패키지 매니저). Always apply.
+alwaysApply: true
+---
+
+# Stack
+
+- **Framework**: SvelteKit (latest) with `@sveltejs/adapter-cloudflare` for Cloudflare Pages deployment
+- **UI language**: Svelte 5 with **Runes syntax only** (`$state`, `$derived`, `$effect`, `$props`, `$bindable`)
+- **Typed language**: TypeScript (strict)
+- **Package manager**: npm

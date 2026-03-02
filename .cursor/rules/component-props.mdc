@@ -1,0 +1,19 @@
+---
+description: DrawDashBoard – 보드 페이지 컴포넌트 역할 (BoardStage, ToolPanel, PropertyPanel 등). Always apply.
+alwaysApply: true
+---
+
+# Component Props Pattern (board page)
+
+| Component | Responsibility |
+|---|---|
+| `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors |
+| `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change) |
+| `PropertyPanel.svelte` | Per-selection property controls, connector section (Line style, Arrow size, Direction) |
+| `Topbar.svelte` | Save, undo/redo, export, back-navigation |
+| `ImportModal.svelte` | Import boards modal |
+| `MinimapThumbnail.svelte` | Mini preview |
+
+All board-page components live in **`src/lib/component/board/`**.
+
+연결선 UI: **connectors.mdc**. 로직 분리: **coding-rules.mdc** (Core 파일).

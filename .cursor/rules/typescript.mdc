@@ -1,0 +1,11 @@
+---
+description: DrawDashBoard – TypeScript 규칙 (타입 위치, interface/type, any 금지). Always apply.
+alwaysApply: true
+---
+
+# TypeScript
+
+- Shared types/interfaces: 프로젝트 규칙에 따라 **`type` 폴더** 또는 `src/lib/board-types.ts` 등 한곳에서 관리. (see **coding-rules.mdc** – Type 폴더)
+- Use `interface` for object shapes, `type` for unions and aliases
+- Avoid `any`; prefer `unknown` + narrowing / type guards
+- Derived / computed values → `$derived`, not a raw `const` inside `$effect`

@@ -1,0 +1,27 @@
+---
+description: DrawDashBoard – 보드 데이터 모델 (BoardElement, Stroke, BoardData, ResizeHandle). Always apply.
+alwaysApply: true
+---
+
+# Board Data Model (key types)
+
+타입 정의 위치: **coding-rules.mdc**의 Type 폴더 규칙에 따라 `type` 폴더 또는 `src/lib/board-types.ts` 등에서 관리.
+
+```typescript
+// Simplified – 실제는 type/BoardElement 등에서 import
+interface BoardElement {
+  id: string; groupId?: string;
+  type: 'rect' | 'ellipse' | 'triangle' | 'line-h' | 'line-v' | 'text' | 'image' | 'connector';
+  x: number; y: number; width: number; height: number; rotation: number;
+  strokeColor: string; fillColor: string; borderWidth: number;
+  text: string; textAlign: TextAlign; textVerticalAlign: TextVerticalAlign;
+  fontSize: number; imageDataUrl?: string;
+  // connector-only: startElementId, startAnchor, endElementId, endAnchor, connectorStyle, connectorType,
+  // startArrow, endArrow, startArrowDirection, endArrowDirection, connectorArrowSize, connectorSelfBendX/Y, etc.
+}
+interface Stroke { id: string; tool: 'pen' | 'eraser'; color: string; size: number; points: Point[]; }
+interface BoardData { id: string; title: string; themeId: ThemeId; strokes: Stroke[]; elements: BoardElement[]; width?: number; height?: number; gridEnabled?: boolean; gridSize?: number; thumbnail?: string; }
+type ResizeHandle = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
+```
+
+연결선 필드 상세: **connectors.mdc**. Enum 정의: **coding-rules.mdc** (Enum 폴더).

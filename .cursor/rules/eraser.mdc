@@ -1,0 +1,13 @@
+---
+description: DrawDashBoard – 지우개 로직 (이전 포인터, 세그먼트 교차, pure function). Always apply.
+alwaysApply: true
+---
+
+# Eraser Logic
+
+- Eraser tracks the **previous pointer position** (`_prevEraserPt`) and sweeps intermediate circles along the path (step = `radius / 2`) to avoid gaps from fast mouse movement
+- Each erase circle uses **segment-level intersection** (`_circleTs`) to split strokes at exact entry/exit points rather than just discarding entire points
+- `_eraseAtCenter(strokes, center, radius)` is a **pure function** returning a new stroke array
+- Reset `_prevEraserPt = null` at the start and end of each erase session
+
+관련 파일: `src/routes/board/[id]/+page.svelte` (pointer move/up에서 지우개 처리). 로직은 **Core** 파일로 분리 시 해당 Core 참조 (**coding-rules.mdc**).
