@@ -4,6 +4,7 @@ export type DrawingTool =
 	| 'select'
 	| 'pen'
 	| 'eraser'
+	| 'eraser-multi'
 	| 'rect'
 	| 'ellipse'
 	| 'triangle'

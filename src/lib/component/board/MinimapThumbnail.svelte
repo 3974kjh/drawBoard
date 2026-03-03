@@ -312,12 +312,8 @@
 		background: rgba(255, 255, 255, 0.92);
 		backdrop-filter: blur(16px) saturate(160%);
 		-webkit-backdrop-filter: blur(16px) saturate(160%);
-		border: 1.5px solid #94a3b8;
-		border-radius: 14px;
+		border: 1px solid #e2e8f0;
 		overflow: hidden;
-		box-shadow:
-			0 2px 12px rgba(15, 23, 42, 0.1),
-			inset 0 1px 0 rgba(255, 255, 255, 0.85);
 		flex-shrink: 0;
 	}
 
@@ -356,7 +352,6 @@
 		border: none;
 		background: transparent;
 		cursor: pointer;
-		border-radius: 5px;
 		color: #9ca3af;
 		padding: 0;
 		transition:
@@ -397,7 +392,6 @@
 		box-shadow: 0 0 0 0.5px rgba(59, 130, 246, 0.35);
 		pointer-events: none;
 		z-index: 2;
-		border-radius: 1px;
 	}
 
 	/* ── Interaction overlay ── */

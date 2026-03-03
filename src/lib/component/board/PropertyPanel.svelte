@@ -28,10 +28,14 @@
 		stageHeight: number;
 		selectedElementIds: string[];
 		selectedElements: BoardElement[];
+		/** Number of selected pen strokes (for selection count and delete). */
+		selectedStrokeCount?: number;
 		isTextAlignVisible: boolean;
 		canGroup: boolean;
 		canUngroup: boolean;
 		canDistribute: boolean;
+		/** True when selection (elements or strokes) can be deleted. */
+		canDeleteSelection?: boolean;
 		onThemeChange: () => void;
 		onDuplicate: () => void;
 		onDelete: () => void;
@@ -81,10 +85,12 @@
 		stageHeight,
 		selectedElementIds,
 		selectedElements,
+		selectedStrokeCount = 0,
 		isTextAlignVisible,
 		canGroup,
 		canUngroup,
 		canDistribute,
+		canDeleteSelection,
 		onThemeChange,
 		onDuplicate,
 		onDelete,
@@ -388,15 +394,15 @@
 		<input type="range" min="1" max="20" bind:value={penSize} />
 	</div>
 
-	{#if activeTool === 'eraser'}
+	{#if activeTool === 'eraser' || activeTool === 'eraser-multi'}
 		<div class="section">
 			<div class="section-title">
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/></svg>
-		Eraser <span class="badge">{eraserSize}px</span>
-		</div>
-		<input type="range" min="8" max="80" bind:value={eraserSize} />
-		<p class="hint">Drag to erase pen strokes</p>
+				Eraser <span class="badge">{eraserSize}px</span>
+			</div>
+			<input type="range" min="8" max="80" bind:value={eraserSize} />
+			<p class="hint">{activeTool === 'eraser-multi' ? 'Drag to erase strokes, shapes, connectors' : 'Drag to erase pen strokes only'}</p>
 		</div>
 	{/if}
 
@@ -469,7 +475,7 @@
 
 	<!-- ─── Selection info ─── -->
 	<p class="selection-info">
-		Selected: {selectedElementIds.length} item{selectedElementIds.length !== 1 ? 's' : ''}
+		Selected: {selectedElementIds.length + selectedStrokeCount} item{selectedElementIds.length + selectedStrokeCount !== 1 ? 's' : ''}
 		<span class="hint-inline">(Shift+Click to multi-select)</span>
 	</p>
 
@@ -497,7 +503,7 @@
 			type="button"
 			title="Delete selected"
 			onclick={onDelete}
-			disabled={selectedElementIds.length === 0}
+			disabled={!(canDeleteSelection ?? (selectedElementIds.length > 0))}
 		>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
@@ -652,10 +658,8 @@
 
 <style>
 	.property-panel {
-		background: #ffffffd9;
-		backdrop-filter: blur(8px);
-		border: 1px solid #cbd5e1;
-		border-radius: 16px;
+		background: #fff;
+		border: none;
 		padding: 0.6rem;
 		overflow-y: auto;
 		font-size: 0.8rem;
@@ -796,7 +800,6 @@
 		place-items: center;
 		padding: 0.4rem;
 		border: 1px solid #cbd5e1;
-		border-radius: 8px;
 		background: #fff;
 		cursor: pointer;
 		color: #475569;
@@ -828,7 +831,6 @@
 		place-items: center;
 		padding: 0.4rem;
 		border: 1px solid #cbd5e1;
-		border-radius: 8px;
 		background: #fff;
 		cursor: pointer;
 		color: #475569;

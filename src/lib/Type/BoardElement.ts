@@ -36,6 +36,8 @@ export interface BoardElement {
 	startArrowDirection?: ConnectorArrowDirection;
 	endArrowDirection?: ConnectorArrowDirection;
 	connectorBendX?: number;
+	/** For orthogonal V-H-V path: Y of the horizontal segment (used when |dy| > |dx|). */
+	connectorBendY?: number;
 	connectorControlX?: number;
 	connectorControlY?: number;
 	connectorSelfBendX?: number;

@@ -1,6 +1,78 @@
 import type { BoardElement, Stroke } from './board-types';
+import type { Bounds } from './board-types';
 import { TEXT_EDITABLE_TYPES } from './board-types';
 import { getConnectorPath } from './connector-geometry';
+
+/** Bounding box of a pen stroke (points + stroke radius). */
+export const getStrokeBounds = (stroke: Stroke): Bounds | null => {
+	if (stroke.tool !== 'pen' || stroke.points.length === 0) return null;
+	const r = stroke.size / 2;
+	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	for (const p of stroke.points) {
+		minX = Math.min(minX, p.x - r);
+		minY = Math.min(minY, p.y - r);
+		maxX = Math.max(maxX, p.x + r);
+		maxY = Math.max(maxY, p.y + r);
+	}
+	if (minX === Infinity) return null;
+	return {
+		x: minX,
+		y: minY,
+		right: maxX,
+		bottom: maxY,
+		width: maxX - minX,
+		height: maxY - minY,
+		centerX: (minX + maxX) / 2,
+		centerY: (minY + maxY) / 2
+	};
+};
+
+/** Combined bounds of multiple strokes. */
+export const getStrokesBounds = (strokes: Stroke[], ids: string[]): Bounds | null => {
+	const list = ids.map((id) => strokes.find((s) => s.id === id)).filter(Boolean) as Stroke[];
+	const boxes = list.map(getStrokeBounds).filter(Boolean) as Bounds[];
+	if (boxes.length === 0) return null;
+	const minX = Math.min(...boxes.map((b) => b.x));
+	const minY = Math.min(...boxes.map((b) => b.y));
+	const maxX = Math.max(...boxes.map((b) => b.right));
+	const maxY = Math.max(...boxes.map((b) => b.bottom));
+	return {
+		x: minX,
+		y: minY,
+		right: maxX,
+		bottom: maxY,
+		width: maxX - minX,
+		height: maxY - minY,
+		centerX: (minX + maxX) / 2,
+		centerY: (minY + maxY) / 2
+	};
+};
+
+/** Check if a rect (e.g. marquee) intersects a stroke's bounds. */
+export const strokeIntersectsRect = (
+	stroke: Stroke,
+	rx: number,
+	ry: number,
+	rw: number,
+	rh: number
+): boolean => {
+	const b = getStrokeBounds(stroke);
+	if (!b) return false;
+	return !(b.right < rx || b.x > rx + rw || b.bottom < ry || b.y > ry + rh);
+};
+
+/** Check if a circle (e.g. eraser) intersects a stroke's bounds (for whole-stroke erase). */
+export const strokeIntersectsCircle = (
+	stroke: Stroke,
+	center: { x: number; y: number },
+	radius: number
+): boolean => {
+	const b = getStrokeBounds(stroke);
+	if (!b) return false;
+	const px = Math.max(b.x, Math.min(center.x, b.right));
+	const py = Math.max(b.y, Math.min(center.y, b.bottom));
+	return (center.x - px) ** 2 + (center.y - py) ** 2 <= radius * radius;
+};
 
 export const drawThemeBackground = (
 	ctx: CanvasRenderingContext2D,
@@ -320,6 +392,87 @@ export const renderThumbnail = (
 	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
 	strokes.forEach((s) => drawStroke(ctx, s));
 	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, elements));
+	ctx.restore();
+
+	return canvas.toDataURL('image/jpeg', 0.72);
+};
+
+/** True if color is white or near-white (for library thumbnail on white background). */
+function isWhiteColor(c: string): boolean {
+	if (!c || typeof c !== 'string') return false;
+	const s = c.trim().toLowerCase();
+	if (s === 'white' || s === '#fff' || s === '#ffffff') return true;
+	const rgb = s.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+	if (rgb)
+		return (
+			Number(rgb[1]) >= 250 &&
+			Number(rgb[2]) >= 250 &&
+			Number(rgb[3]) >= 250
+		);
+	const hex = s.replace(/^#/, '');
+	if (hex.length === 3 || hex.length === 6) {
+		const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.slice(0, 2), 16);
+		const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.slice(2, 4), 16);
+		const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.slice(4, 6), 16);
+		return r >= 250 && g >= 250 && b >= 250;
+	}
+	return false;
+}
+
+function libraryThumbColor(c: string): string {
+	return isWhiteColor(c) ? '#000000' : c;
+}
+
+/**
+ * Render a JPEG thumbnail for library items: white background, no grid.
+ * Any stroke or element color that is white is drawn as black so it remains visible.
+ * Same size as renderThumbnail; used in library management modal.
+ */
+export const renderLibraryThumbnail = (
+	stageWidth: number,
+	stageHeight: number,
+	strokes: Stroke[],
+	elements: BoardElement[],
+	imageMap?: Map<string, HTMLImageElement>
+): string => {
+	const canvas = document.createElement('canvas');
+	canvas.width = THUMB_W * THUMB_DPR;
+	canvas.height = THUMB_H * THUMB_DPR;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) return '';
+
+	ctx.scale(THUMB_DPR, THUMB_DPR);
+
+	const scale = Math.min(THUMB_W / stageWidth, THUMB_H / stageHeight);
+	const boardW = stageWidth * scale;
+	const boardH = stageHeight * scale;
+	const ox = (THUMB_W - boardW) / 2;
+	const oy = (THUMB_H - boardH) / 2;
+
+	ctx.fillStyle = '#ffffff';
+	ctx.fillRect(0, 0, THUMB_W, THUMB_H);
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(ox, oy, boardW, boardH);
+	ctx.clip();
+	ctx.translate(ox, oy);
+	ctx.scale(scale, scale);
+	ctx.fillStyle = '#ffffff';
+	ctx.fillRect(0, 0, stageWidth, stageHeight);
+
+	const libStrokes: Stroke[] = strokes.map((s) => ({
+		...s,
+		color: libraryThumbColor(s.color)
+	}));
+	const libElements: BoardElement[] = elements.map((e) => ({
+		...e,
+		strokeColor: e.strokeColor != null ? libraryThumbColor(e.strokeColor) : e.strokeColor,
+		fillColor: e.fillColor != null ? libraryThumbColor(e.fillColor) : e.fillColor
+	}));
+
+	libStrokes.forEach((s) => drawStroke(ctx, s));
+	libElements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, libElements));
 	ctx.restore();
 
 	return canvas.toDataURL('image/jpeg', 0.72);

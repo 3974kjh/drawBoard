@@ -8,6 +8,8 @@
 		onDownloadImage: () => void;
 		onClear: () => void;
 		onShowImport: () => void;
+		onShowLibrary?: () => void;
+		onShowShortcuts?: () => void;
 		onUndo: () => void;
 		onRedo: () => void;
 	}
@@ -21,6 +23,8 @@
 		onDownloadImage,
 		onClear,
 		onShowImport,
+		onShowLibrary,
+		onShowShortcuts,
 		onUndo,
 		onRedo
 	}: Props = $props();
@@ -33,27 +37,42 @@
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
 		</button>
 		<input bind:value={boardTitle} class="title-input" placeholder="Board title" />
+		{#if onShowShortcuts}
+			<button type="button" class="icon-btn" onclick={onShowShortcuts} title="Keyboard shortcuts">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"/>
+					<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+					<line x1="12" y1="17" x2="12.01" y2="17"/>
+				</svg>
+			</button>
+		{/if}
 	</div>
 
 	<div class="topbar-right">
-		<button type="button" class="icon-btn" onclick={onDownloadPdf} title="Export as PDF">
+		<button type="button" class="icon-btn" onclick={onDownloadPdf} title="Export as PDF (Ctrl+Shift+P)">
 			<!-- prettier-ignore -->
 			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="9" y2="17"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/></svg>
 		</button>
-		<button type="button" class="icon-btn" onclick={onDownloadImage} title="Export as image (PNG)">
+		<button type="button" class="icon-btn" onclick={onDownloadImage} title="Export as image PNG (Ctrl+Shift+E)">
 			<!-- prettier-ignore -->
 			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
 		</button>
-		<button type="button" class="icon-btn" onclick={onShowImport} title="Import from another board">
+		<button type="button" class="icon-btn" onclick={onShowImport} title="Import from another board (Ctrl+O)">
 			<!-- prettier-ignore -->
 			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><polyline points="9 14 12 11 15 14"/></svg>
 		</button>
+		{#if onShowLibrary}
+			<button type="button" class="icon-btn" onclick={onShowLibrary} title="Library (Ctrl+L)">
+				<!-- prettier-ignore -->
+				<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
+			</button>
+		{/if}
 
 		<div class="separator"></div>
 
-		<button type="button" class="icon-btn danger" onclick={onClear} title="Clear board">
-			<!-- prettier-ignore -->
-			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+		<button type="button" class="icon-btn danger" onclick={onClear} title="Clear board (Ctrl+Shift+C)">
+			<!-- Clear board: eraser (wipe clean) – distinct from trash (multi-eraser) and undo/redo -->
+			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/></svg>
 		</button>
 
 		<div class="separator"></div>

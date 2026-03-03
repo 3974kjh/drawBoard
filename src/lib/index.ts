@@ -11,7 +11,11 @@ export {
 	drawStroke,
 	drawElementToCanvas,
 	loadImages,
-	renderThumbnail
+	renderThumbnail,
+	getStrokeBounds,
+	getStrokesBounds,
+	strokeIntersectsRect,
+	strokeIntersectsCircle
 } from './canvas-renderer.js';
 export {
 	getAnchorPosition,

@@ -12,8 +12,11 @@ alwaysApply: true
 | `PropertyPanel.svelte` | Per-selection property controls, connector section (Line style, Arrow size, Direction) |
 | `Topbar.svelte` | Save, undo/redo, export, back-navigation |
 | `ImportModal.svelte` | Import boards modal |
+| `ShortcutsModal.svelte` | Keyboard shortcuts list (opened via Topbar ❓) |
 | `MinimapThumbnail.svelte` | Mini preview |
 
 All board-page components live in **`src/lib/component/board/`**.
+
+보드 확장 버튼(상·하·좌·우)은 **BoardStage 내부가 아니라** 보드 페이지 `+page.svelte`의 `stage-with-expand` 그리드에서 렌더하며, `expandBoard` 콜백으로 확장 실행. BoardStage에는 확장 스트립/호버 로직 없음.
 
 연결선 UI: **connectors.mdc**. 로직 분리: **coding-rules.mdc** (Core 파일).

@@ -8,9 +8,13 @@
 	interface Props {
 		activeTool: DrawingTool;
 		keepToolActive: boolean;
+		/** When true, show connection anchors on all connectable shapes. */
+		showConnectorAnchors?: boolean;
+		/** When true, show the select tool as active (e.g. while context menu is open). */
+		contextMenuOpen?: boolean;
 		onToolChange?: (tool: DrawingTool) => void;
 	}
-	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false), onToolChange }: Props = $props();
+	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false), showConnectorAnchors = $bindable(false), contextMenuOpen = false, onToolChange }: Props = $props();
 
 	// 8. HTML 이벤트에 바인딩하는 함수
 	const handleToolClick = (tool: DrawingTool) => {
@@ -22,18 +26,32 @@
 </script>
 
 <aside class="tool-panel">
-	{#each TOOL_ITEMS as item}
+	{#each TOOL_ITEMS as item, i}
 		<button
 			type="button"
-			class={`tool-btn ${activeTool === item.tool ? 'active' : ''}`}
+			class={`tool-btn ${(contextMenuOpen ? item.tool === 'select' : activeTool === item.tool) ? 'active' : ''}`}
 			onclick={() => handleToolClick(item.tool)}
-			title={item.label}
+			title={item.label + (i < 10 ? ` (Ctrl+${i})` : ' (Ctrl+Shift+M)')}
 		>
 			<span class="icon">{@html item.icon}</span>
 		</button>
 	{/each}
 
 	<div class="tool-divider"></div>
+
+	{#if activeTool === 'select' || activeTool === 'connector' || contextMenuOpen}
+		<button
+			type="button"
+			class={`tool-btn ${showConnectorAnchors ? 'active' : ''}`}
+			onclick={() => (showConnectorAnchors = !showConnectorAnchors)}
+			title={showConnectorAnchors ? 'Hide connection points' : 'Show connection points on all shapes'}
+		>
+			<span class="icon">
+				<!-- link / anchor points icon -->
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+			</span>
+		</button>
+	{/if}
 
 	<button
 		type="button"
@@ -61,8 +79,8 @@
 		background: #ffffffd9;
 		backdrop-filter: blur(8px);
 		border: 1px solid #cbd5e1;
-		border-radius: 14px;
-		padding: 0.3rem;
+		border-top: none;
+		padding: 0.3rem 0.5rem 0.3rem 0.3rem;
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
@@ -76,7 +94,6 @@
 		place-items: center;
 		border: 1px solid #cbd5e1;
 		background: #fff;
-		border-radius: 8px;
 		padding: 0;
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;

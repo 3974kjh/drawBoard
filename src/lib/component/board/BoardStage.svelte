@@ -10,10 +10,40 @@
 		type Point,
 		type ResizeHandle
 	} from '$lib/board-types';
+	import type { Bounds } from '$lib/Type/Bounds.js';
 	import { getAnchorPoints, getAnchorPosition, getConnectorPath } from '$lib/connector-geometry';
 
 	/** All 8 resize handle positions (compass directions). */
 	const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
+
+	/** Cursor for a resize handle: matches the resize (drag) direction in screen space after rotation. */
+	function getResizeCursor(handle: ResizeHandle, rotationDeg: number): string {
+		const rad = (rotationDeg * Math.PI) / 180;
+		const cos = Math.cos(rad);
+		const sin = Math.sin(rad);
+		const rotate = (x: number, y: number) => ({ x: x * cos - y * sin, y: x * sin + y * cos });
+		let angleDeg: number;
+		switch (handle) {
+			case 'n':
+			case 's':
+				{ const p = rotate(0, 1); angleDeg = (Math.atan2(p.y, p.x) * 180) / Math.PI; break; }
+			case 'e':
+			case 'w':
+				{ const p = rotate(1, 0); angleDeg = (Math.atan2(p.y, p.x) * 180) / Math.PI; break; }
+			case 'nw':
+			case 'se':
+				{ const p = rotate(1, 1); angleDeg = (Math.atan2(p.y, p.x) * 180) / Math.PI; break; }
+			default:
+				{ const p = rotate(1, -1); angleDeg = (Math.atan2(p.y, p.x) * 180) / Math.PI; break; }
+		}
+		angleDeg = ((angleDeg % 360) + 360) % 360;
+		const step = 45;
+		const a = Math.round(angleDeg / step) * step % 360;
+		if (a === 0 || a === 180) return 'ew-resize';
+		if (a === 90 || a === 270) return 'ns-resize';
+		if (a === 45 || a === 225) return 'nwse-resize';
+		return 'nesw-resize';
+	}
 
 	interface MarqueeRect {
 		start: Point;
@@ -38,6 +68,14 @@
 		editingElementId: string | null;
 		marquee: MarqueeRect | null;
 		selectedGroupBoxes: GroupBox[];
+		/** Combined bounds of selection (elements + strokes) for group resize. */
+		selectionBounds: Bounds | null;
+		/** Show one selection bbox with resize handles (multi-element or any strokes). */
+		showSelectionBbox: boolean;
+		/** Rotation (degrees) applied to selection bbox during rotate-group drag. */
+		selectionBboxRotation?: number;
+		/** Bounds used to draw the selection bbox (frozen during rotate to avoid distortion). */
+		selectionBboxBounds?: Bounds | { x: number; y: number; width: number; height: number } | null;
 		guideLines: GuideLine[];
 		guideDistances: GuideDistance[];
 		onPointerDown: (e: PointerEvent) => void;
@@ -46,15 +84,23 @@
 		onPointerLeave?: () => void;
 		onDblClickElement: (id: string) => void;
 		onBeginResize: (e: PointerEvent, id: string, handle: ResizeHandle) => void;
+		onBeginResizeGroup: (e: PointerEvent, handle: ResizeHandle) => void;
+		onBeginDragGroup: (e: PointerEvent) => void;
 		onBeginRotate: (e: PointerEvent, id: string) => void;
+		onBeginRotateGroup: (e: PointerEvent) => void;
 		onElementTextChange: (id: string, text: string) => void;
 		onElementTextBlur: () => void;
-		onExpandBoard: (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => void;
 		gridEnabled: boolean;
 		gridSize: number;
+		/** When true, show connection anchors on all connectable shapes (not on hover). */
+		showConnectorAnchors: boolean;
 		/** Connector tool: first anchor chosen, show preview to mouse */
 		pendingConnector: { startElementId: string; startAnchor: string } | null;
 		connectorPreviewEnd: Point | null;
+		/** Right-click context menu (e.g. Save to Library). Caller should preventDefault when needed. */
+		onContextMenu?: (e: MouseEvent) => void;
+		/** When true, show placement cursor (e.g. after picking from library). */
+		pendingLibraryPlacement?: boolean;
 	}
 
 	let {
@@ -76,6 +122,10 @@
 		editingElementId,
 		marquee,
 		selectedGroupBoxes,
+		selectionBounds = null,
+		showSelectionBbox = false,
+		selectionBboxRotation = 0,
+		selectionBboxBounds = null,
 		guideLines,
 		guideDistances,
 		onPointerDown,
@@ -84,102 +134,39 @@
 		onPointerLeave,
 		onDblClickElement,
 		onBeginResize,
+		onBeginResizeGroup,
+		onBeginDragGroup,
 		onBeginRotate,
+		onBeginRotateGroup,
 		onElementTextChange,
 		onElementTextBlur,
-		onExpandBoard,
+		showConnectorAnchors = false,
 		pendingConnector = null,
-		connectorPreviewEnd = null
+		connectorPreviewEnd = null,
+		onContextMenu,
+		pendingLibraryPlacement = false
 	}: Props = $props();
 
 	/* ── Internal eraser cursor tracking ── */
 	let eraserPos = $state<{ x: number; y: number } | null>(null);
 
-	/* ── Connector tool: which connectable element is hovered (for anchor display) ── */
-	let hoveredConnectableId = $state<string | null>(null);
-
-	/* ── Edge hover for expand buttons (visible-viewport coords) ── */
-	let hoverEdge = $state<'top' | 'bottom' | 'left' | 'right' | null>(null);
-
-	const EDGE_ZONE = 36; // px from visible edge that activates the expand button
-
-	/* ── Scroll / viewport state for visible-edge detection ── */
-	let _scrollLeft = $state(0);
-	let _scrollTop = $state(0);
-	let _viewportW = $state(0);
-	let _viewportH = $state(0);
-
-	const _visCenterX = $derived(_scrollLeft + _viewportW / 2);
-	const _visCenterY = $derived(_scrollTop + _viewportH / 2);
-
-	$effect(() => {
-		const el = wrapRef;
-		if (!el) return;
-		const update = () => {
-			_scrollLeft = el.scrollLeft;
-			_scrollTop = el.scrollTop;
-			_viewportW = el.clientWidth;
-			_viewportH = el.clientHeight;
-		};
-		update();
-		el.addEventListener('scroll', update, { passive: true });
-		const ro = new ResizeObserver(update);
-		ro.observe(el);
-		return () => {
-			el.removeEventListener('scroll', update);
-			ro.disconnect();
-		};
-	});
-
 	function handlePointerMove(event: PointerEvent) {
 		const wrap = wrapRef;
 		const rect = wrap?.getBoundingClientRect();
 		if (rect) {
-			const bx = event.clientX - rect.left;
-			const by = event.clientY - rect.top;
-			const stageX = bx + (wrap?.scrollLeft ?? 0);
-			const stageY = by + (wrap?.scrollTop ?? 0);
-
-			if (activeTool === 'eraser') {
-				eraserPos = { x: bx, y: by };
+			const stageX = event.clientX - rect.left + (wrap?.scrollLeft ?? 0);
+			const stageY = event.clientY - rect.top + (wrap?.scrollTop ?? 0);
+			if (activeTool === 'eraser' || activeTool === 'eraser-multi') {
+				eraserPos = { x: stageX, y: stageY };
 			} else {
 				eraserPos = null;
 			}
-
-			/* 선택 도구 또는 연결선 모드: 도형 호버 시 앵커 표시용 */
-			if (activeTool === 'select' || activeTool === 'connector') {
-				const connectable = elements.filter((e) => CONNECTABLE_TYPES.includes(e.type));
-				let found: string | null = null;
-				for (const el of connectable) {
-					if (
-						stageX >= el.x &&
-						stageX <= el.x + el.width &&
-						stageY >= el.y &&
-						stageY <= el.y + el.height
-					) {
-						found = el.id;
-						break;
-					}
-				}
-				hoveredConnectableId = found;
-			} else {
-				hoveredConnectableId = null;
-			}
-
-			/* Determine which VISIBLE VIEWPORT edge (if any) the pointer is near */
-			if (by < _scrollTop + EDGE_ZONE) hoverEdge = 'top';
-			else if (by > _scrollTop + _viewportH - EDGE_ZONE) hoverEdge = 'bottom';
-			else if (bx < _scrollLeft + EDGE_ZONE) hoverEdge = 'left';
-			else if (bx > _scrollLeft + _viewportW - EDGE_ZONE) hoverEdge = 'right';
-			else hoverEdge = null;
 		}
 		onPointerMove(event);
 	}
 
 	function handlePointerLeave() {
 		eraserPos = null;
-		hoverEdge = null;
-		hoveredConnectableId = null;
 		onPointerLeave?.();
 	}
 
@@ -197,7 +184,16 @@
 <section class="stage-wrap scrollbar-theme" bind:this={wrapRef}>
 	<section
 		class="board-stage"
-		class:eraser-active={activeTool === 'eraser'}
+		class:eraser-active={activeTool === 'eraser' || activeTool === 'eraser-multi'}
+		class:cursor-place={pendingLibraryPlacement}
+		class:cursor-pen={activeTool === 'pen' && !pendingLibraryPlacement}
+		class:cursor-rect={activeTool === 'rect'}
+		class:cursor-ellipse={activeTool === 'ellipse'}
+		class:cursor-triangle={activeTool === 'triangle'}
+		class:cursor-line-h={activeTool === 'line-h'}
+		class:cursor-line-v={activeTool === 'line-v'}
+		class:cursor-text={activeTool === 'text'}
+		class:cursor-image={activeTool === 'image'}
 		bind:this={stageRef}
 		style={`--theme-bg:${themeBackground};--grid-color:${gridEnabled ? themeGridColor : 'transparent'};--grid-size:${gridSize}px;min-width:${stageWidth}px;min-height:${stageHeight}px;`}
 		onpointerdown={onPointerDown}
@@ -205,77 +201,28 @@
 		onpointerup={onPointerUp}
 		onpointercancel={onPointerUp}
 		onpointerleave={handlePointerLeave}
+		oncontextmenu={(e) => { e.preventDefault(); onContextMenu?.(e); }}
 		role="application"
 		aria-label="Drawing board"
 	>
-		<!-- Edge expand buttons – centered on the VISIBLE viewport edge, not the board edge -->
-		{#if hoverEdge === 'top'}
-			<button
-				type="button"
-				class="expand-btn top"
-				style={`top:${_scrollTop}px;left:${_visCenterX}px;`}
-				onclick={() => onExpandBoard('top', 200)}
-				title="Expand top by 200px"
-			>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
-			</button>
-		{/if}
-		{#if hoverEdge === 'bottom'}
-			<button
-				type="button"
-				class="expand-btn bottom"
-				style={`top:${Math.min(stageHeight, _scrollTop + _viewportH) - 26}px;left:${_visCenterX}px;`}
-				onclick={() => onExpandBoard('bottom', 200)}
-				title="Expand bottom by 200px"
-			>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
-			</button>
-		{/if}
-		{#if hoverEdge === 'left'}
-			<button
-				type="button"
-				class="expand-btn left"
-				style={`left:${_scrollLeft}px;top:${_visCenterY}px;`}
-				onclick={() => onExpandBoard('left', 200)}
-				title="Expand left by 200px"
-			>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
-			</button>
-		{/if}
-		{#if hoverEdge === 'right'}
-			<button
-				type="button"
-				class="expand-btn right"
-				style={`left:${Math.min(stageWidth, _scrollLeft + _viewportW) - 26}px;top:${_visCenterY}px;`}
-				onclick={() => onExpandBoard('right', 200)}
-				title="Expand right by 200px"
-			>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-			</button>
-		{/if}
 		<canvas bind:this={drawCanvas}></canvas>
 
-		<!-- Connector tool: anchor points on hovered shape -->
-		{#if (activeTool === 'select' || activeTool === 'connector') && hoveredConnectableId}
-			{@const hoveredEl = elements.find((e) => e.id === hoveredConnectableId)}
-			{#if hoveredEl}
-				<div class="connector-anchors" style="width:{stageWidth}px;height:{stageHeight}px;">
-					{#each getAnchorPoints(hoveredEl) as anchor (anchor.anchorId)}
+		<!-- Connector anchors: shown on all connectables when showConnectorAnchors is on -->
+		{#if (activeTool === 'select' || activeTool === 'connector') && showConnectorAnchors}
+			<div class="connector-anchors" style="width:{stageWidth}px;height:{stageHeight}px;">
+				{#each elements.filter((e) => CONNECTABLE_TYPES.includes(e.type)) as connectableEl (connectableEl.id)}
+					{#each getAnchorPoints(connectableEl) as anchor (anchor.anchorId)}
 						<button
 							type="button"
 							class="connector-anchor-dot"
 							style="left:{anchor.x - 12}px;top:{anchor.y - 12}px;"
-							data-element-id={hoveredEl.id}
+							data-element-id={connectableEl.id}
 							data-anchor-id={anchor.anchorId}
 							title="Connect here"
 						><span class="connector-anchor-dot-visual"></span></button>
 					{/each}
-				</div>
-			{/if}
+				{/each}
+			</div>
 		{/if}
 
 		<!-- Connector lines (SVG layer; hit area per connector for selection) -->
@@ -475,19 +422,13 @@
 					{/if}
 				{/if}
 
-			{#if isSingleSelected}
-				<!-- Rotation handle -->
-				<button
-					type="button"
-					class="rotate-handle"
-					onpointerdown={(event) => onBeginRotate(event, element.id)}
-					aria-label="Rotate element"
-				>↻</button>
-				<!-- 8-point resize handles -->
+			{#if isSingleSelected && !showSelectionBbox}
+				<!-- 8-point resize handles (rotation handle is rendered in overlay layer on top); cursor matches rotated edge -->
 				{#each RESIZE_HANDLES as handle (handle)}
 					<button
 						type="button"
 						class={`resize-handle handle-${handle}`}
+						style="cursor: {getResizeCursor(handle, element.rotation ?? 0)}"
 						onpointerdown={(event) => onBeginResize(event, element.id, handle)}
 						aria-label={`Resize (${handle})`}
 					></button>
@@ -496,6 +437,25 @@
 			</div>
 			{/if}
 		{/each}
+
+		<!-- Rotation handle overlay: always on top; position follows element rotation -->
+		{#if selectedSingleElement && !showSelectionBbox}
+			{@const cx = selectedSingleElement.x + selectedSingleElement.width / 2}
+			{@const cy = selectedSingleElement.y + selectedSingleElement.height / 2}
+			{@const rad = (selectedSingleElement.rotation ?? 0) * Math.PI / 180}
+			{@const dist = 30 + selectedSingleElement.height / 2}
+			{@const hx = cx + dist * Math.sin(rad)}
+			{@const hy = cy - dist * Math.cos(rad)}
+			<div class="rotate-handle-overlay" role="presentation">
+				<button
+					type="button"
+					class="rotate-handle"
+					style={`left:${hx - 11}px;top:${hy}px;`}
+					onpointerdown={(e) => onBeginRotate(e, selectedSingleElement.id)}
+					aria-label="Rotate element"
+				>↻</button>
+			</div>
+		{/if}
 
 		{#if marquee}
 			<div
@@ -513,6 +473,46 @@
 			</div>
 		{/each}
 
+		{#if showSelectionBbox && (selectionBboxBounds ?? selectionBounds)}
+			{@const bbox = selectionBboxBounds ?? selectionBounds}
+			{#if bbox}
+			<div
+				class="selection-bbox"
+				style={`left:${bbox.x - 6}px;top:${bbox.y - 6}px;width:${bbox.width + 12}px;height:${bbox.height + 12}px;transform-origin:50% 50%;transform:rotate(${selectionBboxRotation}deg);`}
+			>
+				<div
+					class="selection-bbox-inner"
+					style={`width:${bbox.width}px;height:${bbox.height}px;`}
+				>
+					<!-- Drag area: move entire selection (behind handles so handles get priority) -->
+					<div
+						class="selection-bbox-drag"
+						role="button"
+						tabindex="0"
+						aria-label="Drag selection"
+						onpointerdown={(e) => { e.stopPropagation(); onBeginDragGroup(e); }}
+					></div>
+					<!-- Rotate selection (above center) -->
+					<button
+						type="button"
+						class="rotate-handle selection-bbox-rotate"
+						onpointerdown={(e) => { e.stopPropagation(); onBeginRotateGroup(e); }}
+						aria-label="Rotate selection"
+					>↻</button>
+					{#each RESIZE_HANDLES as handle (handle)}
+						<button
+							type="button"
+							class="resize-handle handle-{handle}"
+							style="cursor: {getResizeCursor(handle, selectionBboxRotation ?? 0)}"
+							onpointerdown={(e) => onBeginResizeGroup(e, handle)}
+							aria-label="Resize selection"
+						></button>
+					{/each}
+				</div>
+			</div>
+			{/if}
+		{/if}
+
 		{#each guideLines as line, idx (`${line.orientation}-${line.value}-${idx}`)}
 			<div
 				class={`guide-line ${line.orientation}`}
@@ -528,18 +528,27 @@
 			</div>
 		{/each}
 
-		<!-- Eraser cursor: centred on the pointer via transform -->
-		{#if activeTool === 'eraser' && eraserPos}
+		<!-- Eraser cursor: centred on the pointer; style differs by default vs multi mode -->
+		{#if (activeTool === 'eraser' || activeTool === 'eraser-multi') && eraserPos}
 			<div
 				class="eraser-cursor"
 				class:active={isErasing}
+				class:multi={activeTool === 'eraser-multi'}
 				style={`left:${eraserPos.x}px;top:${eraserPos.y}px;width:${eraserSize}px;height:${eraserSize}px;`}
 			>
-				<!-- Inner eraser icon (only when idle / not pressed) -->
 				{#if !isErasing}
-					<svg class="eraser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/>
-					</svg>
+					{#if activeTool === 'eraser-multi'}
+						<!-- Multi: clear-all / wipe icon -->
+						<svg class="eraser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+							<line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+						</svg>
+					{:else}
+						<!-- Default: precise eraser icon -->
+						<svg class="eraser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/>
+						</svg>
+					{/if}
 				{/if}
 			</div>
 		{/if}
@@ -575,7 +584,6 @@
 		min-height: 0;
 		min-width: 0;
 		overflow: auto;
-		border: 1px solid #cbd5e1;
 		background: #f8fafc;
 	}
 
@@ -600,6 +608,35 @@
 	   reveal a visual mismatch with the eraser circle. */
 	.board-stage.eraser-active * {
 		cursor: none !important;
+	}
+
+	/* Tool cursors: 32×32, white outline + dark fill for visibility on any background */
+	.board-stage.cursor-place {
+		cursor: crosshair;
+	}
+	.board-stage.cursor-pen {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' d='M20 4l8 8-14 14h-4l2-4 8-8'/%3E%3Cpath fill='none' stroke='%231e293b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M20 4l8 8-14 14h-4l2-4 8-8'/%3E%3C/svg%3E") 10 28, crosshair;
+	}
+	.board-stage.cursor-rect {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='2' fill='none' stroke='%23fff' stroke-width='3.5'/%3E%3Crect x='6' y='6' width='20' height='20' rx='2' fill='none' stroke='%231e293b' stroke-width='2'/%3E%3C/svg%3E") 16 16, crosshair;
+	}
+	.board-stage.cursor-ellipse {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23fff' stroke-width='3.5'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%231e293b' stroke-width='2'/%3E%3C/svg%3E") 16 16, crosshair;
+	}
+	.board-stage.cursor-triangle {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='3.5' stroke-linejoin='round' d='M16 6L28 26H4z'/%3E%3Cpath fill='none' stroke='%231e293b' stroke-width='2' stroke-linejoin='round' d='M16 6L28 26H4z'/%3E%3C/svg%3E") 16 16, crosshair;
+	}
+	.board-stage.cursor-line-h {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cline x1='4' y1='16' x2='28' y2='16' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='4' y1='16' x2='28' y2='16' stroke='%231e293b' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") 16 16, crosshair;
+	}
+	.board-stage.cursor-line-v {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cline x1='16' y1='4' x2='16' y2='28' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='16' y1='4' x2='16' y2='28' stroke='%231e293b' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") 16 16, crosshair;
+	}
+	.board-stage.cursor-text {
+		cursor: text;
+	}
+	.board-stage.cursor-image {
+		cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='3' fill='none' stroke='%23fff' stroke-width='3.5'/%3E%3Crect x='4' y='4' width='24' height='24' rx='3' fill='none' stroke='%231e293b' stroke-width='2'/%3E%3Ccircle cx='11' cy='11' r='2.5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='11' cy='11' r='2.5' fill='none' stroke='%231e293b' stroke-width='1.2'/%3E%3Cpath d='M4 24l8-8 6 6 8-12 4 14H4z' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M4 24l8-8 6 6 8-12 4 14H4z' fill='none' stroke='%231e293b' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 16 16, crosshair;
 	}
 
 	canvas {
@@ -663,89 +700,6 @@
 		background: #2563eb;
 		border: 2px solid #fff;
 		box-shadow: 0 0 0 1px #1d4ed8;
-	}
-
-	/* ── Expand buttons – glassmorphism ── */
-	.expand-btn {
-		position: absolute;
-		z-index: 20;
-		display: grid;
-		place-items: center;
-		/* glass base */
-		background: rgba(255, 255, 255, 0.22);
-		backdrop-filter: blur(10px) saturate(160%);
-		-webkit-backdrop-filter: blur(10px) saturate(160%);
-		border: 1px solid rgba(255, 255, 255, 0.45);
-		color: rgba(30, 64, 175, 0.95);
-		cursor: pointer;
-		padding: 0;
-		box-shadow:
-			0 2px 12px rgba(37, 99, 235, 0.18),
-			inset 0 1px 0 rgba(255, 255, 255, 0.6);
-		transition:
-			background 0.18s,
-			box-shadow 0.18s,
-			transform 0.12s;
-	}
-
-	.expand-btn:hover {
-		background: rgba(219, 234, 254, 0.65);
-		box-shadow:
-			0 4px 20px rgba(37, 99, 235, 0.28),
-			inset 0 1px 0 rgba(255, 255, 255, 0.7);
-		color: #1d4ed8;
-	}
-
-	.expand-btn svg {
-		filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
-	}
-
-	.expand-btn.top {
-		transform: translateX(-50%);
-		width: 88px;
-		height: 26px;
-		border-top: none;
-		border-radius: 0 0 14px 14px;
-	}
-
-	.expand-btn.top:hover {
-		filter: brightness(0.93);
-	}
-
-	.expand-btn.bottom {
-		transform: translateX(-50%);
-		width: 88px;
-		height: 26px;
-		border-bottom: none;
-		border-radius: 14px 14px 0 0;
-	}
-
-	.expand-btn.bottom:hover {
-		filter: brightness(0.93);
-	}
-
-	.expand-btn.left {
-		transform: translateY(-50%);
-		width: 26px;
-		height: 88px;
-		border-left: none;
-		border-radius: 0 14px 14px 0;
-	}
-
-	.expand-btn.left:hover {
-		filter: brightness(0.93);
-	}
-
-	.expand-btn.right {
-		transform: translateY(-50%);
-		width: 26px;
-		height: 88px;
-		border-right: none;
-		border-radius: 14px 0 0 14px;
-	}
-
-	.expand-btn.right:hover {
-		filter: brightness(0.93);
 	}
 
 	/* ── Elements ── */
@@ -913,11 +867,17 @@
 	.handle-w  { left: -5px;   top: calc(50% - 5px);  cursor: ew-resize; }
 	.handle-e  { right: -5px;  top: calc(50% - 5px);  cursor: ew-resize; }
 
+	.rotate-handle-overlay {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 20;
+	}
+	.rotate-handle-overlay .rotate-handle {
+		pointer-events: auto;
+	}
 	.rotate-handle {
 		position: absolute;
-		top: -30px;
-		left: 50%;
-		transform: translateX(-50%);
 		width: 22px;
 		height: 22px;
 		border-radius: 50%;
@@ -965,6 +925,50 @@
 		border-radius: 999px;
 		border: 1px solid #e9d5ff;
 	}
+
+	/* ── Selection bbox (elements + strokes) with resize handles ── */
+	.selection-bbox {
+		position: absolute;
+		border: 1px dashed #2563eb;
+		border-radius: 8px;
+		background: rgba(37, 99, 235, 0.06);
+		z-index: 3;
+		pointer-events: none;
+	}
+	.selection-bbox-inner {
+		position: absolute;
+		left: 6px;
+		top: 6px;
+		pointer-events: auto;
+	}
+	.selection-bbox-drag {
+		position: absolute;
+		inset: 0;
+		cursor: move;
+	}
+	.selection-bbox .selection-bbox-rotate {
+		top: -30px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	.selection-bbox .resize-handle {
+		position: absolute;
+		width: 10px;
+		height: 10px;
+		border-radius: 2px;
+		background: #2563eb;
+		border: 2px solid #fff;
+		z-index: 6;
+		padding: 0;
+	}
+	.selection-bbox .handle-nw { top: -5px;  left: -5px;              cursor: nwse-resize; }
+	.selection-bbox .handle-ne { top: -5px;  right: -5px;             cursor: nesw-resize; }
+	.selection-bbox .handle-sw { bottom: -5px; left: -5px;            cursor: nesw-resize; }
+	.selection-bbox .handle-se { bottom: -5px; right: -5px;            cursor: nwse-resize; }
+	.selection-bbox .handle-n  { top: -5px;    left: calc(50% - 5px); cursor: ns-resize; }
+	.selection-bbox .handle-s  { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+	.selection-bbox .handle-w  { left: -5px;   top: calc(50% - 5px);  cursor: ew-resize; }
+	.selection-bbox .handle-e  { right: -5px;  top: calc(50% - 5px);  cursor: ew-resize; }
 
 	/* ── Guide lines ── */
 	.guide-line {
@@ -1065,5 +1069,36 @@
 
 	.eraser-cursor.active::after {
 		background: rgba(200, 40, 40, 0.85);
+	}
+
+	/* ── Multi eraser: dashed ring, amber/orange tint, trash icon ── */
+	.eraser-cursor.multi {
+		background: radial-gradient(
+			circle at 38% 36%,
+			rgba(255, 220, 160, 0.35) 0%,
+			rgba(251, 180, 80, 0.2) 60%,
+			rgba(220, 130, 50, 0.08) 100%
+		);
+		border: 1.5px dashed rgba(200, 120, 40, 0.7);
+		box-shadow:
+			0 0 8px rgba(245, 158, 11, 0.2),
+			inset 0 1px 4px rgba(255, 255, 255, 0.3);
+		color: rgba(180, 100, 30, 0.6);
+	}
+	.eraser-cursor.multi::after {
+		background: rgba(200, 120, 40, 0.6);
+	}
+	.eraser-cursor.multi.active {
+		background: radial-gradient(
+			circle at 38% 36%,
+			rgba(255, 200, 120, 0.5) 0%,
+			rgba(251, 160, 60, 0.35) 60%,
+			rgba(220, 110, 40, 0.2) 100%
+		);
+		border-color: rgba(220, 120, 40, 0.9);
+		box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+	}
+	.eraser-cursor.multi.active::after {
+		background: rgba(220, 100, 30, 0.9);
 	}
 </style>

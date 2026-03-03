@@ -19,6 +19,7 @@
 		type TextVerticalAlign,
 		type ThemeId,
 		CONNECTABLE_TYPES,
+		TOOL_ITEMS,
 		type ConnectorStyle,
 		type ConnectorType,
 		type ConnectorArrow,
@@ -33,6 +34,12 @@
 		getGapMatchSnap,
 		getDistanceLabels
 	} from '$lib/snap-engine';
+	import {
+		getStrokeBounds,
+		getStrokesBounds,
+		strokeIntersectsRect,
+		strokeIntersectsCircle
+	} from '$lib/canvas-renderer';
 	import {
 		drawThemeBackground,
 		drawStroke,
@@ -49,7 +56,14 @@
 	import PropertyPanel from '$lib/component/board/PropertyPanel.svelte';
 	import BoardStage from '$lib/component/board/BoardStage.svelte';
 	import ImportModal from '$lib/component/board/ImportModal.svelte';
+	import LibraryModal from '$lib/component/board/LibraryModal.svelte';
+	import ShortcutsModal from '$lib/component/board/ShortcutsModal.svelte';
+	import SaveLibraryNameModal from '$lib/component/board/SaveLibraryNameModal.svelte';
 	import MinimapThumbnail from '$lib/component/board/MinimapThumbnail.svelte';
+	import {
+		saveLibraryItem,
+		type LibraryItem
+	} from '$lib/library-storage';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -67,6 +81,7 @@
 	let elements = $state<BoardElement[]>([]);
 	let activeTool = $state<DrawingTool>('pen');
 	let selectedElementIds = $state<string[]>([]);
+	let selectedStrokeIds = $state<string[]>([]);
 	let editingElementId = $state<string | null>(null);
 	/** Image element id when opening file picker from double-click on image (replace image flow). */
 	let imageReplaceTargetId = $state<string | null>(null);
@@ -88,12 +103,27 @@
 	let startArrowDirection = $state<ConnectorArrowDirection>('auto');
 	let endArrowDirection = $state<ConnectorArrowDirection>('auto');
 	let connectorArrowSize = $state(10);
+	/** When true, show line-connection anchor points on all connectable shapes (no hover). */
+	let showConnectorAnchors = $state(false);
 	/** When connector tool: { startElementId, startAnchor } or null */
 	let pendingConnector = $state<{ startElementId: string; startAnchor: string } | null>(null);
 	/** Preview end point while drawing connector (start anchor → mouse) */
 	let connectorPreviewEnd = $state<Point | null>(null);
 	let showImportModal = $state(false);
 	let importBoards = $state<BoardData[]>([]);
+	let showLibraryModal = $state(false);
+	let showShortcutsModal = $state(false);
+	/** When set, next board click places this library item at the click position. */
+	let pendingLibraryItem = $state<LibraryItem | null>(null);
+	/** Context menu position (right-click with selection). */
+	let contextMenuAt = $state<{ x: number; y: number } | null>(null);
+	/** 'element' = Copy/Delete/Save to Library; 'paste' = Paste on empty area */
+	let contextMenuMode = $state<'element' | 'paste' | null>(null);
+	/** Stage coords for paste-from-context-menu (when contextMenuMode === 'paste'). */
+	let contextMenuPasteAt = $state<Point | null>(null);
+	let stageContainerRef = $state<HTMLElement | null>(null);
+	let contextMenuRef = $state<HTMLElement | null>(null);
+	let showSaveLibraryNameModal = $state(false);
 	/** true = unsaved content (strokes/elements/settings) */
 	let _contentDirty = $state(false);
 	/** title at last load or save (so title change counts as dirty) */
@@ -112,6 +142,10 @@
 	let stageHeight = $state(700);
 	let guideLines = $state<GuideLine[]>([]);
 	let guideDistances = $state<GuideDistance[]>([]);
+	/** Persisted selection bbox rotation (degrees) so rotate handle stays at rotated position after drag. */
+	let selectionBboxRotationPersisted = $state(0);
+	/** Persisted bbox dimensions at start of rotate; used to draw bbox after rotation. */
+	let selectionBboxBoundsPersisted = $state<{ x: number; y: number; width: number; height: number } | null>(null);
 
 	/* ── Non-reactive live-drawing state (bypasses Svelte reactivity for perf) ── */
 	let _livePoints: Point[] = [];
@@ -164,9 +198,103 @@
 			.filter((item): item is NonNullable<typeof item> => Boolean(item));
 	});
 
+	/** Combined bounds of selected elements + selected strokes (for group resize). */
+	const selectionBounds = $derived.by(() => {
+		const elBounds = getBounds(selectedElements);
+		const strokeBounds = getStrokesBounds(strokes, selectedStrokeIds);
+		if (!elBounds && !strokeBounds) return null;
+		if (!elBounds) return strokeBounds;
+		if (!strokeBounds) return elBounds;
+		const minX = Math.min(elBounds.x, strokeBounds.x);
+		const minY = Math.min(elBounds.y, strokeBounds.y);
+		const maxX = Math.max(elBounds.right, strokeBounds.right);
+		const maxY = Math.max(elBounds.bottom, strokeBounds.bottom);
+		return {
+			x: minX,
+			y: minY,
+			right: maxX,
+			bottom: maxY,
+			width: maxX - minX,
+			height: maxY - minY,
+			centerX: (minX + maxX) / 2,
+			centerY: (minY + maxY) / 2
+		};
+	});
+
+	/** Show one selection bbox with resize handles (multi-element or any strokes). */
+	const showSelectionBbox = $derived(
+		selectedStrokeIds.length >= 1 || selectedElementIds.length > 1
+	);
+
+	/** Rotation angle (degrees) to apply to selection bbox and its rotate handle. */
+	const selectionBboxRotation = $derived(
+		interaction?.kind === 'rotate-group'
+			? (interaction.originBboxRotation + (interaction.currentDeltaDeg ?? 0))
+			: selectionBboxRotationPersisted
+	);
+
+	/** Bounds used to draw the selection bbox; frozen during rotate; during drag offset by delta; during resize use live lastNewBounds so bbox shrinks/grows with drag. */
+	const selectionBboxBounds = $derived.by(() => {
+		if (interaction?.kind === 'rotate-group' && interaction.originBounds) return interaction.originBounds;
+		if (interaction?.kind === 'drag-group' && selectionBboxBoundsPersisted) {
+			const dx = interaction.currentDx ?? 0;
+			const dy = interaction.currentDy ?? 0;
+			return {
+				x: selectionBboxBoundsPersisted.x + dx,
+				y: selectionBboxBoundsPersisted.y + dy,
+				width: selectionBboxBoundsPersisted.width,
+				height: selectionBboxBoundsPersisted.height
+			};
+		}
+		if (interaction?.kind === 'resize-group' && interaction.lastNewBounds) return interaction.lastNewBounds;
+		if (selectionBboxBoundsPersisted) return selectionBboxBoundsPersisted;
+		return selectionBounds;
+	});
+
 	/* ── Utilities ── */
 	const deepClone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 	const uniq = (items: string[]) => [...new Set(items)];
+
+	/** Visual AABB of an element (rotation and connector path). For thumbnail bounds so nothing is clipped. */
+	function getElementVisualBounds(
+		el: BoardElement,
+		allElements: BoardElement[]
+	): { minX: number; minY: number; maxX: number; maxY: number } {
+		if (el.type === 'connector') {
+			const data = getConnectorPath(el, allElements);
+			if (data?.bounds)
+				return {
+					minX: data.bounds.x,
+					minY: data.bounds.y,
+					maxX: data.bounds.x + data.bounds.width,
+					maxY: data.bounds.y + data.bounds.height
+				};
+		}
+		const x = el.x;
+		const y = el.y;
+		const w = el.width;
+		const h = el.height;
+		const rot = (el.rotation ?? 0) * (Math.PI / 180);
+		const bw = (el.borderWidth ?? 2) / 2;
+		const cx = x + w / 2;
+		const cy = y + h / 2;
+		const cos = Math.cos(rot);
+		const sin = Math.sin(rot);
+		const corners = [
+			[x - bw, y - bw],
+			[x + w + bw, y - bw],
+			[x + w + bw, y + h + bw],
+			[x - bw, y + h + bw]
+		].map(([px, py]) => ({
+			x: cx + (px - cx) * cos - (py - cy) * sin,
+			y: cy + (px - cx) * sin + (py - cy) * cos
+		}));
+		const minX = Math.min(...corners.map((c) => c.x));
+		const minY = Math.min(...corners.map((c) => c.y));
+		const maxX = Math.max(...corners.map((c) => c.x));
+		const maxY = Math.max(...corners.map((c) => c.y));
+		return { minX, minY, maxX, maxY };
+	}
 
 	const nextId = () => {
 		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -211,6 +339,7 @@
 		gridEnabled = snapshot.gridEnabled;
 		gridSize = snapshot.gridSize;
 		selectedElementIds = [];
+		selectedStrokeIds = [];
 		editingElementId = null;
 	};
 
@@ -279,6 +408,7 @@
 		strokes = deepClone(board.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(board.elements).map((el: BoardElement) => migrateElement(el));
 		selectedElementIds = [];
+		selectedStrokeIds = [];
 		penColor =
 			BOARD_THEMES.find((theme) => theme.id === board.themeId)?.defaultStrokeColor ?? '#111827';
 		fillColor =
@@ -305,6 +435,22 @@
 				});
 			});
 		}
+		/* Restore saved scroll position so returning to the board shows the same view */
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				const wrap = stageWrapRef;
+				if (wrap) {
+					try {
+						const raw = sessionStorage.getItem(`board-scroll-${boardId}`);
+						if (raw) {
+							const { x, y } = JSON.parse(raw);
+							wrap.scrollLeft = Math.max(0, Number(x) || 0);
+							wrap.scrollTop = Math.max(0, Number(y) || 0);
+						}
+					} catch (_) {}
+				}
+			});
+		});
 	};
 
 	const saveBoard = async (silent = false) => {
@@ -480,13 +626,19 @@
 		const isLine = isLineH || isLineV;
 		const isCircle = type === 'ellipse';
 		const isImage = type === 'image';
+		const defW = type === 'text' ? 220 : isLineV ? 20 : isCircle ? 160 : isImage ? 200 : 200;
+		const defH = type === 'text' ? 80 : isLineH ? 20 : isCircle ? 160 : isImage ? 150 : 140;
+		const w = Math.max(10, Math.min(defW, stageWidth));
+		const h = Math.max(10, Math.min(defH, stageHeight));
+		const x = Math.max(0, Math.min(stageWidth - w, point.x));
+		const y = Math.max(0, Math.min(stageHeight - h, point.y));
 		const element: BoardElement = {
 			id: nextId(),
 			type,
-			x: point.x,
-			y: point.y,
-			width: type === 'text' ? 220 : isLineV ? 20 : isCircle ? 160 : isImage ? 200 : 200,
-			height: type === 'text' ? 80 : isLineH ? 20 : isCircle ? 160 : isImage ? 150 : 140,
+			x,
+			y,
+			width: w,
+			height: h,
 			rotation: 0,
 			strokeColor: penColor,
 			fillColor: isLine || type === 'text' || isImage ? 'transparent' : fillColor,
@@ -671,14 +823,14 @@
 	};
 
 	/* ── Board expansion ── */
-	const expandBoard = (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => {
+	const expandBoard = (dir: 'top' | 'bottom' | 'left' | 'right', amount: number, commit = true) => {
 		if (dir === 'right') {
 			stageWidth += amount;
 		} else if (dir === 'bottom') {
 			stageHeight += amount;
 		} else if (dir === 'left') {
 			stageWidth += amount;
-			/* Shift all elements and strokes right */
+			/* Shift all elements and strokes right so new space is on the left */
 			elements = elements.map((el) => ({ ...el, x: el.x + amount }));
 			strokes = strokes.map((s) => ({
 				...s,
@@ -686,6 +838,7 @@
 			}));
 		} else if (dir === 'top') {
 			stageHeight += amount;
+			/* Shift all elements and strokes down so new space is at the top */
 			elements = elements.map((el) => ({ ...el, y: el.y + amount }));
 			strokes = strokes.map((s) => ({
 				...s,
@@ -698,11 +851,29 @@
 			drawCanvas.height = stageHeight;
 		}
 		redrawCanvas();
-		commitSnapshot();
+		/* Keep visible area fixed: scroll by expansion amount for top/left so content doesn’t jump */
+		const wrap = stageWrapRef;
+		const scrollDir = dir === 'top' ? 'top' : dir === 'left' ? 'left' : null;
+		if (scrollDir && wrap) {
+			requestAnimationFrame(() => {
+				if (scrollDir === 'top') wrap.scrollTop += amount;
+				if (scrollDir === 'left') wrap.scrollLeft += amount;
+			});
+		}
+		if (commit) commitSnapshot();
 	};
+
+	/** Clamp point to current board bounds (so strokes/elements cannot be placed outside). */
+	function clampPointToBoard(p: Point): Point {
+		return {
+			x: Math.max(0, Math.min(stageWidth, p.x)),
+			y: Math.max(0, Math.min(stageHeight, p.y))
+		};
+	}
 
 	/* ── Drawing ── */
 	const startDrawing = (point: Point) => {
+		const pt = clampPointToBoard(point);
 		// Snapshot the current canvas so we can restore it on every RAF frame
 		if (drawCanvas) {
 			const ctx = drawCanvas.getContext('2d');
@@ -710,7 +881,7 @@
 				_committedImageData = ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
 			}
 		}
-		_livePoints = [point];
+		_livePoints = [pt];
 		_liveColor = penColor;
 		_liveSize = penSize;
 		_isLiveDrawing = true;
@@ -719,7 +890,7 @@
 
 	const pushPointToStroke = (point: Point) => {
 		if (!_isLiveDrawing) return;
-		_livePoints = [..._livePoints, point];
+		_livePoints = [..._livePoints, clampPointToBoard(point)];
 		// Batch canvas updates through RAF for smoothest rendering
 		if (_liveRafId === 0) {
 			_liveRafId = requestAnimationFrame(() => {
@@ -1030,6 +1201,21 @@
 		redrawCanvas();
 	};
 
+	/** Multi eraser: remove whole strokes and elements/connectors that intersect the circle. */
+	const eraseMultiAt = (point: Point) => {
+		const radius = eraserSize / 2;
+		strokes = strokes.filter(
+			(s) => !(s.tool === 'pen' && strokeIntersectsCircle(s, point, radius))
+		);
+		const r2 = radius * radius;
+		elements = elements.filter((el) => {
+			const px = Math.max(el.x, Math.min(point.x, el.x + el.width));
+			const py = Math.max(el.y, Math.min(point.y, el.y + el.height));
+			return (point.x - px) ** 2 + (point.y - py) ** 2 > r2;
+		});
+		redrawCanvas();
+	};
+
 	/* ── Pointer handlers ── */
 	const elementAt = (target: EventTarget | null): string | null => {
 		const element = (target as HTMLElement | null)?.closest(
@@ -1039,7 +1225,14 @@
 	};
 
 	const onStagePointerDown = (event: PointerEvent) => {
+		/* Only react to primary (left) button; right-click is for context menu and must not start drag/marquee */
+		if (event.button !== 0) return;
 		const point = getPointFromPointer(event);
+		if (pendingLibraryItem) {
+			placeLibraryItemAt(point, pendingLibraryItem);
+			pendingLibraryItem = null;
+			return;
+		}
 		const clickedElementId = elementAt(event.target);
 		guideLines = [];
 		guideDistances = [];
@@ -1068,18 +1261,25 @@
 				if (conn) {
 					const pathData = getConnectorPath(conn, elements);
 					const bend = pathData?.bendPoint;
-					if (bend) {
+					if (bend && pathData) {
 						event.preventDefault();
 						const isSelfConnector = conn.startElementId === conn.endElementId;
+						const isOrthogonal = !isSelfConnector && conn.connectorType !== 'curved';
+						const orthogonalBendVertical =
+							isOrthogonal &&
+							Math.abs((pathData.end?.x ?? 0) - (pathData.start?.x ?? 0)) <
+								Math.abs((pathData.end?.y ?? 0) - (pathData.start?.y ?? 0));
 						interaction = {
 							kind: 'connector-bend',
 							pointerId: event.pointerId,
 							connectorId,
 							start: point,
 							originalBendX: isSelfConnector ? bend.x : (conn.connectorType === 'curved' ? undefined : bend.x),
-							originalBendY: isSelfConnector ? bend.y : undefined,
+							originalBendY:
+								isSelfConnector ? bend.y : orthogonalBendVertical ? bend.y : (conn.connectorType === 'curved' ? undefined : undefined),
 							originalControlX: !isSelfConnector && conn.connectorType === 'curved' ? bend.x : undefined,
-							originalControlY: !isSelfConnector && conn.connectorType === 'curved' ? bend.y : undefined
+							originalControlY: !isSelfConnector && conn.connectorType === 'curved' ? bend.y : undefined,
+							orthogonalBendVertical: isOrthogonal ? orthogonalBendVertical : undefined
 						};
 					}
 					return;
@@ -1093,13 +1293,17 @@
 		editingElementId = null;
 
 		/* 도형 클릭 시 펜/지우개여도 선택 모드로 전환하고 해당 도형 선택 */
-		if (clickedElementId && (activeTool === 'pen' || activeTool === 'eraser')) {
+		if (clickedElementId && (activeTool === 'pen' || activeTool === 'eraser' || activeTool === 'eraser-multi')) {
 			activeTool = 'select';
 		}
 
-		if (activeTool === 'eraser') {
+		if (activeTool === 'eraser' || activeTool === 'eraser-multi') {
 			_prevEraserPt = null;
-			eraseAt(point);
+			if (activeTool === 'eraser-multi') {
+				eraseMultiAt(point);
+			} else {
+				eraseAt(point);
+			}
 			interaction = { kind: 'erasing', pointerId: event.pointerId };
 			return;
 		}
@@ -1151,6 +1355,7 @@
 
 			if (!event.shiftKey) {
 				setSelection([]);
+				selectedStrokeIds = [];
 			}
 			interaction = {
 				kind: 'marquee',
@@ -1196,7 +1401,11 @@
 		}
 
 		if (currentInteraction.kind === 'erasing') {
-			eraseAt(point);
+			if (activeTool === 'eraser-multi') {
+				eraseMultiAt(point);
+			} else {
+				eraseAt(point);
+			}
 			return;
 		}
 
@@ -1275,8 +1484,69 @@
 				if (!selected.has(item.id)) return item;
 				const origin = currentInteraction.originById[item.id];
 				if (!origin) return item;
-				return { ...item, x: origin.x + dx, y: origin.y + dy };
+				const newX = Math.max(0, Math.min(stageWidth - item.width, origin.x + dx));
+				const newY = Math.max(0, Math.min(stageHeight - item.height, origin.y + dy));
+				return { ...item, x: newX, y: newY };
 			});
+			return;
+		}
+
+		if (currentInteraction.kind === 'drag-group') {
+			let dx = point.x - currentInteraction.start.x;
+			let dy = point.y - currentInteraction.start.y;
+			const selectedSet = new Set(currentInteraction.elementIds);
+			const originById = currentInteraction.originById;
+			/* Clamp dx, dy so the whole group stays inside board; use AABB for rotated elements */
+			let dxMin = -Infinity, dxMax = Infinity, dyMin = -Infinity, dyMax = Infinity;
+			for (const item of elements) {
+				if (!selectedSet.has(item.id)) continue;
+				const o = originById[item.id];
+				if (!o) continue;
+				const rot = (item.rotation ?? 0) * (Math.PI / 180);
+				const hw = item.width / 2;
+				const hh = item.height / 2;
+				const aabbHalfW = hw * Math.abs(Math.cos(rot)) + hh * Math.abs(Math.sin(rot));
+				const aabbHalfH = hw * Math.abs(Math.sin(rot)) + hh * Math.abs(Math.cos(rot));
+				const originCx = o.x + hw;
+				const originCy = o.y + hh;
+				dxMin = Math.max(dxMin, aabbHalfW - originCx);
+				dxMax = Math.min(dxMax, stageWidth - originCx - aabbHalfW);
+				dyMin = Math.max(dyMin, aabbHalfH - originCy);
+				dyMax = Math.min(dyMax, stageHeight - originCy - aabbHalfH);
+			}
+			for (const s of currentInteraction.originStrokes) {
+				for (const p of s.points) {
+					dxMin = Math.max(dxMin, -p.x);
+					dxMax = Math.min(dxMax, stageWidth - p.x);
+					dyMin = Math.max(dyMin, -p.y);
+					dyMax = Math.min(dyMax, stageHeight - p.y);
+				}
+			}
+			dx = Math.max(dxMin, Math.min(dxMax, dx));
+			dy = Math.max(dyMin, Math.min(dyMax, dy));
+			interaction = { ...currentInteraction, currentDx: dx, currentDy: dy };
+			elements = elements.map((item) => {
+				if (!selectedSet.has(item.id)) return item;
+				const origin = currentInteraction.originById[item.id];
+				if (!origin) return item;
+				const newX = origin.x + dx;
+				const newY = origin.y + dy;
+				return { ...item, x: newX, y: newY };
+			});
+			const originStrokeIds = new Set(currentInteraction.originStrokes.map((s) => s.id));
+			strokes = strokes.map((s) => {
+				if (!originStrokeIds.has(s.id) || s.tool !== 'pen') return s;
+				const orig = currentInteraction.originStrokes.find((o) => o.id === s.id);
+				if (!orig) return s;
+				return {
+					...s,
+					points: orig.points.map((p) => ({
+						x: Math.max(0, Math.min(stageWidth, p.x + dx)),
+						y: Math.max(0, Math.min(stageHeight, p.y + dy))
+					}))
+				};
+			});
+			redrawCanvas();
 			return;
 		}
 
@@ -1296,10 +1566,17 @@
 			if (handle.includes('n')) top = originY + dy;
 
 			// Normalise: support flipping when an edge crosses its opposite
-			const newX = Math.min(left, right);
-			const newY = Math.min(top, bottom);
-			const newW = Math.max(10, Math.abs(right - left));
-			const newH = Math.max(10, Math.abs(bottom - top));
+			let newX = Math.min(left, right);
+			let newY = Math.min(top, bottom);
+			let newW = Math.max(10, Math.abs(right - left));
+			let newH = Math.max(10, Math.abs(bottom - top));
+			// Clamp to board
+			newW = Math.min(newW, stageWidth - newX);
+			newH = Math.min(newH, stageHeight - newY);
+			newX = Math.max(0, Math.min(stageWidth - newW, newX));
+			newY = Math.max(0, Math.min(stageHeight - newH, newY));
+			newW = Math.max(10, Math.min(stageWidth - newX, newW));
+			newH = Math.max(10, Math.min(stageHeight - newY, newH));
 
 			updateElement(currentInteraction.elementId, (item) => ({
 				...item,
@@ -1348,11 +1625,236 @@
 						connectorControlY: (currentInteraction.originalControlY ?? 0) + dy
 					};
 				}
+				if (currentInteraction.orthogonalBendVertical) {
+					return {
+						...c,
+						connectorBendY: (currentInteraction.originalBendY ?? (c.y + c.height / 2)) + dy
+					};
+				}
 				return {
 					...c,
 					connectorBendX: (currentInteraction.originalBendX ?? 0) + dx
 				};
 			});
+			return;
+		}
+
+		if (currentInteraction.kind === 'resize-group') {
+			const { handle, originBounds: ob, originBboxRotation: bboxRot, originElements, originStrokes } = currentInteraction;
+			const useRotatedResize = bboxRot != null && bboxRot !== 0;
+			const angleRad = useRotatedResize ? (bboxRot * Math.PI) / 180 : 0;
+			const cos = Math.cos(angleRad);
+			const sin = Math.sin(angleRad);
+			const oldCx = ob.x + ob.width / 2;
+			const oldCy = ob.y + ob.height / 2;
+			const w2 = ob.width / 2;
+			const h2 = ob.height / 2;
+
+			let newX: number;
+			let newY: number;
+			let newW: number;
+			let newH: number;
+
+			if (useRotatedResize) {
+				// Rotated resize: dragged handle moves to pointer; opposite edge/corner stays fixed.
+				const dist = (ax: number, ay: number, bx: number, by: number) =>
+					Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+				const px = point.x;
+				const py = point.y;
+
+				if (handle === 'e') {
+					const fixX = oldCx - w2 * cos;
+					const fixY = oldCy - w2 * sin;
+					newW = Math.max(4, dist(fixX, fixY, px, py));
+					newH = ob.height;
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 'w') {
+					const fixX = oldCx + w2 * cos;
+					const fixY = oldCy + w2 * sin;
+					newW = Math.max(4, dist(fixX, fixY, px, py));
+					newH = ob.height;
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 'n') {
+					const fixX = oldCx - h2 * sin;
+					const fixY = oldCy + h2 * cos;
+					newW = ob.width;
+					newH = Math.max(4, dist(fixX, fixY, px, py));
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 's') {
+					const fixX = oldCx + h2 * sin;
+					const fixY = oldCy - h2 * cos;
+					newW = ob.width;
+					newH = Math.max(4, dist(fixX, fixY, px, py));
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else {
+					// Corner: fixed = opposite corner; new center = midpoint; new size from center-to-point in local
+					let fixX: number, fixY: number;
+					if (handle === 'ne') {
+						fixX = oldCx - w2 * cos - h2 * sin;
+						fixY = oldCy - w2 * sin + h2 * cos;
+					} else if (handle === 'sw') {
+						fixX = oldCx + w2 * cos + h2 * sin;
+						fixY = oldCy + w2 * sin - h2 * cos;
+					} else if (handle === 'nw') {
+						fixX = oldCx + w2 * cos - h2 * sin;
+						fixY = oldCy + w2 * sin + h2 * cos;
+					} else {
+						fixX = oldCx - w2 * cos + h2 * sin;
+						fixY = oldCy - w2 * sin - h2 * cos;
+					}
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					const dx = px - newCx;
+					const dy = py - newCy;
+					const localX = dx * cos + dy * sin;
+					const localY = -dx * sin + dy * cos;
+					if (handle === 'ne') {
+						newW = Math.max(4, 2 * localX);
+						newH = Math.max(4, -2 * localY);
+					} else if (handle === 'sw') {
+						newW = Math.max(4, -2 * localX);
+						newH = Math.max(4, 2 * localY);
+					} else if (handle === 'nw') {
+						newW = Math.max(4, -2 * localX);
+						newH = Math.max(4, -2 * localY);
+					} else {
+						newW = Math.max(4, 2 * localX);
+						newH = Math.max(4, 2 * localY);
+					}
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				}
+			} else {
+				const dx = point.x - currentInteraction.start.x;
+				const dy = point.y - currentInteraction.start.y;
+				let left = ob.x;
+				let top = ob.y;
+				let right = ob.x + ob.width;
+				let bottom = ob.y + ob.height;
+				if (handle.includes('e')) right = ob.x + ob.width + dx;
+				if (handle.includes('w')) left = ob.x + dx;
+				if (handle.includes('s')) bottom = ob.y + ob.height + dy;
+				if (handle.includes('n')) top = ob.y + dy;
+				newX = Math.min(left, right);
+				newY = Math.min(top, bottom);
+				newW = Math.max(4, Math.abs(right - left));
+				newH = Math.max(4, Math.abs(bottom - top));
+			}
+
+			// Clamp to board
+			newW = Math.min(newW, stageWidth - newX);
+			newH = Math.min(newH, stageHeight - newY);
+			newX = Math.max(0, Math.min(stageWidth - newW, newX));
+			newY = Math.max(0, Math.min(stageHeight - newH, newY));
+			newW = Math.max(4, Math.min(stageWidth - newX, newW));
+			newH = Math.max(4, Math.min(stageHeight - newY, newH));
+
+			const sx = newW / ob.width;
+			const sy = newH / ob.height;
+			const newCx = newX + newW / 2;
+			const newCy = newY + newH / 2;
+			const originElIds = new Set(originElements.map((e) => e.id));
+			const originStrokeIds = new Set(originStrokes.map((s) => s.id));
+
+			const scalePoint = (px: number, py: number): { x: number; y: number } => {
+				if (!useRotatedResize) {
+					return {
+						x: newX + (px - ob.x) * sx,
+						y: newY + (py - ob.y) * sy
+					};
+				}
+				const relX = px - oldCx;
+				const relY = py - oldCy;
+				const u = ob.width / 2 + relX * cos + relY * sin;
+				const v = ob.height / 2 - relX * sin + relY * cos;
+				const newU = u * sx;
+				const newV = v * sy;
+				const newLocalX = newU - newW / 2;
+				const newLocalY = newV - newH / 2;
+				return {
+					x: newCx + newLocalX * cos - newLocalY * sin,
+					y: newCy + newLocalX * sin + newLocalY * cos
+				};
+			};
+
+			elements = elements.map((item) => {
+				if (!originElIds.has(item.id)) return item;
+				const orig = originElements.find((e) => e.id === item.id);
+				if (!orig) return item;
+				const pos = scalePoint(orig.x, orig.y);
+				return {
+					...item,
+					x: pos.x,
+					y: pos.y,
+					width: orig.width * sx,
+					height: orig.height * sy
+				};
+			});
+			strokes = strokes.map((s) => {
+				if (!originStrokeIds.has(s.id) || s.tool !== 'pen') return s;
+				const orig = originStrokes.find((o) => o.id === s.id);
+				if (!orig) return s;
+				return {
+					...s,
+					points: orig.points.map((p) => scalePoint(p.x, p.y))
+				};
+			});
+			interaction = { ...currentInteraction, lastNewBounds: { x: newX, y: newY, width: newW, height: newH } };
+			redrawCanvas();
+			return;
+		}
+
+		if (currentInteraction.kind === 'rotate-group') {
+			const { center, startAngle, originRotations, originElements, originStrokes } = currentInteraction;
+			const angle =
+				Math.atan2(point.y - center.y, point.x - center.x) * (180 / Math.PI) + 90;
+			const deltaDeg = angle - startAngle;
+			interaction = { ...currentInteraction, currentDeltaDeg: deltaDeg };
+			const deltaRad = (deltaDeg * Math.PI) / 180;
+			const cos = Math.cos(deltaRad);
+			const sin = Math.sin(deltaRad);
+			const rotatePoint = (px: number, py: number) => ({
+				x: center.x + (px - center.x) * cos - (py - center.y) * sin,
+				y: center.y + (px - center.x) * sin + (py - center.y) * cos
+			});
+			/* Rigid-body rotation: rotate each element's center around group center, then set x,y and rotation */
+			elements = elements.map((el) => {
+				const orig = originElements.find((o) => o.id === el.id);
+				const origRot = originRotations[el.id];
+				if (orig === undefined || origRot === undefined) return el;
+				const origCx = orig.x + orig.width / 2;
+				const origCy = orig.y + orig.height / 2;
+				const newCenter = rotatePoint(origCx, origCy);
+				let newRot = origRot + deltaDeg;
+				newRot = ((newRot % 360) + 360) % 360;
+				return {
+					...el,
+					x: newCenter.x - el.width / 2,
+					y: newCenter.y - el.height / 2,
+					rotation: Math.round(newRot * 10) / 10
+				};
+			});
+			strokes = strokes.map((s) => {
+				const orig = originStrokes.find((o) => o.id === s.id);
+				if (!orig || s.tool !== 'pen') return s;
+				return {
+					...s,
+					points: orig.points.map((p) => rotatePoint(p.x, p.y))
+				};
+			});
+			redrawCanvas();
 			return;
 		}
 
@@ -1376,6 +1878,8 @@
 			const y1 = Math.min(interaction.start.y, interaction.current.y);
 			const x2 = Math.max(interaction.start.x, interaction.current.x);
 			const y2 = Math.max(interaction.start.y, interaction.current.y);
+			const w = x2 - x1;
+			const h = y2 - y1;
 			const hits = elements
 				.filter(
 					(item) =>
@@ -1389,7 +1893,40 @@
 			setSelection(
 				interaction.append ? [...selectedElementIds, ...expandedHits] : expandedHits
 			);
+			const strokeHits = strokes
+				.filter((s) => s.tool === 'pen' && strokeIntersectsRect(s, x1, y1, w, h))
+				.map((s) => s.id);
+			selectedStrokeIds = interaction.append
+				? [...selectedStrokeIds, ...strokeHits]
+				: strokeHits;
+			if (expandedHits.length > 0 || strokeHits.length > 0) activeTool = 'select';
 		} else if (interaction.kind === 'connector-bend') {
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else if (interaction.kind === 'resize-group') {
+			if (interaction.lastNewBounds) {
+				selectionBboxBoundsPersisted = { ...interaction.lastNewBounds };
+			}
+			commitSnapshot();
+		} else if (interaction.kind === 'rotate-group') {
+			selectionBboxRotationPersisted =
+				interaction.originBboxRotation + (interaction.currentDeltaDeg ?? 0);
+			selectionBboxBoundsPersisted = interaction.originBounds
+				? { ...interaction.originBounds }
+				: selectionBboxBoundsPersisted;
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else if (interaction.kind === 'drag-group') {
+			const point = getPointFromPointer(event);
+			const dx = point.x - interaction.start.x;
+			const dy = point.y - interaction.start.y;
+			if (selectionBboxBoundsPersisted) {
+				selectionBboxBoundsPersisted = {
+					...selectionBboxBoundsPersisted,
+					x: selectionBboxBoundsPersisted.x + dx,
+					y: selectionBboxBoundsPersisted.y + dy
+				};
+			}
 			refreshConnectorBounds();
 			commitSnapshot();
 		} else {
@@ -1397,6 +1934,56 @@
 			commitSnapshot();
 		}
 
+		guideLines = [];
+		guideDistances = [];
+		interaction = null;
+	};
+
+	/** End current interaction when pointer leaves the board (drag/pen released outside). */
+	const endInteractionOnLeave = () => {
+		connectorPreviewEnd = null;
+		if (!interaction) return;
+		const current = interaction;
+		if (current.kind === 'drawing') {
+			commitLiveStroke();
+			commitSnapshot();
+		} else if (current.kind === 'erasing') {
+			_prevEraserPt = null;
+			commitSnapshot();
+		} else if (current.kind === 'marquee') {
+			/* Cancel marquee selection when leaving board */
+		} else if (
+			current.kind === 'connector-bend' ||
+			current.kind === 'resize-group' ||
+			current.kind === 'rotate-group' ||
+			current.kind === 'drag-group' ||
+			current.kind === 'drag' ||
+			current.kind === 'resize' ||
+			current.kind === 'rotate'
+		) {
+			if (current.kind === 'resize-group' && current.lastNewBounds) {
+				selectionBboxBoundsPersisted = { ...current.lastNewBounds };
+			}
+			if (current.kind === 'rotate-group') {
+				selectionBboxRotationPersisted =
+					current.originBboxRotation + (current.currentDeltaDeg ?? 0);
+				selectionBboxBoundsPersisted = current.originBounds
+					? { ...current.originBounds }
+					: selectionBboxBoundsPersisted;
+			}
+			if (current.kind === 'drag-group' && selectionBboxBoundsPersisted && current.currentDx != null && current.currentDy != null) {
+				selectionBboxBoundsPersisted = {
+					...selectionBboxBoundsPersisted,
+					x: selectionBboxBoundsPersisted.x + current.currentDx,
+					y: selectionBboxBoundsPersisted.y + current.currentDy
+				};
+			}
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else {
+			refreshConnectorBounds();
+			commitSnapshot();
+		}
 		guideLines = [];
 		guideDistances = [];
 		interaction = null;
@@ -1440,6 +2027,100 @@
 			center,
 			startAngle,
 			originRotation: element.rotation
+		};
+	};
+
+	const beginResizeGroup = (event: PointerEvent, handle: ResizeHandle) => {
+		if (activeTool !== 'select' || !selectionBounds) return;
+		event.stopPropagation();
+		const point = getPointFromPointer(event);
+		const selectedSet = new Set(selectedElementIds);
+		const strokeSet = new Set(selectedStrokeIds);
+		const bbox = selectionBboxBounds ?? selectionBounds;
+		const originBounds = { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height };
+		const rot = selectionBboxRotationPersisted;
+		interaction = {
+			kind: 'resize-group',
+			pointerId: event.pointerId,
+			handle,
+			start: point,
+			originBounds,
+			...(rot !== 0 ? { originBboxRotation: rot } : {}),
+			lastNewBounds: { ...originBounds },
+			originElements: elements
+				.filter((el) => selectedSet.has(el.id))
+				.map((el) => ({ id: el.id, x: el.x, y: el.y, width: el.width, height: el.height })),
+			originStrokes: strokes
+				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
+				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
+		};
+	};
+
+	const beginRotateGroup = (event: PointerEvent) => {
+		if (activeTool !== 'select' || !selectionBounds || (selectedElementIds.length === 0 && selectedStrokeIds.length === 0)) return;
+		event.stopPropagation();
+		const point = getPointFromPointer(event);
+		const center: Point = {
+			x: selectionBounds.x + selectionBounds.width / 2,
+			y: selectionBounds.y + selectionBounds.height / 2
+		};
+		const startAngle =
+			Math.atan2(point.y - center.y, point.x - center.x) * (180 / Math.PI) + 90;
+		const originRotations: Record<string, number> = {};
+		const originElements: { id: string; x: number; y: number; width: number; height: number }[] = [];
+		for (const id of selectedElementIds) {
+			const el = elements.find((e) => e.id === id);
+			if (el) {
+				originRotations[id] = el.rotation ?? 0;
+				originElements.push({ id: el.id, x: el.x, y: el.y, width: el.width, height: el.height });
+			}
+		}
+		const strokeSet = new Set(selectedStrokeIds);
+		selectionBboxBoundsPersisted = {
+			x: selectionBounds.x,
+			y: selectionBounds.y,
+			width: selectionBounds.width,
+			height: selectionBounds.height
+		};
+		interaction = {
+			kind: 'rotate-group',
+			pointerId: event.pointerId,
+			center,
+			startAngle,
+			originBounds: {
+				x: selectionBounds.x,
+				y: selectionBounds.y,
+				width: selectionBounds.width,
+				height: selectionBounds.height
+			},
+			originBboxRotation: selectionBboxRotationPersisted,
+			originRotations,
+			originElements,
+			originStrokes: strokes
+				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
+				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
+		};
+	};
+
+	const beginDragGroup = (event: PointerEvent) => {
+		if (activeTool !== 'select' || (selectedElementIds.length === 0 && selectedStrokeIds.length === 0)) return;
+		event.stopPropagation();
+		const point = getPointFromPointer(event);
+		const originById: Record<string, Point> = {};
+		for (const id of selectedElementIds) {
+			const el = elements.find((e) => e.id === id);
+			if (el) originById[id] = { x: el.x, y: el.y };
+		}
+		const strokeSet = new Set(selectedStrokeIds);
+		interaction = {
+			kind: 'drag-group',
+			pointerId: event.pointerId,
+			start: point,
+			elementIds: [...selectedElementIds],
+			originById,
+			originStrokes: strokes
+				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
+				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
 		};
 	};
 
@@ -1533,9 +2214,10 @@
 	};
 
 	const deleteSelectedElement = () => {
-		if (selectedElementIds.length === 0) return;
+		const hasElements = selectedElementIds.length > 0;
+		const hasStrokes = selectedStrokeIds.length > 0;
+		if (!hasElements && !hasStrokes) return;
 		const selected = new Set(selectedElementIds);
-		// Remove connectors attached to any deleted element
 		const idsToDelete = new Set(selected);
 		elements
 			.filter(
@@ -1547,9 +2229,13 @@
 			)
 			.forEach((c) => idsToDelete.add(c.id));
 		elements = elements.filter((item) => !idsToDelete.has(item.id));
+		const strokeIdsToDelete = new Set(selectedStrokeIds);
+		strokes = strokes.filter((s) => !strokeIdsToDelete.has(s.id));
 		selectedElementIds = [];
+		selectedStrokeIds = [];
 		editingElementId = null;
 		pendingConnector = null;
+		redrawCanvas();
 		commitSnapshot();
 	};
 
@@ -1578,6 +2264,308 @@
 		refreshConnectorBounds();
 		setSelection(duplicated.map((item) => item.id));
 		commitSnapshot();
+	};
+
+	/** Place a library item on the board at the given point (top-left of content bbox at point). */
+	function placeLibraryItemAt(placePoint: Point, item: LibraryItem) {
+		const { elements: libEls, strokes: libStrokes } = item;
+		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		for (const el of libEls) {
+			minX = Math.min(minX, el.x);
+			minY = Math.min(minY, el.y);
+			maxX = Math.max(maxX, el.x + el.width);
+			maxY = Math.max(maxY, el.y + el.height);
+		}
+		for (const s of libStrokes) {
+			const b = getStrokeBounds(s);
+			if (b) {
+				minX = Math.min(minX, b.x);
+				minY = Math.min(minY, b.y);
+				maxX = Math.max(maxX, b.right);
+				maxY = Math.max(maxY, b.bottom);
+			}
+		}
+		if (minX === Infinity) return;
+		const w = maxX - minX;
+		const h = maxY - minY;
+		const placeX = Math.max(0, Math.min(stageWidth - w, placePoint.x));
+		const placeY = Math.max(0, Math.min(stageHeight - h, placePoint.y));
+		const idMap = new Map<string, string>();
+		for (const el of libEls) idMap.set(el.id, nextId());
+		const newElements: BoardElement[] = libEls.map((el) => ({
+			...deepClone(el),
+			id: idMap.get(el.id)!,
+			x: el.x - minX + placeX,
+			y: el.y - minY + placeY,
+			startElementId: el.startElementId ? (idMap.get(el.startElementId) ?? el.startElementId) : undefined,
+			endElementId: el.endElementId ? (idMap.get(el.endElementId) ?? el.endElementId) : undefined
+		}));
+		const newStrokes: Stroke[] = libStrokes.map((s) => ({
+			...deepClone(s),
+			id: nextId(),
+			points: s.points.map((p) => ({ x: p.x - minX + placeX, y: p.y - minY + placeY }))
+		}));
+		elements = [...elements, ...newElements];
+		strokes = [...strokes, ...newStrokes];
+		setSelection(newElements.map((e) => e.id));
+		selectedStrokeIds = newStrokes.map((s) => s.id);
+		refreshConnectorBounds();
+		redrawCanvas();
+		commitSnapshot();
+	}
+
+	const handleStageContextMenu = (e: MouseEvent) => {
+		e.preventDefault();
+		interaction = null;
+		const point = getPointFromPointer(e as unknown as PointerEvent);
+		/* If right-clicked on an element, select it (and its group) first */
+		const el = (e.target as HTMLElement).closest?.('[data-element-id]');
+		const elementId = el?.getAttribute('data-element-id') ?? null;
+		if (elementId) {
+			setSelection(expandByGroups(collectGroupedIds(elementId)));
+			activeTool = 'select';
+		}
+		const hadSelection = selectedElementIds.length > 0 || selectedStrokeIds.length > 0;
+		const hasSelection = !!elementId || hadSelection;
+
+		const MENU_W = 180;
+		const MENU_H = 160;
+		let x = e.clientX;
+		let y = e.clientY;
+		if (stageWrapRef) {
+			const r = stageWrapRef.getBoundingClientRect();
+			x = Math.max(r.left, Math.min(x, r.right - MENU_W));
+			y = Math.max(r.top, Math.min(y, r.bottom - MENU_H));
+		}
+
+		if (hasSelection) {
+			/* Show element menu only when right-click is inside selection bounds */
+			const bounds = selectionBounds;
+			if (hadSelection && !elementId && bounds) {
+				const inside =
+					point.x >= bounds.x &&
+					point.x <= bounds.x + bounds.width &&
+					point.y >= bounds.y &&
+					point.y <= bounds.y + bounds.height;
+				if (!inside) {
+					setSelection([]);
+					selectedStrokeIds = [];
+					/* Show paste menu at this position if clipboard has items */
+					if (_clipboard.length > 0) {
+						contextMenuAt = { x, y };
+						contextMenuMode = 'paste';
+						contextMenuPasteAt = { x: point.x, y: point.y };
+					}
+					return;
+				}
+			}
+			contextMenuAt = { x, y };
+			contextMenuMode = 'element';
+			contextMenuPasteAt = null;
+			return;
+		}
+
+		/* Empty area: show paste menu if clipboard has items */
+		if (_clipboard.length > 0) {
+			contextMenuAt = { x, y };
+			contextMenuMode = 'paste';
+			contextMenuPasteAt = { x: point.x, y: point.y };
+		}
+	};
+
+	const openSaveLibraryNameModal = () => {
+		contextMenuAt = null;
+		contextMenuMode = null;
+		contextMenuPasteAt = null;
+		showSaveLibraryNameModal = true;
+	};
+
+	const handleContextMenuCopy = () => {
+		contextMenuAt = null;
+		contextMenuMode = null;
+		contextMenuPasteAt = null;
+		if (selectedElementIds.length > 0) {
+			_clipboard = elements.filter((el) => selectedElementIds.includes(el.id)).map((el) => deepClone(el));
+			toast.success('Copied.');
+		}
+	};
+
+	const handleContextMenuDelete = () => {
+		contextMenuAt = null;
+		contextMenuMode = null;
+		contextMenuPasteAt = null;
+		deleteSelectedElement();
+	};
+
+	/** Paste clipboard at a given stage point (top-left of clipboard bbox at point). Clamps so pasted content stays within board bounds. */
+	function pasteAtPoint(at: Point) {
+		if (_clipboard.length === 0) return;
+		const groupMap = new Map<string, string>();
+		for (const orig of _clipboard) {
+			if (orig.groupId && !groupMap.has(orig.groupId)) {
+				groupMap.set(orig.groupId, nextId());
+			}
+		}
+		let minX = Infinity;
+		let minY = Infinity;
+		for (const el of _clipboard) {
+			minX = Math.min(minX, el.x);
+			minY = Math.min(minY, el.y);
+		}
+		let dx = at.x - minX;
+		let dy = at.y - minY;
+		let newEls: BoardElement[] = _clipboard.map((el) => ({
+			...JSON.parse(JSON.stringify(el)),
+			id: nextId(),
+			groupId: el.groupId ? groupMap.get(el.groupId) : undefined,
+			x: el.x + dx,
+			y: el.y + dy
+		}));
+		// Clamp pasted bbox to board bounds [0,0]..[stageWidth, stageHeight]
+		let pastedMinX = Infinity;
+		let pastedMinY = Infinity;
+		let pastedMaxX = -Infinity;
+		let pastedMaxY = -Infinity;
+		for (const el of newEls) {
+			pastedMinX = Math.min(pastedMinX, el.x);
+			pastedMinY = Math.min(pastedMinY, el.y);
+			pastedMaxX = Math.max(pastedMaxX, el.x + (el.width ?? 0));
+			pastedMaxY = Math.max(pastedMaxY, el.y + (el.height ?? 0));
+		}
+		let shiftX = Math.max(0, -pastedMinX);
+		shiftX = Math.min(shiftX, stageWidth - pastedMaxX);
+		let shiftY = Math.max(0, -pastedMinY);
+		shiftY = Math.min(shiftY, stageHeight - pastedMaxY);
+		newEls = newEls.map((el) => ({ ...el, x: el.x + shiftX, y: el.y + shiftY }));
+		elements = [...elements, ...newEls];
+		setSelection(newEls.map((e) => e.id));
+		commitSnapshot();
+	}
+
+	const handleContextMenuPaste = () => {
+		const at = contextMenuPasteAt;
+		contextMenuAt = null;
+		contextMenuMode = null;
+		contextMenuPasteAt = null;
+		if (at) pasteAtPoint(at);
+	};
+
+	/** When context menu is open and user right-clicks on backdrop: close menu, then select/paste under cursor. */
+	const handleContextMenuBackdropContextMenu = (e: MouseEvent) => {
+		e.preventDefault();
+		const x = e.clientX;
+		const y = e.clientY;
+		contextMenuAt = null;
+		contextMenuMode = null;
+		contextMenuPasteAt = null;
+		requestAnimationFrame(() => {
+			const target = document.elementFromPoint(x, y) as HTMLElement | null;
+			const wrap = stageWrapRef;
+			if (!wrap?.contains(target)) {
+				setSelection([]);
+				selectedStrokeIds = [];
+				return;
+			}
+			const el = target?.closest?.('[data-element-id]');
+			const elementId = el?.getAttribute('data-element-id') ?? null;
+			if (elementId) {
+				setSelection(expandByGroups(collectGroupedIds(elementId)));
+				activeTool = 'select';
+				const MENU_W = 180;
+				const MENU_H = 160;
+				let mx = x;
+				let my = y;
+				const r = wrap.getBoundingClientRect();
+				mx = Math.max(r.left, Math.min(x, r.right - MENU_W));
+				my = Math.max(r.top, Math.min(y, r.bottom - MENU_H));
+				contextMenuAt = { x: mx, y: my };
+				contextMenuMode = 'element';
+				contextMenuPasteAt = null;
+			} else {
+				setSelection([]);
+				selectedStrokeIds = [];
+				if (_clipboard.length > 0 && wrap) {
+					const rect = stageRef?.getBoundingClientRect();
+					if (rect) {
+						const px = x - rect.left;
+						const py = y - rect.top;
+						const MENU_W = 180;
+						const MENU_H = 60;
+						let mx = x;
+						let my = y;
+						const r = wrap.getBoundingClientRect();
+						mx = Math.max(r.left, Math.min(x, r.right - MENU_W));
+						my = Math.max(r.top, Math.min(y, r.bottom - MENU_H));
+						contextMenuAt = { x: mx, y: my };
+						contextMenuMode = 'paste';
+						contextMenuPasteAt = { x: px, y: py };
+					}
+				}
+			}
+		});
+	};
+
+	const handleSaveLibraryWithName = async (name: string) => {
+		const elIds = new Set(selectedElementIds);
+		const strokeIds = new Set(selectedStrokeIds);
+		const toSave = elements.filter((e) => elIds.has(e.id));
+		const strokesToSave = strokes.filter((s) => strokeIds.has(s.id));
+		let thumbnail: string | undefined;
+		const THUMB_PADDING = 24;
+		if (toSave.length > 0 || strokesToSave.length > 0) {
+			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			for (const el of toSave) {
+				const b = getElementVisualBounds(el, toSave);
+				minX = Math.min(minX, b.minX);
+				minY = Math.min(minY, b.minY);
+				maxX = Math.max(maxX, b.maxX);
+				maxY = Math.max(maxY, b.maxY);
+			}
+			for (const s of strokesToSave) {
+				const b = getStrokeBounds(s);
+				if (b) {
+					minX = Math.min(minX, b.x);
+					minY = Math.min(minY, b.y);
+					maxX = Math.max(maxX, b.right);
+					maxY = Math.max(maxY, b.bottom);
+				}
+			}
+			if (minX !== Infinity) {
+				minX -= THUMB_PADDING;
+				minY -= THUMB_PADDING;
+				maxX += THUMB_PADDING;
+				maxY += THUMB_PADDING;
+				const w = Math.max(1, maxX - minX);
+				const h = Math.max(1, maxY - minY);
+				const shiftedElements = toSave.map((e) => ({ ...e, x: e.x - minX, y: e.y - minY }));
+				const shiftedStrokes = strokesToSave.map((s) => ({
+					...s,
+					points: s.points.map((p) => ({ x: p.x - minX, y: p.y - minY }))
+				}));
+				const imageMap = await loadImages(shiftedElements);
+				thumbnail = renderThumbnail(
+					w,
+					h,
+					currentTheme.background,
+					currentTheme.gridColor,
+					shiftedStrokes,
+					shiftedElements,
+					imageMap,
+					gridEnabled,
+					gridSize
+				);
+			}
+		}
+		saveLibraryItem(name, toSave, strokesToSave, thumbnail);
+		toast.success('Saved to library.');
+		setSelection([]);
+		selectedStrokeIds = [];
+	};
+
+	const handleInsertFromLibrary = (item: LibraryItem) => {
+		showLibraryModal = false;
+		pendingLibraryItem = item;
+		toast.info('Click on the board to place.');
 	};
 
 	/* ── Canvas ── */
@@ -1684,7 +2672,15 @@
 
 	/* ── Effects & lifecycle ── */
 	/* ── Unsaved changes guard ── */
-	beforeNavigate(({ cancel, to }) => {
+	beforeNavigate(({ cancel, to, from }) => {
+		if (from?.params?.id && to && stageWrapRef) {
+			try {
+				sessionStorage.setItem(
+					`board-scroll-${from.params.id}`,
+					JSON.stringify({ x: stageWrapRef.scrollLeft, y: stageWrapRef.scrollTop })
+				);
+			} catch (_) {}
+		}
 		if (!isDirty) return;
 		cancel();
 		_pendingNavUrl = to?.url.pathname ?? '/';
@@ -1728,19 +2724,23 @@
 		updateCanvasSize();
 		const onKeydown = (event: KeyboardEvent) => {
 			if (editingElementId) return;
-			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+			const mod = event.ctrlKey || event.metaKey;
+			const key = event.key.toLowerCase();
+			const isInput = (event.target as HTMLElement)?.closest?.('input, textarea, [contenteditable="true"]');
+
+			if (mod && key === 's') {
 				event.preventDefault();
 				saveBoard();
 			}
-			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+			if (mod && key === 'z') {
 				event.preventDefault();
 				undo();
 			}
-			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+			if (mod && key === 'y') {
 				event.preventDefault();
 				redo();
 			}
-			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+			if (mod && key === 'c') {
 				event.preventDefault();
 				if (selectedElementIds.length > 0) {
 					const ids = $state.snapshot(selectedElementIds);
@@ -1748,11 +2748,10 @@
 					_clipboard = snap.filter((el) => ids.includes(el.id));
 				}
 			}
-			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+			if (mod && key === 'v') {
 				event.preventDefault();
 				if (_clipboard.length > 0) {
 					const offset = 20;
-					// Build group ID mapping first
 					const groupMap = new Map<string, string>();
 					for (const orig of _clipboard) {
 						if (orig.groupId && !groupMap.has(orig.groupId)) {
@@ -1768,13 +2767,79 @@
 					}));
 					elements = [...elements, ...newEls];
 					selectedElementIds = newEls.map((el) => el.id);
-					// Shift clipboard so next paste offsets further
 					_clipboard = _clipboard.map((el) => ({ ...el, x: el.x + offset, y: el.y + offset }));
 					commitSnapshot();
 				}
 			}
-			if (event.key === 'Delete') {
+			if (event.key === 'Delete' || event.key === 'Backspace') {
 				deleteSelectedElement();
+			}
+
+			/* Tool panel & topbar: only when not typing in input/textarea */
+			if (isInput) return;
+			/* Ctrl+Shift+Arrow: expand board in direction */
+			if (mod && event.shiftKey) {
+				const arrow = event.key;
+				if (arrow === 'ArrowUp') {
+					event.preventDefault();
+					expandBoard('top', 200);
+					return;
+				}
+				if (arrow === 'ArrowDown') {
+					event.preventDefault();
+					expandBoard('bottom', 200);
+					return;
+				}
+				if (arrow === 'ArrowLeft') {
+					event.preventDefault();
+					expandBoard('left', 200);
+					return;
+				}
+				if (arrow === 'ArrowRight') {
+					event.preventDefault();
+					expandBoard('right', 200);
+					return;
+				}
+			}
+			if (mod) {
+				const num = key >= '0' && key <= '9' ? parseInt(key, 10) : -1;
+				if (num >= 0 && num <= 9 && TOOL_ITEMS[num]) {
+					event.preventDefault();
+					activeTool = TOOL_ITEMS[num].tool;
+					return;
+				}
+				if (event.shiftKey) {
+					if (key === 'm') {
+						event.preventDefault();
+						if (TOOL_ITEMS[10]) activeTool = TOOL_ITEMS[10].tool; // Image
+						return;
+					}
+					if (key === 'p') {
+						event.preventDefault();
+						downloadPdf();
+						return;
+					}
+					if (key === 'e') {
+						event.preventDefault();
+						downloadBoardImage();
+						return;
+					}
+					if (key === 'c') {
+						event.preventDefault();
+						openClearConfirmModal();
+						return;
+					}
+				}
+				if (key === 'o') {
+					event.preventDefault();
+					showImportModal = true;
+					return;
+				}
+				if (key === 'l') {
+					event.preventDefault();
+					showLibraryModal = true;
+					return;
+				}
 			}
 		};
 		window.addEventListener('keydown', onKeydown);
@@ -1803,6 +2868,31 @@
 		return () => document.removeEventListener('touchmove', onTouchMove);
 	});
 
+	/* Close context menu when clicking outside menu and outside stage (e.g. tool/property panel); do not clear selection */
+	$effect(() => {
+		if (selectedElementIds.length === 0 && selectedStrokeIds.length === 0) {
+			selectionBboxRotationPersisted = 0;
+			selectionBboxBoundsPersisted = null;
+		}
+	});
+
+	$effect(() => {
+		const at = contextMenuAt;
+		if (!at) return;
+		const menuEl = contextMenuRef;
+		const stageEl = stageContainerRef;
+		const onMouseDown = (e: MouseEvent) => {
+			const t = e.target as Node | null;
+			if (menuEl?.contains(t)) return;
+			if (stageEl?.contains(t)) return;
+			contextMenuAt = null;
+			contextMenuMode = null;
+			contextMenuPasteAt = null;
+		};
+		document.addEventListener('mousedown', onMouseDown, true);
+		return () => document.removeEventListener('mousedown', onMouseDown, true);
+	});
+
 	/* Auto-save 5 seconds after last change (debounced): re-run on every edit to reset timer */
 	$effect(() => {
 		if (!isDirty) return;
@@ -1827,6 +2917,8 @@
 		onDownloadImage={downloadBoardImage}
 		onClear={openClearConfirmModal}
 		onShowImport={() => (showImportModal = true)}
+		onShowLibrary={() => (showLibraryModal = true)}
+		onShowShortcuts={() => (showShortcutsModal = true)}
 		onUndo={undo}
 		onRedo={redo}
 	/>
@@ -1835,6 +2927,8 @@
 		<ToolPanel
 			bind:activeTool
 			bind:keepToolActive
+			bind:showConnectorAnchors
+			contextMenuOpen={contextMenuAt !== null}
 			onToolChange={(tool) => {
 				if (tool !== 'select') {
 					selectedElementIds = [];
@@ -1844,7 +2938,27 @@
 			}}
 		/>
 
-		<div class="stage-container">
+		<div class="stage-container" bind:this={stageContainerRef}>
+		<div class="stage-with-expand">
+			<div class="expand-corner" aria-hidden="true"></div>
+			<button
+				type="button"
+				class="expand-strip top"
+				title="Expand top by 200px"
+				onclick={() => expandBoard('top', 200)}
+			>
+				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6L6 16h12L12 6z"/></svg></span>
+			</button>
+			<div class="expand-corner" aria-hidden="true"></div>
+			<button
+				type="button"
+				class="expand-strip left"
+				title="Expand left by 200px"
+				onclick={() => expandBoard('left', 200)}
+			>
+				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 12l8-6v12l-8-6z"/></svg></span>
+			</button>
+			<div class="stage-center">
 		<BoardStage
 			bind:stageRef
 			bind:drawCanvas
@@ -1864,21 +2978,50 @@
 			{editingElementId}
 			{marquee}
 			{selectedGroupBoxes}
+			selectionBounds={selectionBounds}
+			showSelectionBbox={showSelectionBbox}
+			selectionBboxRotation={selectionBboxRotation}
+			selectionBboxBounds={selectionBboxBounds}
 			{guideLines}
 			{guideDistances}
 			onPointerDown={onStagePointerDown}
 			onPointerMove={onStagePointerMove}
 			onPointerUp={onStagePointerUp}
-			onPointerLeave={() => (connectorPreviewEnd = null)}
+			onPointerLeave={endInteractionOnLeave}
 			onDblClickElement={handleDblClickElement}
 			onBeginResize={beginResize}
+			onBeginResizeGroup={beginResizeGroup}
+			onBeginDragGroup={beginDragGroup}
 			onBeginRotate={beginRotate}
+			onBeginRotateGroup={beginRotateGroup}
 			onElementTextChange={handleElementTextChange}
 			onElementTextBlur={handleElementTextBlur}
-			onExpandBoard={expandBoard}
+			showConnectorAnchors={showConnectorAnchors}
 			{pendingConnector}
 			{connectorPreviewEnd}
+			onContextMenu={handleStageContextMenu}
+			pendingLibraryPlacement={!!pendingLibraryItem}
 		/>
+			</div>
+			<button
+				type="button"
+				class="expand-strip right"
+				title="Expand right by 200px"
+				onclick={() => expandBoard('right', 200)}
+			>
+				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12L8 6v12l8-6z"/></svg></span>
+			</button>
+			<div class="expand-corner" aria-hidden="true"></div>
+			<button
+				type="button"
+				class="expand-strip bottom"
+				title="Expand bottom by 200px"
+				onclick={() => expandBoard('bottom', 200)}
+			>
+				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18L6 8h12l-6 10z"/></svg></span>
+			</button>
+			<div class="expand-corner" aria-hidden="true"></div>
+		</div>
 		<!-- Hidden input for "replace image" when double-clicking an image element on the board -->
 		<input
 			type="file"
@@ -1889,19 +3032,84 @@
 			aria-hidden="true"
 			tabindex="-1"
 		/>
+		{#if contextMenuAt}
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_use_role -->
+			<div
+				class="context-menu-backdrop"
+				role="presentation"
+				onclick={(e: MouseEvent) => {
+					const x = e.clientX;
+					const y = e.clientY;
+					contextMenuAt = null;
+					contextMenuMode = null;
+					contextMenuPasteAt = null;
+					requestAnimationFrame(() => {
+						const target = document.elementFromPoint(x, y) as HTMLElement | null;
+						if (stageWrapRef?.contains(target)) {
+							const el = target?.closest?.('[data-element-id]');
+							const elementId = el?.getAttribute('data-element-id') ?? null;
+							if (elementId) {
+								setSelection(expandByGroups(collectGroupedIds(elementId)));
+								activeTool = 'select';
+								return;
+							}
+						}
+						setSelection([]);
+						selectedStrokeIds = [];
+					});
+				}}
+				oncontextmenu={handleContextMenuBackdropContextMenu}
+			></div>
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+			<div
+				bind:this={contextMenuRef}
+				class="context-menu"
+				role="menu"
+				tabindex="-1"
+				style={`left:${contextMenuAt.x}px;top:${contextMenuAt.y}px;`}
+				onclick={(e) => e.stopPropagation()}
+				oncontextmenu={(e) => e.stopPropagation()}
+			>
+				{#if contextMenuMode === 'element'}
+					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuCopy} disabled={selectedElementIds.length === 0}>
+						<!-- prettier-ignore -->
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+						Copy
+					</button>
+					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuDelete}>
+						<!-- prettier-ignore -->
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+						Delete
+					</button>
+					<button type="button" class="context-menu-item" role="menuitem" onclick={openSaveLibraryNameModal}>
+						<!-- prettier-ignore -->
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
+						Save to Library
+					</button>
+				{:else if contextMenuMode === 'paste'}
+					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuPaste}>
+						<!-- prettier-ignore -->
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+						Paste
+					</button>
+				{/if}
+			</div>
+		{/if}
 		</div>
 
 		<div class="right-col">
-			<MinimapThumbnail
-				{stageWidth}
-				{stageHeight}
-				themeBackground={currentTheme.background}
-				themeGridColor={currentTheme.gridColor}
-				{strokes}
-				{elements}
-				{stageWrapRef}
-			/>
-
+			<div class="right-col-minimap">
+				<MinimapThumbnail
+					{stageWidth}
+					{stageHeight}
+					themeBackground={currentTheme.background}
+					themeGridColor={currentTheme.gridColor}
+					{strokes}
+					{elements}
+					{stageWrapRef}
+				/>
+			</div>
+			<div class="right-col-properties">
 			<PropertyPanel
 				bind:penColor
 				bind:fillColor
@@ -1914,15 +3122,17 @@
 				{activeTool}
 				{stageWidth}
 				{stageHeight}
-				{selectedElementIds}
-				{selectedElements}
-				{isTextAlignVisible}
-				{canGroup}
-				{canUngroup}
-				{canDistribute}
-				onThemeChange={applyThemeDefaults}
-				onDuplicate={duplicateSelectedElement}
-				onDelete={deleteSelectedElement}
+			{selectedElementIds}
+			{selectedElements}
+			selectedStrokeCount={selectedStrokeIds.length}
+			canDeleteSelection={selectedElementIds.length > 0 || selectedStrokeIds.length > 0}
+			{isTextAlignVisible}
+			{canGroup}
+			{canUngroup}
+			{canDistribute}
+			onThemeChange={applyThemeDefaults}
+			onDuplicate={duplicateSelectedElement}
+			onDelete={deleteSelectedElement}
 				onGroup={groupSelected}
 				onUngroup={ungroupSelected}
 				onAlign={alignSelected}
@@ -1954,6 +3164,7 @@
 			connectorArrowSize={connectorArrowSize}
 			onConnectorArrowSizeChange={handleConnectorArrowSizeChange}
 		/>
+			</div>
 		</div>
 	</div>
 </main>
@@ -1963,6 +3174,24 @@
 	boards={importBoards}
 	onImport={importBoardContent}
 	onClose={() => (showImportModal = false)}
+/>
+
+<LibraryModal
+	show={showLibraryModal}
+	onInsert={handleInsertFromLibrary}
+	onClose={() => { showLibraryModal = false; pendingLibraryItem = null; }}
+/>
+
+<SaveLibraryNameModal
+	show={showSaveLibraryNameModal}
+	defaultName="Library item"
+	onSave={handleSaveLibraryWithName}
+	onClose={() => (showSaveLibraryNameModal = false)}
+/>
+
+<ShortcutsModal
+	show={showShortcutsModal}
+	onClose={() => (showShortcutsModal = false)}
 />
 
 {#if showUnsavedModal}
@@ -2071,33 +3300,181 @@
 		overflow: hidden;
 	}
 
+	/* Canva-style: left tools, center canvas, right properties */
 	.workspace {
 		display: grid;
-		grid-template-columns: auto 1fr 260px;
-		height: calc(100vh - 68px);
-		gap: 0.7rem;
-		padding: 0.7rem;
+		grid-template-columns: 56px 1fr minmax(240px, 280px);
+		height: calc(100vh - 56px);
+		gap: 0;
+		padding: 0;
 		box-sizing: border-box;
+		background: #f1f5f9;
 	}
 
-	/* Constrain stage area so scroll only appears when board content exceeds viewport */
+	/* Stage takes maximum space; scroll only when content exceeds viewport */
 	.stage-container {
 		min-height: 0;
 		min-width: 0;
 		overflow: hidden;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
 	}
+
+	/* Expand strips outside board: narrow strips so board area is wider */
+	.stage-with-expand {
+		flex: 1;
+		min-height: 0;
+		min-width: 0;
+		display: grid;
+		grid-template-rows: 14px 1fr 14px;
+		grid-template-columns: 14px 1fr 14px;
+		gap: 0;
+		background: #e2e8f0;
+		overflow: hidden;
+	}
+
+	.stage-center {
+		grid-row: 2;
+		grid-column: 2;
+		min-height: 0;
+		min-width: 0;
+		overflow: hidden;
+		background: #f1f5f9;
+		border: 1px solid #cbd5e1;
+		box-sizing: border-box;
+	}
+
+	.expand-strip {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		padding: 0;
+		border: none;
+		background: rgba(255, 255, 255, 0.5);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+		overflow: hidden;
+	}
+
+	.expand-strip::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	/* 위·아래 버튼: 좌우 방향 그라데이션 (가운데 진함) */
+	.expand-strip.top:hover::before,
+	.expand-strip.bottom:hover::before {
+		opacity: 1;
+		background: linear-gradient(
+			to right,
+			rgba(226, 232, 240, 0.35) 0%,
+			rgba(148, 163, 184, 0.85) 50%,
+			rgba(226, 232, 240, 0.35) 100%
+		);
+	}
+
+	.expand-strip.top:active::before,
+	.expand-strip.bottom:active::before {
+		opacity: 1;
+		background: linear-gradient(
+			to right,
+			rgba(203, 213, 225, 0.5) 0%,
+			rgba(100, 116, 139, 0.95) 50%,
+			rgba(203, 213, 225, 0.5) 100%
+		);
+	}
+
+	/* 좌·우 버튼: 상하 방향 그라데이션 (가운데 진함) */
+	.expand-strip.left:hover::before,
+	.expand-strip.right:hover::before {
+		opacity: 1;
+		background: linear-gradient(
+			to bottom,
+			rgba(226, 232, 240, 0.35) 0%,
+			rgba(148, 163, 184, 0.85) 50%,
+			rgba(226, 232, 240, 0.35) 100%
+		);
+	}
+
+	.expand-strip.left:active::before,
+	.expand-strip.right:active::before {
+		opacity: 1;
+		background: linear-gradient(
+			to bottom,
+			rgba(203, 213, 225, 0.5) 0%,
+			rgba(100, 116, 139, 0.95) 50%,
+			rgba(203, 213, 225, 0.5) 100%
+		);
+	}
+
+	.expand-strip:hover {
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.expand-strip:active::before {
+		opacity: 1;
+	}
+
+	.expand-strip-icon {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		color: rgba(30, 64, 175, 0.6);
+		transition: color 0.2s;
+	}
+
+	.expand-strip:hover .expand-strip-icon {
+		color: #1e3a8a;
+	}
+
+	.expand-corner {
+		background: rgba(255, 255, 255, 0.5);
+		pointer-events: none;
+	}
+	.expand-corner:nth-child(1) { grid-row: 1; grid-column: 1; }
+	.expand-corner:nth-child(3) { grid-row: 1; grid-column: 3; }
+	.expand-corner:nth-child(7) { grid-row: 3; grid-column: 1; }
+	.expand-corner:nth-child(9) { grid-row: 3; grid-column: 3; }
+
+	.expand-strip.top { grid-row: 1; grid-column: 2; }
+	.expand-strip.bottom { grid-row: 3; grid-column: 2; }
+	.expand-strip.left { grid-row: 2; grid-column: 1; }
+	.expand-strip.right { grid-row: 2; grid-column: 3; }
 
 	.right-col {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0;
+		min-height: 0;
+		overflow: hidden;
+		background: #fff;
+		border-left: 1px solid #e2e8f0;
+	}
+
+	.right-col-minimap {
+		flex-shrink: 0;
+		border-bottom: 1px solid #e2e8f0;
+		padding: 0.5rem;
+	}
+
+	.right-col-properties {
+		flex: 1;
 		min-height: 0;
 		overflow: hidden;
 	}
 
-	.right-col :global(.property-panel) {
-		flex: 1;
-		min-height: 0;
+	.right-col-properties :global(.property-panel) {
+		height: 100%;
+		box-sizing: border-box;
 	}
 
 	/* ── Unsaved changes modal ── */
@@ -2270,6 +3647,47 @@
 	.modal-btn.danger {
 		background: #dc2626;
 		color: #fff;
+	}
+
+	/* ── Context menu (right-click: Save to Library) ── */
+	.stage-container {
+		position: relative;
+	}
+	.context-menu-backdrop {
+		position: absolute;
+		inset: 0;
+		z-index: 900;
+	}
+	.context-menu {
+		position: fixed;
+		z-index: 901;
+		min-width: 160px;
+		background: #fff;
+		border-radius: 8px;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+		border: 1px solid #e2e8f0;
+		padding: 0.35rem;
+	}
+	.context-menu-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		background: none;
+		font-size: 0.875rem;
+		color: #334155;
+		cursor: pointer;
+		border-radius: 6px;
+		text-align: left;
+	}
+	.context-menu-item:hover:not(:disabled) {
+		background: #f1f5f9;
+	}
+	.context-menu-item:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.modal-btn:hover {

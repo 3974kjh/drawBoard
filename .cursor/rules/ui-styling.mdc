@@ -15,3 +15,4 @@ alwaysApply: true
   border: 1px solid rgba(255, 255, 255, 0.4);
   ```
 - Fonts: `'Caveat'` (brand/logo), `'DM Sans'` (UI text) — loaded via Google Fonts in `src/app.html`
+- 보드 확장 버튼(바깥 스트립): 기본 반투명 흰 배경, 호버 시 위/아래 버튼은 좌우 방향·좌/우 버튼은 상하 방향 linear-gradient(가운데 진함), 클릭(active) 시 동일 그라데이션에 더 진한 색. 모서리 4칸은 버튼이 아닌 배경만 동일 색.

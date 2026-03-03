@@ -93,14 +93,14 @@ export const getAnchorPoints = (element: BoardElement): AnchorPoint[] => {
 	});
 };
 
-/** Orthogonal path: start -> horizontal to bendX -> vertical -> horizontal to end */
-const orthogonalPathWithBend = (
+/** Orthogonal H-V-H: start -> horizontal to bendX -> vertical -> horizontal to end (when horizontal is main direction) */
+const orthogonalPathHorizontalFirst = (
 	x1: number,
 	y1: number,
 	x2: number,
 	y2: number,
 	bendX?: number
-): { path: string; bounds: { x: number; y: number; width: number; height: number }; bendX: number } => {
+): { path: string; bounds: { x: number; y: number; width: number; height: number }; bendPoint: Point } => {
 	const midX = bendX ?? (x1 + x2) / 2;
 	const path = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
 	const minX = Math.min(x1, midX, x2);
@@ -110,7 +110,28 @@ const orthogonalPathWithBend = (
 	return {
 		path,
 		bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
-		bendX: midX
+		bendPoint: { x: midX, y: (y1 + y2) / 2 }
+	};
+};
+
+/** Orthogonal V-H-V: start -> vertical to bendY -> horizontal -> vertical to end (when vertical is main direction) */
+const orthogonalPathVerticalFirst = (
+	x1: number,
+	y1: number,
+	x2: number,
+	y2: number,
+	bendY?: number
+): { path: string; bounds: { x: number; y: number; width: number; height: number }; bendPoint: Point } => {
+	const midY = bendY ?? (y1 + y2) / 2;
+	const path = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+	const minX = Math.min(x1, x2);
+	const maxX = Math.max(x1, x2);
+	const minY = Math.min(y1, midY, y2);
+	const maxY = Math.max(y1, midY, y2);
+	return {
+		path,
+		bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+		bendPoint: { x: (x1 + x2) / 2, y: midY }
 	};
 };
 
@@ -316,10 +337,20 @@ export const getConnectorPath = (
 		bounds = out.bounds;
 		bendPoint = { x: ctrlX, y: ctrlY };
 	} else {
-		const out = orthogonalPathWithBend(start.x, start.y, end.x, end.y, connector.connectorBendX);
-		path = out.path;
-		bounds = out.bounds;
-		bendPoint = { x: out.bendX, y: (start.y + end.y) / 2 };
+		const dx = Math.abs(end.x - start.x);
+		const dy = Math.abs(end.y - start.y);
+		const horizontalFirst = dx >= dy;
+		if (horizontalFirst) {
+			const out = orthogonalPathHorizontalFirst(start.x, start.y, end.x, end.y, connector.connectorBendX);
+			path = out.path;
+			bounds = out.bounds;
+			bendPoint = out.bendPoint;
+		} else {
+			const out = orthogonalPathVerticalFirst(start.x, start.y, end.x, end.y, connector.connectorBendY);
+			path = out.path;
+			bounds = out.bounds;
+			bendPoint = out.bendPoint;
+		}
 	}
 
 	const finalBounds = { ...bounds, x: bounds.x - pad, y: bounds.y - pad, width: bounds.width + pad * 2, height: bounds.height + pad * 2 };
