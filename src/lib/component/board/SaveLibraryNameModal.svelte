@@ -25,6 +25,10 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') onClose();
 		if (e.key === 'Enter') handleSubmit();
+		// 입력 필드에서 Delete/Backspace 키가 보드의 삭제 로직으로 전파되지 않도록 막기
+		if (e.key === 'Delete' || e.key === 'Backspace') {
+			e.stopPropagation();
+		}
 	}
 </script>
 
@@ -42,6 +46,12 @@
 				placeholder="Item name"
 				class="name-input"
 				aria-label="Library item name"
+				onkeydown={(e) => {
+					// 입력 필드에서 Delete/Backspace 키가 보드의 삭제 로직으로 전파되지 않도록 막기
+					if (e.key === 'Delete' || e.key === 'Backspace') {
+						e.stopPropagation();
+					}
+				}}
 			/>
 			<div class="modal-actions">
 				<button type="button" class="btn-secondary" onclick={onClose}>Cancel</button>

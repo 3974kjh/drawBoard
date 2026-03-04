@@ -369,6 +369,12 @@ npm run deploy
 
 ## 📝 최근 변경 사항
 
+### 라이브러리 모달 키보드 이벤트 수정 (2025)
+
+- **Delete/Backspace 키 이벤트 분리**: 라이브러리 이름 입력 필드에서 Delete/Backspace 키를 눌렀을 때 선택된 항목이 삭제되는 문제 수정
+- **모달 상태 확인**: 보드 페이지의 `onKeydown` 핸들러에서 모달이 열려 있을 때 Delete/Backspace 키 처리를 건너뛰도록 개선
+- **이벤트 전파 차단**: `SaveLibraryNameModal`의 입력 필드에서 Delete/Backspace 키 이벤트 전파를 `stopPropagation()`으로 차단하여 보드 삭제 로직과 분리
+
 ### 키보드 단축키·보드 확장 UI·UX 개선 (2025)
 
 - **키보드 단축키**: 도구 Ctrl+0~9·Ctrl+Shift+M, 상단바 Ctrl+O/L/Shift+P/Shift+E/Shift+C, 보드 확장 Ctrl+Shift+방향키, 복사/붙여넣기/삭제. 입력창·텍스트 편집 중에는 미적용

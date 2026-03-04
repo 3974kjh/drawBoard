@@ -2727,6 +2727,8 @@
 			const mod = event.ctrlKey || event.metaKey;
 			const key = event.key.toLowerCase();
 			const isInput = (event.target as HTMLElement)?.closest?.('input, textarea, [contenteditable="true"]');
+			// 모달이 열려 있으면 보드 키 이벤트 처리 건너뛰기
+			const isModalOpen = showSaveLibraryNameModal || showLibraryModal || showImportModal || showShortcutsModal;
 
 			if (mod && key === 's') {
 				event.preventDefault();
@@ -2771,12 +2773,13 @@
 					commitSnapshot();
 				}
 			}
-			if (event.key === 'Delete' || event.key === 'Backspace') {
+			// Delete/Backspace: 입력 필드나 모달이 열려 있으면 처리하지 않음
+			if ((event.key === 'Delete' || event.key === 'Backspace') && !isInput && !isModalOpen) {
 				deleteSelectedElement();
 			}
 
 			/* Tool panel & topbar: only when not typing in input/textarea */
-			if (isInput) return;
+			if (isInput || isModalOpen) return;
 			/* Ctrl+Shift+Arrow: expand board in direction */
 			if (mod && event.shiftKey) {
 				const arrow = event.key;
