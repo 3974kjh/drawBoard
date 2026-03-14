@@ -43,13 +43,13 @@
 
 {@render children()}
 
-<!-- 언어 · 테마 전환 (전역 노출) -->
+<!-- 언어 · 테마 전환 (전역 노출). 다른 메뉴가 열려 있을 때 이쪽 버튼이 위로 오도록 z-index 조정 -->
 <div class="global-switchers">
-	<div class="lang-switcher-wrap">
+	<div class="lang-switcher-wrap" style:z-index={themeMenuOpen ? 2 : 1}>
 		<button
 			type="button"
 			class="switcher-trigger"
-			onclick={() => (langMenuOpen = !langMenuOpen)}
+			onclick={() => { themeMenuOpen = false; langMenuOpen = !langMenuOpen; }}
 			onkeydown={(e) => e.key === 'Escape' && (langMenuOpen = false)}
 			title={$t('lang.switch')}
 			aria-label={$t('lang.switch')}
@@ -67,11 +67,11 @@
 			</div>
 		{/if}
 	</div>
-	<div class="theme-switcher-wrap">
+	<div class="theme-switcher-wrap" style:z-index={langMenuOpen ? 2 : 1}>
 		<button
 			type="button"
 			class="theme-trigger switcher-trigger"
-			onclick={() => (themeMenuOpen = !themeMenuOpen)}
+			onclick={() => { langMenuOpen = false; themeMenuOpen = !themeMenuOpen; }}
 			onkeydown={(e) => e.key === 'Escape' && (themeMenuOpen = false)}
 			title={$t('theme.switch')}
 			aria-label={$t('theme.switch')}

@@ -104,9 +104,10 @@
 
 	.tool-panel {
 		width: 48px;
-		background: #ffffffd9;
+		background: var(--ui-glass-bg);
 		backdrop-filter: blur(8px);
-		border: 1px solid #cbd5e1;
+		-webkit-backdrop-filter: blur(8px);
+		border: 1px solid var(--ui-border-strong);
 		border-top: none;
 		padding: 0.3rem 0.5rem 0.3rem 0.3rem;
 		display: flex;
@@ -120,12 +121,12 @@
 		aspect-ratio: 1 / 1;
 		display: grid;
 		place-items: center;
-		border: 1px solid #cbd5e1;
-		background: #fff;
+		border: 1px solid var(--ui-border);
+		background: var(--ui-surface);
 		padding: 0;
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
-		color: #1d4ed8;
+		color: var(--ui-accent);
 		line-height: 0;
 		overflow: hidden;
 	}
@@ -147,29 +148,29 @@
 	}
 
 	.tool-btn:hover {
-		background: #eff6ff;
-		border-color: #93c5fd;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent-soft);
 	}
 
 	.tool-btn.active {
-		background: #dbeafe;
-		border-color: #2563eb;
-		box-shadow: 0 0 0 1.5px #2563eb inset;
-		color: #1d4ed8;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		box-shadow: 0 0 0 1.5px var(--ui-accent) inset;
+		color: var(--ui-accent);
 	}
 
 	.tool-divider {
 		height: 1px;
-		background: #e2e8f0;
+		background: var(--ui-border);
 		margin: 0.1rem 0.15rem;
 		flex-shrink: 0;
 	}
 
 	.lock-btn {
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 
 	.lock-btn.active {
-		color: #1d4ed8;
+		color: var(--ui-accent);
 	}
 </style>
