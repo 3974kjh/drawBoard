@@ -11,9 +11,10 @@ alwaysApply: true
 | Components | **PascalCase** | `BoardCard.svelte`, `PropertyPanel.svelte` |
 | Component folders | `src/lib/component/<page>/` | `src/lib/component/board/`, `src/lib/component/home/` |
 | Library / utility files | **kebab-case** | `canvas-renderer.ts`, `connector-geometry.ts`, `snap-engine.ts`, `board-storage.ts` |
+| i18n 폴더 | **소문자** | `src/lib/i18n/` (index.ts, translations.ts) |
 | Type 폴더 | **PascalCase** | `src/lib/Type/` (Point.ts, BoardElement.ts, index.ts 등) |
 | Enum 폴더 | **PascalCase** | `src/lib/Enum/` (constants.ts, index.ts) |
 | Style 폴더 | **kebab-case** | `src/lib/style/` (ToolPanel.scss 등) |
 | Static assets | `static/` (served from site root) | `static/robots.txt`, `static/sitemap.xml` |
 
-폴더명·함수명 상세: **coding-rules.mdc** 참조. **배럴**: `src/lib/index.ts`에서 Type, Enum, canvas-renderer, connector-geometry, snap-engine, board-storage 등 re-export.
+폴더명·함수명 상세: **coding-rules.mdc** 참조. **배럴**: `src/lib/index.ts`에서 Type, Enum, i18n, canvas-renderer, connector-geometry, snap-engine, board-storage 등 re-export. 다국어: **i18n.mdc**.

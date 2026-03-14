@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { locale, t } from '$lib/i18n';
+
 	interface Props {
 		show: boolean;
 		defaultName: string;
@@ -34,18 +36,19 @@
 
 {#if show}
 	<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="save-library-title">
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div class="backdrop-close" role="button" tabindex="-1" onclick={onClose}></div>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="modal-box" role="group" onkeydown={handleKeydown}>
-			<h2 id="save-library-title">Save to Library</h2>
-			<p class="modal-desc">Enter a name for this library item.</p>
+			<h2 id="save-library-title">{$t('saveLib.title')}</h2>
+			<p class="modal-desc">{$t('saveLib.desc')}</p>
 			<input
 				type="text"
 				bind:value={name}
-				placeholder="Item name"
+				placeholder={$t('saveLib.placeholder')}
 				class="name-input"
-				aria-label="Library item name"
+				aria-label={$t('saveLib.nameAria')}
 				onkeydown={(e) => {
 					// 입력 필드에서 Delete/Backspace 키가 보드의 삭제 로직으로 전파되지 않도록 막기
 					if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -54,9 +57,9 @@
 				}}
 			/>
 			<div class="modal-actions">
-				<button type="button" class="btn-secondary" onclick={onClose}>Cancel</button>
+				<button type="button" class="btn-secondary" onclick={onClose}>{$t('saveLib.cancel')}</button>
 				<button type="button" class="btn-primary" onclick={handleSubmit} disabled={!name.trim()}>
-					Save
+					{$t('saveLib.save')}
 				</button>
 			</div>
 		</div>

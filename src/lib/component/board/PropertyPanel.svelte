@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { locale, t } from '$lib/i18n';
 	import {
 		BOARD_THEMES,
 		type AlignMode,
@@ -156,22 +157,23 @@
 </script>
 
 <aside class="property-panel scrollbar-theme">
+	<span class="sr-only" aria-hidden="true">{$locale}</span>
 	<!-- ─── Color section ─── -->
 	<div class="section">
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-			Color
+			{$t('prop.color')}
 		</div>
 		<div class="color-row">
 			<button
 				type="button"
 				class="swatch"
-				title="Stroke color"
+				title={$t('prop.strokeColor')}
 				style="background:{penColor}"
 				onclick={() => strokeColorRef?.click()}
 			></button>
-			<span class="color-label">Stroke</span>
+			<span class="color-label">{$t('prop.stroke')}</span>
 			<input
 				type="color"
 				class="hidden-color"
@@ -187,11 +189,11 @@
 			<button
 				type="button"
 				class="swatch"
-				title="Fill color"
+				title={$t('prop.fillColor')}
 				style="background:{fillColor};{fillColor === 'transparent' ? 'background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,4px 4px;' : ''}"
 				onclick={() => fillColorRef?.click()}
 			></button>
-			<span class="color-label">Fill</span>
+			<span class="color-label">{$t('prop.fill')}</span>
 			<input
 				type="color"
 				class="hidden-color"
@@ -211,7 +213,7 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-			Border <span class="badge">{borderWidth}px</span>
+			{$t('prop.border')} <span class="badge">{borderWidth}px</span>
 		</div>
 		<input
 			type="range"
@@ -221,10 +223,10 @@
 			oninput={() => onBorderWidthChange(borderWidth)}
 		/>
 		{#if singleElement?.type === 'text'}
-			<p class="hint-note">Set to 0 to hide the text border</p>
+			<p class="hint-note">{$t('prop.hideTextBorder')}</p>
 		{/if}
 		{#if singleElement?.type === 'connector'}
-			<p class="hint-note">Line weight</p>
+			<p class="hint-note">{$t('prop.lineWeight')}</p>
 		{/if}
 	</div>
 
@@ -232,25 +234,24 @@
 	{#if showConnectorSection}
 		<div class="section">
 			<div class="section-title">
-				<!-- Line style icon -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-				Line style
+				{$t('prop.lineStyle')}
 			</div>
 			<div class="connector-options">
 				<label class="connector-option-row">
-					<span class="connector-option-label">Style</span>
+					<span class="connector-option-label">{$t('prop.style')}</span>
 					<select
 						class="connector-option-select"
 						value={connectorStyle}
 						onchange={(e) => onConnectorStyleChange((e.currentTarget as HTMLSelectElement).value as ConnectorStyle)}
 					>
-						<option value="solid">Solid</option>
-						<option value="dashed">Dashed</option>
-						<option value="double">Double</option>
+						<option value="solid">{$t('prop.solid')}</option>
+						<option value="dashed">{$t('prop.dashed')}</option>
+						<option value="double">{$t('prop.double')}</option>
 					</select>
 				</label>
 				<label class="connector-option-row">
-					<span class="connector-option-label">Arrow size</span>
+					<span class="connector-option-label">{$t('prop.arrowSize')}</span>
 					<div class="connector-option-right">
 						<input
 							type="range"
@@ -267,60 +268,60 @@
 				<label class="connector-option-row">
 					<span class="connector-option-label">
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 4 12 12 22 12 12 20 12 12 2"/></svg>
-						Start arrow
+						{$t('prop.startArrow')}
 					</span>
 					<select
 						class="connector-option-select"
 						value={startArrow}
 						onchange={(e) => onStartArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
 					>
-						<option value="none">None</option>
-						<option value="arrow">Arrow</option>
+						<option value="none">{$t('prop.none')}</option>
+						<option value="arrow">{$t('prop.arrow')}</option>
 					</select>
 				</label>
 				{#if startArrow === 'arrow'}
 					<label class="connector-option-row connector-option-row-indent">
-						<span class="connector-option-label">Direction</span>
+						<span class="connector-option-label">{$t('prop.direction')}</span>
 						<select
 							class="connector-option-select"
 							value={startArrowDirection}
 							onchange={(e) => onStartArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
 						>
-							<option value="auto">Auto</option>
-							<option value="n">North</option>
-							<option value="s">South</option>
-							<option value="e">East</option>
-							<option value="w">West</option>
+							<option value="auto">{$t('prop.auto')}</option>
+							<option value="n">{$t('prop.north')}</option>
+							<option value="s">{$t('prop.south')}</option>
+							<option value="e">{$t('prop.east')}</option>
+							<option value="w">{$t('prop.west')}</option>
 						</select>
 					</label>
 				{/if}
 				<label class="connector-option-row">
 					<span class="connector-option-label">
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 20 12 12 22 12 12 4 12 12 2"/></svg>
-						End arrow
+						{$t('prop.endArrow')}
 					</span>
 					<select
 						class="connector-option-select"
 						value={endArrow}
 						onchange={(e) => onEndArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
 					>
-						<option value="none">None</option>
-						<option value="arrow">Arrow</option>
+						<option value="none">{$t('prop.none')}</option>
+						<option value="arrow">{$t('prop.arrow')}</option>
 					</select>
 				</label>
 				{#if endArrow === 'arrow'}
 					<label class="connector-option-row connector-option-row-indent">
-						<span class="connector-option-label">Direction</span>
+						<span class="connector-option-label">{$t('prop.direction')}</span>
 						<select
 							class="connector-option-select"
 							value={endArrowDirection}
 							onchange={(e) => onEndArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
 						>
-							<option value="auto">Auto</option>
-							<option value="n">North</option>
-							<option value="s">South</option>
-							<option value="e">East</option>
-							<option value="w">West</option>
+							<option value="auto">{$t('prop.auto')}</option>
+							<option value="n">{$t('prop.north')}</option>
+							<option value="s">{$t('prop.south')}</option>
+							<option value="e">{$t('prop.east')}</option>
+							<option value="w">{$t('prop.west')}</option>
 						</select>
 					</label>
 				{/if}
@@ -334,7 +335,7 @@
 			<div class="section-title">
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-				Font Size <span class="badge">{fontSize}px</span>
+				{$t('prop.fontSize')} <span class="badge">{fontSize}px</span>
 			</div>
 			<input
 				type="range"
@@ -367,7 +368,7 @@
 			<button type="button" class="upload-btn" onclick={() => imageFileRef?.click()}>
 				<!-- prettier-ignore -->
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-				Import Image
+				{$t('prop.importImage')}
 			</button>
 			{#if singleElement.imageDataUrl}
 				<p class="hint-note">✓ Image loaded. Double-click the image on the board to replace it.</p>
@@ -436,23 +437,23 @@
 		<div class="section-title">
 			<!-- prettier-ignore -->
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-			Grid
+			{$t('prop.grid')}
 		</div>
 		<label class="grid-toggle-row">
-			<span>Show Grid</span>
+			<span>{gridEnabled ? $t('prop.hideGrid') : $t('prop.showGrid')}</span>
 			<button
 				type="button"
 				class="toggle-btn"
 				class:active={gridEnabled}
 				onclick={() => onGridEnabledChange(!gridEnabled)}
-				title={gridEnabled ? 'Hide Grid' : 'Show Grid'}
+				title={gridEnabled ? $t('prop.hideGrid') : $t('prop.showGrid')}
 			>
 				<span class="toggle-knob"></span>
 			</button>
 		</label>
 		{#if gridEnabled}
 			<div class="grid-size-row">
-				<span class="grid-size-label">Spacing <strong>{gridSize}px</strong></span>
+				<span class="grid-size-label">{$t('prop.gridSpacing')} <strong>{gridSize}px</strong></span>
 				<input
 					type="range"
 					min="8"
@@ -463,9 +464,9 @@
 					onchange={(e) => onGridSizeChange(Number(e.currentTarget.value))}
 				/>
 				<div class="grid-presets">
-					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>Small</button>
-					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>Medium</button>
-					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>Large</button>
+					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>{$t('prop.small')}</button>
+					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>{$t('prop.medium')}</button>
+					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>{$t('prop.large')}</button>
 				</div>
 			</div>
 		{/if}
@@ -492,7 +493,7 @@
 	<div class="action-grid">
 		<button
 			type="button"
-			title="Duplicate selected"
+			title={$t('prop.duplicate')}
 			onclick={onDuplicate}
 			disabled={selectedElementIds.length === 0}
 		>
@@ -501,20 +502,20 @@
 		</button>
 		<button
 			type="button"
-			title="Delete selected"
+			title={$t('prop.deleteSelected')}
 			onclick={onDelete}
 			disabled={!(canDeleteSelection ?? (selectedElementIds.length > 0))}
 		>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
 		</button>
-		<button type="button" title="Group" onclick={onGroup} disabled={!canGroup}>
+		<button type="button" title={$t('prop.group')} onclick={onGroup} disabled={!canGroup}>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M6 14v-4h4"/><path d="M18 10v4h-4"/></svg>
 		</button>
 		<button
 			type="button"
-			title="Ungroup"
+			title={$t('prop.ungroup')}
 			onclick={onUngroup}
 			disabled={!canUngroup}
 		>
@@ -526,29 +527,29 @@
 	<!-- ─── Align (multi-select) ─── -->
 	{#if selectedElementIds.length > 1}
 		<div class="sub-section">
-		<div class="section-title small">Align</div>
+		<div class="section-title small">{$t('prop.sectionAlign')}</div>
 		<div class="action-grid six">
-			<button type="button" title="Align Left" onclick={() => onAlign('left')}>
+			<button type="button" title={$t('prop.alignLeft')} onclick={() => onAlign('left')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="2" x2="4" y2="22"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Center (Horizontal)" onclick={() => onAlign('center')}>
+			<button type="button" title={$t('prop.alignCenter')} onclick={() => onAlign('center')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="6" y="14" width="12" height="4" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Right" onclick={() => onAlign('right')}>
+			<button type="button" title={$t('prop.alignRight')} onclick={() => onAlign('right')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="2" x2="20" y2="22"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Top" onclick={() => onAlign('top')}>
+			<button type="button" title={$t('prop.alignTop')} onclick={() => onAlign('top')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="22" y2="4"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Middle (Vertical)" onclick={() => onAlign('middle')}>
+			<button type="button" title={$t('prop.alignMiddle')} onclick={() => onAlign('middle')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="6" width="4" height="12" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Bottom" onclick={() => onAlign('bottom')}>
+			<button type="button" title={$t('prop.alignBottom')} onclick={() => onAlign('bottom')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
 			</button>
@@ -559,13 +560,13 @@
 	<!-- ─── Distribute ─── -->
 	{#if canDistribute}
 		<div class="sub-section">
-		<div class="section-title small">Distribute</div>
+		<div class="section-title small">{$t('prop.sectionDistribute')}</div>
 		<div class="action-grid">
-			<button type="button" title="Distribute Horizontally" onclick={() => onDistribute('horizontal')}>
+			<button type="button" title={$t('prop.distributeH')} onclick={() => onDistribute('horizontal')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/></svg>
 			</button>
-			<button type="button" title="Distribute Vertically" onclick={() => onDistribute('vertical')}>
+			<button type="button" title={$t('prop.distributeV')} onclick={() => onDistribute('vertical')}>
 				<!-- prettier-ignore -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg>
 			</button>
@@ -576,13 +577,13 @@
 	<!-- ─── Text align ─── -->
 	{#if isTextAlignVisible}
 		<div class="sub-section">
-		<div class="section-title small">Text Horizontal Align</div>
+		<div class="section-title small">{$t('prop.sectionTextH')}</div>
 		<div class="text-align-row">
-			<button type="button" title="Align Left" onclick={() => onTextAlign('left')}>
+			<button type="button" title={$t('prop.textAlignLeft')} onclick={() => onTextAlign('left')}>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
 			</button>
-			<button type="button" title="Align Center" onclick={() => onTextAlign('center')}>
+			<button type="button" title={$t('prop.textAlignCenter')} onclick={() => onTextAlign('center')}>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
 			</button>
@@ -599,11 +600,11 @@
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Middle" onclick={() => onTextVerticalAlign('middle')}>
+			<button type="button" title={$t('prop.textAlignMiddle')} onclick={() => onTextVerticalAlign('middle')}>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
 			</button>
-			<button type="button" title="Align Bottom" onclick={() => onTextVerticalAlign('bottom')}>
+			<button type="button" title={$t('prop.textAlignBottom')} onclick={() => onTextVerticalAlign('bottom')}>
 				<!-- prettier-ignore -->
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
 			</button>
@@ -624,13 +625,13 @@
 			<span>{stageWidth} × {stageHeight}</span>
 		</div>
 		<div class="expand-grid">
-			<button type="button" title="Expand Top by 200px" onclick={() => onExpandBoard('top', 200)}>
+			<button type="button" title={$t('prop.expandTop')} onclick={() => onExpandBoard('top', 200)}>
 				<!-- prettier-ignore -->
 				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 			</button>
 			<button
 				type="button"
-				title="Expand Bottom by 200px"
+				title={$t('prop.expandBottom')}
 				onclick={() => onExpandBoard('bottom', 200)}
 			>
 				<!-- prettier-ignore -->
@@ -638,7 +639,7 @@
 			</button>
 			<button
 				type="button"
-				title="Expand Left by 200px"
+				title={$t('prop.expandLeft')}
 				onclick={() => onExpandBoard('left', 200)}
 			>
 				<!-- prettier-ignore -->
@@ -646,7 +647,7 @@
 			</button>
 			<button
 				type="button"
-				title="Expand Right by 200px"
+				title={$t('prop.expandRight')}
 				onclick={() => onExpandBoard('right', 200)}
 			>
 				<!-- prettier-ignore -->

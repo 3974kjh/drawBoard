@@ -64,6 +64,7 @@
 		saveLibraryItem,
 		type LibraryItem
 	} from '$lib/library-storage';
+	import { locale, t } from '$lib/i18n';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -3006,6 +3007,7 @@
 </script>
 
 <main class="board-page">
+	<span class="sr-only" aria-hidden="true">{$locale}</span>
 	<Topbar
 		bind:boardTitle
 		{canUndo}
@@ -3042,7 +3044,7 @@
 			<button
 				type="button"
 				class="expand-strip top"
-				title="Expand top by 200px"
+				title={$t('prop.expandTop')}
 				onclick={() => expandBoard('top', 200)}
 			>
 				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6L6 16h12L12 6z"/></svg></span>
@@ -3051,7 +3053,7 @@
 			<button
 				type="button"
 				class="expand-strip left"
-				title="Expand left by 200px"
+				title={$t('prop.expandLeft')}
 				onclick={() => expandBoard('left', 200)}
 			>
 				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 12l8-6v12l-8-6z"/></svg></span>
@@ -3104,7 +3106,7 @@
 			<button
 				type="button"
 				class="expand-strip right"
-				title="Expand right by 200px"
+				title={$t('prop.expandRight')}
 				onclick={() => expandBoard('right', 200)}
 			>
 				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12L8 6v12l8-6z"/></svg></span>
@@ -3113,7 +3115,7 @@
 			<button
 				type="button"
 				class="expand-strip bottom"
-				title="Expand bottom by 200px"
+				title={$t('prop.expandBottom')}
 				onclick={() => expandBoard('bottom', 200)}
 			>
 				<span class="expand-strip-icon"><!-- prettier-ignore --><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18L6 8h12l-6 10z"/></svg></span>
@@ -3172,23 +3174,23 @@
 					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuCopy} disabled={selectedElementIds.length === 0}>
 						<!-- prettier-ignore -->
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-						Copy
+						{$t('context.copy')}
 					</button>
 					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuDelete}>
 						<!-- prettier-ignore -->
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-						Delete
+						{$t('context.delete')}
 					</button>
 					<button type="button" class="context-menu-item" role="menuitem" onclick={openSaveLibraryNameModal}>
 						<!-- prettier-ignore -->
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
-						Save to Library
+						{$t('context.saveToLibrary')}
 					</button>
 				{:else if contextMenuMode === 'paste'}
 					<button type="button" class="context-menu-item" role="menuitem" onclick={handleContextMenuPaste}>
 						<!-- prettier-ignore -->
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-						Paste
+						{$t('context.paste')}
 					</button>
 				{/if}
 			</div>
@@ -3307,23 +3309,23 @@
 				<!-- prettier-ignore -->
 				<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
 			</div>
-			<h2 id="unsaved-title">Unsaved Changes</h2>
-			<p>You have unsaved changes on this board.<br />If you leave without saving, your changes will be lost.</p>
+			<h2 id="unsaved-title">{$t('unsaved.title')}</h2>
+			<p>{$t('unsaved.detail')}</p>
 			<div class="unsaved-actions">
 				<button type="button" class="btn-save" onclick={handleSaveAndLeave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-					Save &amp; Leave
+					{$t('unsaved.saveLeave')}
 				</button>
 				<button type="button" class="btn-discard" onclick={handleLeaveWithoutSave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-					Leave without saving
+					{$t('unsaved.discard')}
 				</button>
 				<button type="button" class="btn-cancel" onclick={handleCancelLeave}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-					Cancel
+					{$t('unsaved.cancel')}
 				</button>
 			</div>
 		</div>
@@ -3341,10 +3343,10 @@
 		tabindex="-1"
 	>
 		<div class="modal-dialog modal-dialog-sm">
-			<h2 id="saved-modal-title" class="modal-title">Board saved.</h2>
+			<h2 id="saved-modal-title" class="modal-title">{$t('saved.modalTitle')}</h2>
 			<div class="modal-actions modal-actions-single">
 				<button type="button" class="modal-btn primary" onclick={() => (showSavedModal = false)}>
-					OK
+					{$t('saved.ok')}
 				</button>
 			</div>
 		</div>
@@ -3362,14 +3364,14 @@
 		tabindex="-1"
 	>
 		<div class="modal-dialog">
-			<h2 id="clear-modal-title" class="modal-title">Clear the board?</h2>
-			<p class="modal-message">All content and board size will be reset.</p>
+			<h2 id="clear-modal-title" class="modal-title">{$t('clear.title')}</h2>
+			<p class="modal-message">{$t('clear.desc')}</p>
 			<div class="modal-actions">
 				<button type="button" class="modal-btn secondary" onclick={closeClearConfirmModal}>
-					Cancel
+					{$t('clear.cancel')}
 				</button>
 				<button type="button" class="modal-btn danger" onclick={clearBoard}>
-					Clear
+					{$t('clear.clear')}
 				</button>
 			</div>
 		</div>
@@ -3380,6 +3382,18 @@
 	:global(body) {
 		margin: 0;
 		font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 
 	.board-page {

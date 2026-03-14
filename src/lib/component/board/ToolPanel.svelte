@@ -3,6 +3,23 @@
 	import { TOOL_ITEMS } from '$lib/Enum';
 	import type { DrawingTool } from '$lib/Type';
 	import { selectTool } from './ToolPanelCore';
+	import { locale, t } from '$lib/i18n';
+
+	const toolLabelKey: Record<string, string> = {
+		select: 'tool.select',
+		pen: 'tool.pen',
+		eraser: 'tool.eraser',
+		'eraser-multi': 'tool.eraserMulti',
+		rect: 'tool.rect',
+		ellipse: 'tool.ellipse',
+		triangle: 'tool.triangle',
+		'line-h': 'tool.lineH',
+		'line-v': 'tool.lineV',
+		text: 'tool.text',
+		image: 'tool.image'
+	};
+	const getToolTitle = (tFn: (key: string) => string, item: (typeof TOOL_ITEMS)[0], i: number) =>
+		tFn(toolLabelKey[item.tool] ?? 'tool.select') + (i < 10 ? ` (Ctrl+${i})` : ' (Ctrl+Shift+M)');
 
 	// 2. props
 	interface Props {
@@ -26,12 +43,13 @@
 </script>
 
 <aside class="tool-panel">
+	<span class="sr-only" aria-hidden="true">{$locale}</span>
 	{#each TOOL_ITEMS as item, i}
 		<button
 			type="button"
 			class={`tool-btn ${(contextMenuOpen ? item.tool === 'select' : activeTool === item.tool) ? 'active' : ''}`}
 			onclick={() => handleToolClick(item.tool)}
-			title={item.label + (i < 10 ? ` (Ctrl+${i})` : ' (Ctrl+Shift+M)')}
+			title={getToolTitle($t, item, i)}
 		>
 			<span class="icon">{@html item.icon}</span>
 		</button>
@@ -44,7 +62,7 @@
 			type="button"
 			class={`tool-btn ${showConnectorAnchors ? 'active' : ''}`}
 			onclick={() => (showConnectorAnchors = !showConnectorAnchors)}
-			title={showConnectorAnchors ? 'Hide connection points' : 'Show connection points on all shapes'}
+			title={showConnectorAnchors ? $t('tool.hideAnchors') : $t('tool.showAnchors')}
 		>
 			<span class="icon">
 				<!-- link / anchor points icon -->
@@ -57,9 +75,7 @@
 		type="button"
 		class={`tool-btn lock-btn ${keepToolActive ? 'active' : ''}`}
 		onclick={handleLockClick}
-		title={keepToolActive
-			? 'Tool locked — stays active after placing a shape (click to unlock)'
-			: 'Tool unlocked — switches to Select after placing a shape (click to lock)'}
+		title={keepToolActive ? $t('tool.lockTitle') : $t('tool.unlockTitle')}
 	>
 		<span class="icon">
 			{#if keepToolActive}
@@ -74,6 +90,18 @@
 </aside>
 
 <style>
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
 	.tool-panel {
 		width: 48px;
 		background: #ffffffd9;

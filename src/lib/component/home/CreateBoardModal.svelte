@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { BOARD_THEMES, type ThemeId } from '$lib/board-types';
+	import { locale, t } from '$lib/i18n';
 
 	interface Props {
 		show: boolean;
@@ -29,19 +30,20 @@
 {#if show}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="modal-backdrop" onkeydown={handleKeydown}>
-		<button class="backdrop-close" type="button" aria-label="Close modal" onclick={onClose}></button>
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
+		<button class="backdrop-close" type="button" aria-label={$t('create.closeModal')} onclick={onClose}></button>
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="modal-header">
-				<h2>New Board</h2>
-				<button type="button" class="close-x" onclick={onClose} aria-label="Close">
+				<h2>{$t('create.title')}</h2>
+				<button type="button" class="close-x" onclick={onClose} aria-label={$t('create.close')}>
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 				</button>
 			</div>
 
-		<label class="field-label" for="board-title">Board Name</label>
-		<input id="board-title" class="field-input" bind:value={boardTitle} placeholder="Enter board name" />
+		<label class="field-label" for="board-title">{$t('create.boardName')}</label>
+		<input id="board-title" class="field-input" bind:value={boardTitle} placeholder={$t('create.enterName')} />
 
-		<p class="theme-title">Select Theme</p>
+		<p class="theme-title">{$t('create.selectTheme')}</p>
 			<div class="theme-grid">
 				{#each BOARD_THEMES as theme}
 					<button
@@ -59,8 +61,8 @@
 			</div>
 
 			<div class="modal-actions">
-			<button type="button" class="btn-ghost" onclick={onClose}>Cancel</button>
-			<button type="button" class="btn-solid" onclick={onCreate}>Create</button>
+			<button type="button" class="btn-ghost" onclick={onClose}>{$t('create.cancel')}</button>
+			<button type="button" class="btn-solid" onclick={onCreate}>{$t('create.create')}</button>
 			</div>
 		</div>
 	</div>

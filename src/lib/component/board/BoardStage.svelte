@@ -12,6 +12,7 @@
 	} from '$lib/board-types';
 	import type { Bounds } from '$lib/Type/Bounds.js';
 	import { getAnchorPoints, getAnchorPosition, getConnectorPath } from '$lib/connector-geometry';
+	import { locale, t } from '$lib/i18n';
 
 	/** All 8 resize handle positions (compass directions). */
 	const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
@@ -203,8 +204,9 @@
 		onpointerleave={handlePointerLeave}
 		oncontextmenu={(e) => { e.preventDefault(); onContextMenu?.(e); }}
 		role="application"
-		aria-label="Drawing board"
+		aria-label={$t('stage.drawingBoard')}
 	>
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
 		<canvas bind:this={drawCanvas}></canvas>
 
 		<!-- Connector anchors: shown on all connectables when showConnectorAnchors is on -->
@@ -218,7 +220,7 @@
 							style="left:{anchor.x - 12}px;top:{anchor.y - 12}px;"
 							data-element-id={connectableEl.id}
 							data-anchor-id={anchor.anchorId}
-							title="Connect here"
+							title={$t('stage.connectHere')}
 						><span class="connector-anchor-dot-visual"></span></button>
 					{/each}
 				{/each}
@@ -430,7 +432,7 @@
 						class={`resize-handle handle-${handle}`}
 						style="cursor: {getResizeCursor(handle, element.rotation ?? 0)}"
 						onpointerdown={(event) => onBeginResize(event, element.id, handle)}
-						aria-label={`Resize (${handle})`}
+						aria-label={$t('stage.resize', { handle })}
 					></button>
 				{/each}
 			{/if}
@@ -452,7 +454,7 @@
 					class="rotate-handle"
 					style={`left:${hx - 11}px;top:${hy}px;`}
 					onpointerdown={(e) => onBeginRotate(e, selectedSingleElement.id)}
-					aria-label="Rotate element"
+					aria-label={$t('stage.rotateElement')}
 				>↻</button>
 			</div>
 		{/if}
@@ -489,7 +491,7 @@
 						class="selection-bbox-drag"
 						role="button"
 						tabindex="0"
-						aria-label="Drag selection"
+						aria-label={$t('stage.dragSelection')}
 						onpointerdown={(e) => { e.stopPropagation(); onBeginDragGroup(e); }}
 					></div>
 					<!-- Rotate selection (above center) -->
@@ -497,7 +499,7 @@
 						type="button"
 						class="rotate-handle selection-bbox-rotate"
 						onpointerdown={(e) => { e.stopPropagation(); onBeginRotateGroup(e); }}
-						aria-label="Rotate selection"
+						aria-label={$t('stage.rotateSelection')}
 					>↻</button>
 					{#each RESIZE_HANDLES as handle (handle)}
 						<button
@@ -505,7 +507,7 @@
 							class="resize-handle handle-{handle}"
 							style="cursor: {getResizeCursor(handle, selectionBboxRotation ?? 0)}"
 							onpointerdown={(e) => onBeginResizeGroup(e, handle)}
-							aria-label="Resize selection"
+							aria-label={$t('stage.resizeSelection')}
 						></button>
 					{/each}
 				</div>

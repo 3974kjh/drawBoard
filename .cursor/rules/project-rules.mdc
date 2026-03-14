@@ -12,6 +12,7 @@ alwaysApply: true
 - **코딩 규칙** (Svelte 정의 순서, Core/type/enum, index.ts, 함수 정의 방식, 폴더/함수 명명): **coding-rules.mdc**
 - **스타일 규칙** (style 폴더, SCSS, 컴포넌트별 스타일): **style-rules.mdc**
 - **스택·Runes·TypeScript·파일명**: **stack.mdc**, **svelte-runes.mdc**, **typescript.mdc**, **file-folder-naming.mdc**
+- **다국어**: **i18n.mdc** (locale, t 스토어, 언어 전환, 번역 키)
 - **캔버스·상태·컴포넌트·지우개·연결선·리사이즈**: **canvas-rendering.mdc**, **state-architecture.mdc**, **component-props.mdc**, **eraser.mdc**, **connectors.mdc**, **resize-handles.mdc**
 - **UI·접근성·성능·SEO·데이터 모델**: **ui-styling.mdc**, **accessibility.mdc**, **performance.mdc**, **seo.mdc**, **board-data-model.mdc**
 

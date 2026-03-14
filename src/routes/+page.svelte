@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { type BoardData, type ThemeId } from '$lib/board-types';
 	import { createBoard, deleteBoard, getBoards } from '$lib/board-storage';
+	import { locale, t } from '$lib/i18n';
 
 	import BoardCard from '$lib/component/home/BoardCard.svelte';
 	import CreateBoardModal from '$lib/component/home/CreateBoardModal.svelte';
@@ -68,7 +69,7 @@
 			<img src="/favicon.svg" alt="DrawDashBoard logo" width="44" height="44" aria-hidden="true" />
 			<div class="logo-text">
 				<h1 class="brand-title">DrawDashBoard</h1>
-				<p class="subtitle">Sketch ideas &middot; organize visually</p>
+				<p class="subtitle">{$t('home.subtitle')}</p>
 			</div>
 		</div>
 	</header>
@@ -76,7 +77,7 @@
 	<!-- ── Board grid (always shown, first card = add new) ── -->
 	<section class="boards-section scrollbar-theme">
 		{#if boards.length > 0}
-			<p class="board-count">{boards.length} board{boards.length !== 1 ? 's' : ''}</p>
+			<p class="board-count">{boards.length === 1 ? $t('home.boardCount', { n: 1 }) : $t('home.boardCountPlural', { n: boards.length })}</p>
 		{/if}
 
 		<div class="boards-grid">
@@ -86,7 +87,7 @@
 					<!-- prettier-ignore -->
 					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 				</div>
-				<span class="add-label">New Board</span>
+				<span class="add-label">{$t('home.newBoard')}</span>
 			</button>
 
 			{#each boards as board (board.id)}
@@ -115,14 +116,14 @@
 		tabindex="-1"
 	>
 		<div class="modal-dialog">
-			<h2 id="delete-modal-title" class="modal-title">Delete this board?</h2>
-			<p class="modal-message">This action cannot be undone.</p>
+			<h2 id="delete-modal-title" class="modal-title">{$t('home.deleteBoardTitle')}</h2>
+			<p class="modal-message">{$t('home.deleteBoardMessage')}</p>
 			<div class="modal-actions">
 				<button type="button" class="modal-btn secondary" onclick={closeDeleteConfirmModal}>
-					Cancel
+					{$t('home.cancel')}
 				</button>
 				<button type="button" class="modal-btn danger" onclick={handleConfirmDelete}>
-					Delete
+					{$t('home.delete')}
 				</button>
 			</div>
 		</div>

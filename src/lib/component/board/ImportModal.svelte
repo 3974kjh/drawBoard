@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { BOARD_THEMES, type BoardData } from '$lib/board-types';
+	import { locale, t } from '$lib/i18n';
 
 	interface Props {
 		show: boolean;
@@ -31,23 +32,23 @@
 {#if show}
 	<div class="modal-backdrop">
 		<!-- svelte-ignore a11y_interactive_supports_focus -->
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
 		<div
 			class="backdrop-close"
 			role="button"
-			aria-label="Close import modal"
+			aria-label={$t('import.closeAria')}
 			onclick={onClose}
 			onkeydown={(e) => e.key === 'Escape' && onClose()}
 		></div>
 
 		<div class="import-modal" role="dialog" aria-modal="true" tabindex="-1">
-			<!-- Header -->
 			<div class="modal-header">
 				<div class="modal-title-wrap">
 					<!-- prettier-ignore -->
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-				<h2>Import Board</h2>
+				<h2>{$t('import.title')}</h2>
 			</div>
-			<p class="modal-desc">Copy the selected board's content into the current board.</p>
+			<p class="modal-desc">{$t('import.desc')}</p>
 			</div>
 
 			<!-- Board list -->
@@ -56,7 +57,7 @@
 					<div class="empty-wrap">
 						<!-- prettier-ignore -->
 						<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
-						<p>No boards available to import.</p>
+						<p>{$t('import.empty')}</p>
 					</div>
 				{:else}
 					{#each boards as item (item.id)}
@@ -104,7 +105,7 @@
 
 			<!-- Footer -->
 			<div class="modal-footer">
-				<button type="button" class="btn-close" onclick={onClose}>Close</button>
+				<button type="button" class="btn-close" onclick={onClose}>{$t('import.close')}</button>
 			</div>
 		</div>
 	</div>

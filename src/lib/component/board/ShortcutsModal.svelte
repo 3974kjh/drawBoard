@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { TOOL_ITEMS } from '$lib/Enum';
+	import { locale, t } from '$lib/i18n';
 
 	interface Props {
 		show: boolean;
@@ -8,45 +9,59 @@
 
 	let { show, onClose }: Props = $props();
 
-	const sections: { title: string; shortcuts: { keys: string; desc: string }[] }[] = [
+	const toolLabelKey: Record<string, string> = {
+		select: 'tool.select',
+		pen: 'tool.pen',
+		eraser: 'tool.eraser',
+		'eraser-multi': 'tool.eraserMulti',
+		rect: 'tool.rect',
+		ellipse: 'tool.ellipse',
+		triangle: 'tool.triangle',
+		'line-h': 'tool.lineH',
+		'line-v': 'tool.lineV',
+		text: 'tool.text',
+		image: 'tool.image'
+	};
+
+	const sections: { titleKey: string; shortcuts: { keys: string; descKey: string }[] }[] = [
 		{
-			title: 'General',
+			titleKey: 'shortcuts.general',
 			shortcuts: [
-				{ keys: 'Ctrl + S', desc: 'Save board' },
-				{ keys: 'Ctrl + Z', desc: 'Undo' },
-				{ keys: 'Ctrl + Y', desc: 'Redo' },
-				{ keys: 'Ctrl + C', desc: 'Copy selection' },
-				{ keys: 'Ctrl + V', desc: 'Paste' },
-				{ keys: 'Delete / Backspace', desc: 'Delete selection' }
+				{ keys: 'Ctrl + S', descKey: 'shortcuts.saveBoard' },
+				{ keys: 'Ctrl + Z', descKey: 'shortcuts.undo' },
+				{ keys: 'Ctrl + Y', descKey: 'shortcuts.redo' },
+				{ keys: 'Ctrl + C', descKey: 'shortcuts.copy' },
+				{ keys: 'Ctrl + V', descKey: 'shortcuts.paste' },
+				{ keys: 'Delete / Backspace', descKey: 'shortcuts.deleteSelection' }
 			]
 		},
 		{
-			title: 'Tools',
+			titleKey: 'shortcuts.tools',
 			shortcuts: [
 				...TOOL_ITEMS.slice(0, 10).map((item, i) => ({
 					keys: `Ctrl + ${i}`,
-					desc: item.label
+					descKey: toolLabelKey[item.tool] ?? 'tool.select'
 				})),
-				{ keys: 'Ctrl + Shift + M', desc: TOOL_ITEMS[10]?.label ?? 'Image' }
+				{ keys: 'Ctrl + Shift + M', descKey: 'tool.image' }
 			]
 		},
 		{
-			title: 'Top bar',
+			titleKey: 'shortcuts.topbar',
 			shortcuts: [
-				{ keys: 'Ctrl + O', desc: 'Import board' },
-				{ keys: 'Ctrl + L', desc: 'Library' },
-				{ keys: 'Ctrl + Shift + P', desc: 'Export as PDF' },
-				{ keys: 'Ctrl + Shift + E', desc: 'Export as image (PNG)' },
-				{ keys: 'Ctrl + Shift + C', desc: 'Clear board' }
+				{ keys: 'Ctrl + O', descKey: 'shortcuts.importBoard' },
+				{ keys: 'Ctrl + L', descKey: 'shortcuts.library' },
+				{ keys: 'Ctrl + Shift + P', descKey: 'shortcuts.exportPdf' },
+				{ keys: 'Ctrl + Shift + E', descKey: 'shortcuts.exportImage' },
+				{ keys: 'Ctrl + Shift + C', descKey: 'shortcuts.clearBoard' }
 			]
 		},
 		{
-			title: 'Board',
+			titleKey: 'shortcuts.board',
 			shortcuts: [
-				{ keys: 'Ctrl + Shift + ↑', desc: 'Expand board up' },
-				{ keys: 'Ctrl + Shift + ↓', desc: 'Expand board down' },
-				{ keys: 'Ctrl + Shift + ←', desc: 'Expand board left' },
-				{ keys: 'Ctrl + Shift + →', desc: 'Expand board right' }
+				{ keys: 'Ctrl + Shift + ↑', descKey: 'shortcuts.expandUp' },
+				{ keys: 'Ctrl + Shift + ↓', descKey: 'shortcuts.expandDown' },
+				{ keys: 'Ctrl + Shift + ←', descKey: 'shortcuts.expandLeft' },
+				{ keys: 'Ctrl + Shift + →', descKey: 'shortcuts.expandRight' }
 			]
 		}
 	];
@@ -54,11 +69,12 @@
 
 {#if show}
 	<div class="modal-backdrop">
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
 		<!-- svelte-ignore a11y_interactive_supports_focus -->
 		<div
 			class="backdrop-close"
 			role="button"
-			aria-label="Close shortcuts"
+			aria-label={$t('shortcuts.closeAria')}
 			onclick={onClose}
 			onkeydown={(e) => e.key === 'Escape' && onClose()}
 		></div>
@@ -66,26 +82,25 @@
 		<div class="shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1">
 			<div class="modal-header">
 				<div class="modal-title-wrap">
-					<!-- question mark icon -->
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="12" cy="12" r="10"/>
 						<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
 						<line x1="12" y1="17" x2="12.01" y2="17"/>
 					</svg>
-					<h2 id="shortcuts-title">Keyboard shortcuts</h2>
+					<h2 id="shortcuts-title">{$t('shortcuts.title')}</h2>
 				</div>
-				<p class="modal-desc">Use these shortcuts while the board is focused (not while typing in a text field).</p>
+				<p class="modal-desc">{$t('shortcuts.desc')}</p>
 			</div>
 
 			<div class="shortcuts-body">
 				{#each sections as section}
 					<section class="shortcut-section">
-						<h3 class="section-title">{section.title}</h3>
+						<h3 class="section-title">{$t(section.titleKey)}</h3>
 						<dl class="shortcut-list">
-							{#each section.shortcuts as { keys, desc }}
+							{#each section.shortcuts as { keys, descKey }}
 								<div class="shortcut-row">
 									<dt class="keys"><kbd>{keys}</kbd></dt>
-									<dd class="desc">{desc}</dd>
+									<dd class="desc">{$t(descKey)}</dd>
 								</div>
 							{/each}
 						</dl>
@@ -94,7 +109,7 @@
 			</div>
 
 			<div class="modal-footer">
-				<button type="button" class="btn-close" onclick={onClose}>Close</button>
+				<button type="button" class="btn-close" onclick={onClose}>{$t('shortcuts.close')}</button>
 			</div>
 		</div>
 	</div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { locale, t } from '$lib/i18n';
+
 	import type { LibraryItem } from '$lib/library-storage';
 	import { getLibraryItems, deleteLibraryItem } from '$lib/library-storage';
 
@@ -26,10 +28,11 @@
 {#if show}
 	<div class="modal-backdrop">
 		<!-- svelte-ignore a11y_interactive_supports_focus -->
+		<span class="sr-only" aria-hidden="true">{$locale}</span>
 		<div
 			class="backdrop-close"
 			role="button"
-			aria-label="Close library"
+			aria-label={$t('library.closeAria')}
 			onclick={onClose}
 			onkeydown={(e) => e.key === 'Escape' && onClose()}
 		></div>
@@ -39,9 +42,9 @@
 				<div class="modal-title-wrap">
 					<!-- prettier-ignore -->
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
-					<h2>Library</h2>
+					<h2>{$t('library.title')}</h2>
 				</div>
-				<p class="modal-desc">Click an item to place it on the board at the position you click next.</p>
+				<p class="modal-desc">{$t('library.desc')}</p>
 			</div>
 
 			<div class="library-list scrollbar-theme">
@@ -49,8 +52,8 @@
 					<div class="empty-wrap">
 						<!-- prettier-ignore -->
 						<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
-						<p>No library items yet.</p>
-						<p class="hint">Select items on the board, then right-click and choose "Save to Library".</p>
+						<p>{$t('library.empty')}</p>
+						<p class="hint">{$t('library.hint')}</p>
 					</div>
 				{:else}
 					{#each items as item (item.id)}
@@ -69,7 +72,7 @@
 							<button
 								type="button"
 								class="library-item-delete"
-								title="Delete"
+								title={$t('library.delete')}
 								onclick={(e) => handleDelete(e, item.id)}
 							>
 								<!-- prettier-ignore -->
@@ -81,7 +84,7 @@
 			</div>
 
 			<div class="modal-footer">
-				<button type="button" class="btn-secondary" onclick={onClose}>Close</button>
+				<button type="button" class="btn-secondary" onclick={onClose}>{$t('library.close')}</button>
 			</div>
 		</div>
 	</div>

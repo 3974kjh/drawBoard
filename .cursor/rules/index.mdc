@@ -17,6 +17,7 @@ alwaysApply: true
 | **svelte-runes.mdc** | $state/$derived/$effect/$props/$bindable, 콜백 props |
 | **typescript.mdc** | 타입 위치, interface/type, any 금지 |
 | **file-folder-naming.mdc** | 라우트·컴포넌트·라이브러리·정적 자산 파일/폴더 명명 |
+| **i18n.mdc** | 다국어(locale, t derived 스토어), 번역 키·반응형 $t, 언어 전환 UI |
 | **canvas-rendering.mdc** | drawCanvas, redrawCanvas, live drawing, canvas-renderer |
 | **state-architecture.mdc** | 보드 상태, 히스토리, commitSnapshot, 저장 |
 | **component-props.mdc** | BoardStage, ToolPanel, PropertyPanel 등 역할 |

@@ -1,0 +1,44 @@
+---
+description: DrawDashBoard – 다국어(i18n) 모듈, locale 스토어, 번역 키·반응형 사용. Always apply.
+alwaysApply: true
+---
+
+# i18n (다국어)
+
+- **기본 언어**: 영어 (`en`). **추가 언어**: 한글 (`ko`).
+- **위치**: `src/lib/i18n/` — `index.ts`(locale 스토어, `t` derived 스토어, getStoredLocale/setStoredLocale), `translations.ts`(en/ko 문자열 맵).
+
+## Locale 스토어·저장
+
+- `locale`: `writable<Locale>` (`'en' | 'ko'`). 레이아웃 `onMount`에서 `getStoredLocale()`로 초기화.
+- **저장 키**: `localStorage` 키 `drawboard-locale`. `setStoredLocale(loc)` 호출 시 저장.
+- **언어 전환 UI**: `+layout.svelte` 하단 우측 `global-switchers` 내 **언어 전환**(EN | 한국어) 버튼. 클릭 시 `setLang(loc)` → `locale.set(loc)` + `setStoredLocale(loc)`.
+
+## 번역 함수 스토어 `t`
+
+- `t`는 **derived(locale, …)** 스토어로, 값이 “현재 locale에 대한 번역 함수”입니다.
+- **템플릿 사용**: `$t('key')` 또는 `$t('key', { n: 1 })` (placeholder `{n}` 등은 params로 치환).
+- **반응성**: `$t`를 구독하므로 언어 전환 시 해당 컴포넌트가 다시 그려지며 문구가 갱신됩니다.
+- **주의**: `t('`를 `$t('`로 일괄 치환할 때 **다른 API와 혼동하지 말 것** — `getContext('2d')`, `createElement('…')`, `addElementAt(…)`, `Intl.DateTimeFormat('…')` 등은 그대로 두고, 번역 호출(`t('home.xxx')` 등)만 `$t('…')`로 변경.
+
+## 번역 키 구조 (translations.ts)
+
+- **점(.) 구분** 키: `home.subtitle`, `topbar.goBack`, `prop.color`, `stage.drawingBoard`, `lang.en`, `lang.ko` 등.
+- **영역별**: home, create, topbar, tool, prop, stage, expand, shortcuts, import, library, saveLib, unsaved, saved, clear, context, card, minimap, theme, lang.
+- **placeholder**: `{n}` 등 — `t('home.boardCount', { n: 1 })` 형태로 전달.
+
+## 적용 범위
+
+- **레이아웃**: 언어·테마 전환 버튼 라벨/툴팁.
+- **홈**: 부제목, 보드 개수, 새 보드, 삭제 모달, CreateBoardModal.
+- **보드 페이지**: Topbar, ToolPanel, PropertyPanel, BoardStage, MinimapThumbnail, 확장 스트립 툴팁, 컨텍스트 메뉴, 미저장/저장됨/비우기 모달.
+- **모달**: ImportModal, ShortcutsModal, LibraryModal, SaveLibraryNameModal.
+- **카드**: BoardCard 삭제 툴팁/aria-label.
+- 툴팁·버튼 라벨·모달 문구·aria-label 등 **사용자에게 보이는 문구**는 모두 `$t('key')`로 통일.
+
+## 관련 파일
+
+- `src/lib/i18n/index.ts`, `src/lib/i18n/translations.ts`
+- `src/routes/+layout.svelte` (언어 전환 UI)
+- `src/routes/+page.svelte`, `src/routes/board/[id]/+page.svelte`
+- `src/lib/component/board/*.svelte`, `src/lib/component/home/*.svelte`
