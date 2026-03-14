@@ -1551,25 +1551,118 @@
 		}
 
 		if (currentInteraction.kind === 'resize') {
-			const dx = point.x - currentInteraction.start.x;
-			const dy = point.y - currentInteraction.start.y;
-			const { handle, originX, originY, originWidth, originHeight } = currentInteraction;
+			const { handle, originX, originY, originWidth, originHeight, originRotation: bboxRot } = currentInteraction;
+			const useRotatedResize = bboxRot != null && bboxRot !== 0;
+			const ob = { x: originX, y: originY, width: originWidth, height: originHeight };
 
-			// Compute the four edges based on which handle is dragged
-			let left = originX;
-			let top = originY;
-			let right = originX + originWidth;
-			let bottom = originY + originHeight;
-			if (handle.includes('e')) right = originX + originWidth + dx;
-			if (handle.includes('w')) left = originX + dx;
-			if (handle.includes('s')) bottom = originY + originHeight + dy;
-			if (handle.includes('n')) top = originY + dy;
+			let newX: number;
+			let newY: number;
+			let newW: number;
+			let newH: number;
 
-			// Normalise: support flipping when an edge crosses its opposite
-			let newX = Math.min(left, right);
-			let newY = Math.min(top, bottom);
-			let newW = Math.max(10, Math.abs(right - left));
-			let newH = Math.max(10, Math.abs(bottom - top));
+			if (useRotatedResize) {
+				const angleRad = (bboxRot * Math.PI) / 180;
+				const cos = Math.cos(angleRad);
+				const sin = Math.sin(angleRad);
+				const oldCx = ob.x + ob.width / 2;
+				const oldCy = ob.y + ob.height / 2;
+				const w2 = ob.width / 2;
+				const h2 = ob.height / 2;
+				const dist = (ax: number, ay: number, bx: number, by: number) =>
+					Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+				const px = point.x;
+				const py = point.y;
+
+				if (handle === 'e') {
+					const fixX = oldCx - w2 * cos;
+					const fixY = oldCy - w2 * sin;
+					newW = Math.max(10, dist(fixX, fixY, px, py));
+					newH = ob.height;
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 'w') {
+					const fixX = oldCx + w2 * cos;
+					const fixY = oldCy + w2 * sin;
+					newW = Math.max(10, dist(fixX, fixY, px, py));
+					newH = ob.height;
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 'n') {
+					const fixX = oldCx - h2 * sin;
+					const fixY = oldCy + h2 * cos;
+					newW = ob.width;
+					newH = Math.max(10, dist(fixX, fixY, px, py));
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else if (handle === 's') {
+					const fixX = oldCx + h2 * sin;
+					const fixY = oldCy - h2 * cos;
+					newW = ob.width;
+					newH = Math.max(10, dist(fixX, fixY, px, py));
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				} else {
+					let fixX: number, fixY: number;
+					if (handle === 'ne') {
+						fixX = oldCx - w2 * cos - h2 * sin;
+						fixY = oldCy - w2 * sin + h2 * cos;
+					} else if (handle === 'sw') {
+						fixX = oldCx + w2 * cos + h2 * sin;
+						fixY = oldCy + w2 * sin - h2 * cos;
+					} else if (handle === 'nw') {
+						fixX = oldCx + w2 * cos - h2 * sin;
+						fixY = oldCy + w2 * sin + h2 * cos;
+					} else {
+						fixX = oldCx - w2 * cos + h2 * sin;
+						fixY = oldCy - w2 * sin - h2 * cos;
+					}
+					const newCx = (fixX + px) / 2;
+					const newCy = (fixY + py) / 2;
+					const dx = px - newCx;
+					const dy = py - newCy;
+					const localX = dx * cos + dy * sin;
+					const localY = -dx * sin + dy * cos;
+					if (handle === 'ne') {
+						newW = Math.max(10, 2 * localX);
+						newH = Math.max(10, -2 * localY);
+					} else if (handle === 'sw') {
+						newW = Math.max(10, -2 * localX);
+						newH = Math.max(10, 2 * localY);
+					} else if (handle === 'nw') {
+						newW = Math.max(10, -2 * localX);
+						newH = Math.max(10, -2 * localY);
+					} else {
+						newW = Math.max(10, 2 * localX);
+						newH = Math.max(10, 2 * localY);
+					}
+					newX = newCx - newW / 2;
+					newY = newCy - newH / 2;
+				}
+			} else {
+				const dx = point.x - currentInteraction.start.x;
+				const dy = point.y - currentInteraction.start.y;
+				let left = originX;
+				let top = originY;
+				let right = originX + originWidth;
+				let bottom = originY + originHeight;
+				if (handle.includes('e')) right = originX + originWidth + dx;
+				if (handle.includes('w')) left = originX + dx;
+				if (handle.includes('s')) bottom = originY + originHeight + dy;
+				if (handle.includes('n')) top = originY + dy;
+				newX = Math.min(left, right);
+				newY = Math.min(top, bottom);
+				newW = Math.max(10, Math.abs(right - left));
+				newH = Math.max(10, Math.abs(bottom - top));
+			}
+
 			// Clamp to board
 			newW = Math.min(newW, stageWidth - newX);
 			newH = Math.min(newH, stageHeight - newY);
@@ -1995,6 +2088,7 @@
 		const element = elements.find((item) => item.id === elementId);
 		if (!element) return;
 		const point = getPointFromPointer(event);
+		const rot = element.rotation ?? 0;
 		interaction = {
 			kind: 'resize',
 			pointerId: event.pointerId,
@@ -2004,7 +2098,8 @@
 			originX: element.x,
 			originY: element.y,
 			originWidth: element.width,
-			originHeight: element.height
+			originHeight: element.height,
+			...(rot !== 0 ? { originRotation: rot } : {})
 		};
 	};
 

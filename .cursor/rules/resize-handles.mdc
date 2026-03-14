@@ -6,8 +6,10 @@ alwaysApply: true
 # Resize Handles
 
 - Every selected element shows **8 handles**: `nw | n | ne | w | e | sw | s | se`
-- `InteractionState.resize` stores `handle`, `originX`, `originY`, `originWidth`, `originHeight`
-- Resize math computes new `left / top / right / bottom` edges independently per handle direction
+- `InteractionState.resize` stores `handle`, `originX`, `originY`, `originWidth`, `originHeight`, and optionally `originRotation` (degrees)
+- When **rotation is 0**: resize uses screen-space dx/dy; edges are axis-aligned
+- When **rotation is non-zero**: resize uses the element’s local (rotated) axes so that dragging a handle moves along the visual edge (same logic as resize-group with `originBboxRotation`); `originRotation` is stored at pointer down and not changed during resize
+- Resize math computes new `left / top / right / bottom` (or rotated equivalent) per handle; **flipping** supported when unrotated
 - **Flipping is supported**: when the dragged edge passes the opposite edge, `x = min(left, right)`, `y = min(top, bottom)`, `width = |right - left|`, `height = |bottom - top|`
 - Minimum element size is **10 × 10 px**
 

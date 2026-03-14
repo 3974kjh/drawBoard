@@ -22,6 +22,8 @@ export type InteractionState =
 			originY: number;
 			originWidth: number;
 			originHeight: number;
+			/** Element rotation (degrees) at pointer down; when non-zero, resize uses rotated handle directions. */
+			originRotation?: number;
 	  }
 	| {
 			kind: 'rotate';
