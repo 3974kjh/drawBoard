@@ -87,7 +87,7 @@
 
 <style>
 	.board-card {
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 16px;
 		overflow: hidden;
 		cursor: pointer;
@@ -96,10 +96,9 @@
 		flex-direction: column;
 		text-align: left;
 		outline-offset: 3px;
-		/* Border only at each corner (L-shaped) */
 		--corner: 2px;
 		--corner-len: 20px;
-		--corner-color: #334155;
+		--corner-color: var(--ui-border-strong);
 		background-image:
 			linear-gradient(to right, var(--corner-color) var(--corner), transparent var(--corner)),
 			linear-gradient(to bottom, var(--corner-color) var(--corner), transparent var(--corner)),
@@ -120,22 +119,15 @@
 			100% 100%, 100% 100%,
 			0 100%, 0 100%;
 		background-repeat: no-repeat;
-		box-shadow:
-			0 1px 2px rgba(0, 0, 0, 0.04),
-			0 4px 12px rgba(0, 0, 0, 0.06),
-			0 8px 24px rgba(15, 23, 42, 0.1),
-			0 2px 6px rgba(0, 0, 0, 0.05);
+		box-shadow: 0 1px 2px var(--ui-shadow), 0 4px 12px var(--ui-shadow), 0 8px 24px var(--ui-shadow);
 	}
 
 	.board-card:focus-visible {
-		outline: 2px solid #2563eb;
+		outline: 2px solid var(--ui-accent);
 	}
 
 	.board-card:hover {
-		box-shadow:
-			0 2px 8px rgba(0, 0, 0, 0.08),
-			0 12px 32px rgba(15, 23, 42, 0.14),
-			0 6px 16px rgba(0, 0, 0, 0.08);
+		box-shadow: 0 2px 8px var(--ui-shadow), 0 12px 32px var(--ui-shadow-strong);
 		transform: translateY(-3px);
 	}
 
@@ -145,8 +137,8 @@
 		width: 100%;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		background: #dbe3ef;
-		border-bottom: 1px solid #e2e8f0;
+		background: var(--ui-surface-alt);
+		border-bottom: 1px solid var(--ui-border);
 		flex-shrink: 0;
 	}
 
@@ -177,12 +169,12 @@
 		left: 8px;
 		padding: 2px 8px;
 		border-radius: 6px;
-		background: rgba(255, 255, 255, 0.88);
+		background: var(--ui-glass-bg);
 		backdrop-filter: blur(4px);
 		font-size: 0.68rem;
 		font-weight: 600;
-		color: #475569;
-		border: 1px solid rgba(0, 0, 0, 0.07);
+		color: var(--ui-text-muted);
+		border: 1px solid var(--ui-glass-border);
 		pointer-events: none;
 	}
 
@@ -194,16 +186,16 @@
 		width: 30px;
 		height: 30px;
 		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.92);
+		background: var(--ui-glass-bg);
 		backdrop-filter: blur(4px);
-		border: 1px solid rgba(0, 0, 0, 0.1);
+		border: 1px solid var(--ui-glass-border);
 		display: grid;
 		place-items: center;
 		cursor: pointer;
 		opacity: 0;
 		transform: scale(0.8);
 		transition: opacity 0.15s, transform 0.15s, background 0.12s, color 0.12s;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		z-index: 2;
 	}
 
@@ -213,9 +205,9 @@
 	}
 
 	.delete-btn:hover {
-		background: #fef2f2 !important;
-		color: #dc2626 !important;
-		border-color: #fca5a5 !important;
+		background: var(--ui-danger-bg) !important;
+		color: var(--ui-danger) !important;
+		border-color: var(--ui-danger) !important;
 	}
 
 	/* ── Card body ── */
@@ -227,7 +219,7 @@
 		margin: 0 0 0.18rem;
 		font-size: 0.95rem;
 		font-weight: 600;
-		color: #1e293b;
+		color: var(--ui-text-secondary);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -236,7 +228,7 @@
 	.meta {
 		margin: 0;
 		font-size: 0.75rem;
-		color: #94a3b8;
+		color: var(--ui-text-subtle);
 	}
 
 	.stats {
@@ -250,6 +242,6 @@
 		align-items: center;
 		gap: 0.28rem;
 		font-size: 0.75rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 </style>

@@ -67,7 +67,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(15, 23, 42, 0.4);
+		background: var(--ui-overlay);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -79,7 +79,7 @@
 	}
 	.modal-box {
 		position: relative;
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 12px;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 		padding: 1.25rem 1.5rem;
@@ -90,12 +90,12 @@
 		margin: 0 0 0.35rem 0;
 		font-size: 1.1rem;
 		font-weight: 600;
-		color: #1e293b;
+		color: var(--ui-text-secondary);
 	}
 	.modal-desc {
 		margin: 0 0 1rem 0;
 		font-size: 0.85rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 	.name-input {
 		width: 100%;
@@ -108,7 +108,7 @@
 	}
 	.name-input:focus {
 		outline: none;
-		border-color: #2563eb;
+		border-color: var(--ui-accent);
 		box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 	}
 	.modal-actions {
@@ -120,25 +120,25 @@
 		padding: 0.45rem 1rem;
 		font-size: 0.85rem;
 		border: 1px solid #cbd5e1;
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 8px;
 		cursor: pointer;
-		color: #475569;
+		color: var(--ui-text-muted);
 	}
 	.btn-secondary:hover {
-		background: #f8fafc;
+		background: var(--ui-surface-alt);
 	}
 	.btn-primary {
 		padding: 0.45rem 1rem;
 		font-size: 0.85rem;
 		border: none;
-		background: #2563eb;
+		background: var(--ui-accent);
 		color: #fff;
 		border-radius: 8px;
 		cursor: pointer;
 	}
 	.btn-primary:hover:not(:disabled) {
-		background: #1d4ed8;
+		background: var(--ui-accent-hover);
 	}
 	.btn-primary:disabled {
 		opacity: 0.5;

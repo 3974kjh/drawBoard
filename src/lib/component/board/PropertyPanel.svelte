@@ -658,7 +658,7 @@
 
 <style>
 	.property-panel {
-		background: #fff;
+		background: var(--ui-surface);
 		border: none;
 		padding: 0.6rem;
 		overflow-y: auto;
@@ -680,12 +680,12 @@
 		font-weight: 600;
 		font-size: 0.78rem;
 		margin-bottom: 0.35rem;
-		color: #334155;
+		color: var(--ui-text-secondary);
 	}
 
 	.section-title.small {
 		font-size: 0.73rem;
-		color: #475569;
+		color: var(--ui-text-muted);
 	}
 
 	/* ─── Color swatch row ─── */
@@ -700,7 +700,7 @@
 		width: 28px;
 		height: 28px;
 		border-radius: 8px;
-		border: 2px solid #cbd5e1;
+		border: 2px solid var(--ui-border-strong);
 		cursor: pointer;
 		transition:
 			border-color 0.15s,
@@ -709,8 +709,8 @@
 	}
 
 	.swatch:hover {
-		border-color: #2563eb;
-		box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+		border-color: var(--ui-accent);
+		box-shadow: 0 0 0 2px var(--ui-accent-focus);
 	}
 
 	.hidden-color {
@@ -730,15 +730,15 @@
 	/* ─── Inputs ─── */
 	.property-panel input[type='range'] {
 		width: 100%;
-		accent-color: #2563eb;
+		accent-color: var(--ui-accent);
 	}
 
 	.property-panel select {
 		width: 100%;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--ui-border-strong);
 		border-radius: 8px;
 		padding: 0.35rem 0.5rem;
-		background: #fff;
+		background: var(--ui-surface);
 		font-size: 0.8rem;
 	}
 
@@ -748,33 +748,33 @@
 		margin-left: 0.25rem;
 		padding: 0 0.4rem;
 		border-radius: 999px;
-		background: #eff6ff;
-		color: #1d4ed8;
+		background: var(--ui-accent-muted);
+		color: var(--ui-accent-hover);
 		font-size: 0.68rem;
 		font-weight: 600;
 	}
 
 	.badge.rot {
-		background: #fef3c7;
-		color: #b45309;
+		background: var(--ui-accent-muted);
+		color: var(--ui-text-muted);
 	}
 
 	/* ─── Divider ─── */
 	.divider {
 		height: 1px;
-		background: #e2e8f0;
+		background: var(--ui-border);
 		margin: 0.55rem 0;
 	}
 
 	/* ─── Selection info ─── */
 	.selection-info {
 		font-size: 0.73rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		margin: 0 0 0.3rem;
 	}
 
 	.hint-inline {
-		color: #94a3b8;
+		color: var(--ui-text-subtle);
 		font-size: 0.65rem;
 	}
 
@@ -799,19 +799,19 @@
 		display: grid;
 		place-items: center;
 		padding: 0.4rem;
-		border: 1px solid #cbd5e1;
-		background: #fff;
+		border: 1px solid var(--ui-border-strong);
+		background: var(--ui-surface);
 		cursor: pointer;
-		color: #475569;
+		color: var(--ui-text-muted);
 		transition:
 			background 0.12s,
 			border-color 0.12s;
 	}
 
 	.action-grid button:hover:not(:disabled) {
-		background: #eff6ff;
-		border-color: #93c5fd;
-		color: #2563eb;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
 	}
 
 	.action-grid button:disabled {
@@ -830,19 +830,19 @@
 		display: grid;
 		place-items: center;
 		padding: 0.4rem;
-		border: 1px solid #cbd5e1;
-		background: #fff;
+		border: 1px solid var(--ui-border-strong);
+		background: var(--ui-surface);
 		cursor: pointer;
-		color: #475569;
+		color: var(--ui-text-muted);
 		transition:
 			background 0.12s,
 			border-color 0.12s;
 	}
 
 	.text-align-row button:hover {
-		background: #eff6ff;
-		border-color: #93c5fd;
-		color: #2563eb;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
 	}
 
 
@@ -850,7 +850,7 @@
 	.size-display {
 		text-align: center;
 		font-size: 0.75rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		margin-bottom: 0.35rem;
 		font-weight: 500;
 	}
@@ -865,26 +865,26 @@
 		display: grid;
 		place-items: center;
 		padding: 0.35rem;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--ui-border-strong);
 		border-radius: 8px;
-		background: #fff;
+		background: var(--ui-surface);
 		cursor: pointer;
-		color: #475569;
+		color: var(--ui-text-muted);
 		transition:
 			background 0.12s,
 			border-color 0.12s;
 	}
 
 	.expand-grid button:hover {
-		background: #eff6ff;
-		border-color: #93c5fd;
-		color: #2563eb;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
 	}
 
 	/* ─── Hint ─── */
 	.hint {
 		font-size: 0.7rem;
-		color: #ef4444;
+		color: var(--ui-danger);
 		margin: 0.25rem 0 0;
 		font-weight: 500;
 	}
@@ -912,9 +912,9 @@
 		width: 7.5rem;
 		font-size: 0.75rem;
 		padding: 0.25rem 0.4rem;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--ui-border-strong);
 		border-radius: 6px;
-		background: #fff;
+		background: var(--ui-surface);
 	}
 	.connector-option-right {
 		display: flex;
@@ -923,13 +923,13 @@
 	}
 	.connector-option-range {
 		width: 5rem;
-		accent-color: #2563eb;
+		accent-color: var(--ui-accent);
 	}
 	.connector-option-badge {
 		font-size: 0.75rem;
 		min-width: 1.5rem;
 		text-align: right;
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 	.connector-option-row-indent {
 		padding-left: 1.25rem;
@@ -937,7 +937,7 @@
 
 	.hint-note {
 		font-size: 0.68rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		margin: 0.2rem 0 0;
 	}
 
@@ -953,23 +953,23 @@
 		padding: 0.25rem 0;
 		font-size: 0.65rem;
 		font-weight: 600;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--ui-border-strong);
 		border-radius: 6px;
-		background: #fff;
+		background: var(--ui-surface);
 		cursor: pointer;
-		color: #475569;
+		color: var(--ui-text-muted);
 		transition: background 0.12s, border-color 0.12s;
 	}
 
 	.preset-btn:hover {
-		background: #eff6ff;
-		border-color: #93c5fd;
-		color: #2563eb;
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
 	}
 
 	.preset-btn.active {
-		background: #2563eb;
-		border-color: #2563eb;
+		background: var(--ui-accent);
+		border-color: var(--ui-accent);
 		color: #fff;
 	}
 
@@ -983,17 +983,17 @@
 		padding: 0.45rem 0.6rem;
 		font-size: 0.78rem;
 		font-weight: 600;
-		border: 1px dashed #93c5fd;
+		border: 1px dashed var(--ui-accent);
 		border-radius: 8px;
-		background: #eff6ff;
-		color: #2563eb;
+		background: var(--ui-accent-muted);
+		color: var(--ui-accent);
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s;
 	}
 
 	.upload-btn:hover {
-		background: #dbeafe;
-		border-color: #2563eb;
+		background: var(--ui-accent-soft);
+		border-color: var(--ui-accent);
 	}
 
 	/* ─── Grid toggle ─── */
@@ -1002,7 +1002,7 @@
 		align-items: center;
 		justify-content: space-between;
 		font-size: 0.78rem;
-		color: #374151;
+		color: var(--ui-text-secondary);
 		margin-bottom: 0.5rem;
 		cursor: pointer;
 	}
@@ -1013,7 +1013,7 @@
 		height: 18px;
 		border-radius: 999px;
 		border: none;
-		background: #cbd5e1;
+		background: var(--ui-border-strong);
 		cursor: pointer;
 		padding: 0;
 		transition: background 0.18s;
@@ -1021,7 +1021,7 @@
 	}
 
 	.toggle-btn.active {
-		background: #2563eb;
+		background: var(--ui-accent);
 	}
 
 	.toggle-knob {
@@ -1031,9 +1031,9 @@
 		width: 14px;
 		height: 14px;
 		border-radius: 50%;
-		background: #fff;
+		background: var(--ui-surface);
 		transition: transform 0.18s;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+		box-shadow: 0 1px 3px var(--ui-shadow);
 	}
 
 	.toggle-btn.active .toggle-knob {
@@ -1049,17 +1049,17 @@
 
 	.grid-size-label {
 		font-size: 0.74rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 
 	.grid-size-label strong {
-		color: #1e293b;
+		color: var(--ui-text-secondary);
 		font-weight: 600;
 	}
 
 	.grid-size-row input[type='range'] {
 		width: 100%;
-		accent-color: #2563eb;
+		accent-color: var(--ui-accent);
 	}
 
 	.grid-presets {
@@ -1072,22 +1072,22 @@
 		padding: 0.25rem 0;
 		font-size: 0.68rem;
 		font-weight: 600;
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--ui-border);
 		border-radius: 6px;
-		background: #fff;
-		color: #64748b;
+		background: var(--ui-surface);
+		color: var(--ui-text-muted);
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s, color 0.12s;
 	}
 
 	.grid-presets button:hover {
-		background: #f1f5f9;
-		border-color: #94a3b8;
+		background: var(--ui-surface-alt);
+		border-color: var(--ui-border-strong);
 	}
 
 	.grid-presets button.active {
-		background: #2563eb;
-		border-color: #2563eb;
+		background: var(--ui-accent);
+		border-color: var(--ui-accent);
 		color: #fff;
 	}
 </style>

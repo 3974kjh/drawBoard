@@ -133,8 +133,6 @@
 	:global(body) {
 		margin: 0;
 		font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
-		background: #f1f5f9;
-		color: #0f172a;
 	}
 
 	.page {
@@ -146,9 +144,9 @@
 	/* ── Header ── */
 	.header {
 		padding: 1.1rem 2rem;
-		background: #fff;
-		border-bottom: 1px solid #e2e8f0;
-		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+		background: var(--ui-surface);
+		border-bottom: 1px solid var(--ui-border);
+		box-shadow: 0 1px 3px var(--ui-shadow);
 		position: sticky;
 		top: 0;
 		z-index: 5;
@@ -178,12 +176,11 @@
 		font-size: 1.75rem;
 		font-weight: 700;
 		letter-spacing: 0.01em;
-		/* gradient text */
-		background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+		/* gradient text – 테마별 accent 반영 */
+		background: linear-gradient(135deg, var(--ui-accent-hover) 0%, var(--ui-accent) 100%);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
-		/* slight tilt for that sketchy feel */
 		display: inline-block;
 		transform: rotate(-1deg);
 		transform-origin: left center;
@@ -196,7 +193,7 @@
 		font-size: 0.78rem;
 		font-weight: 400;
 		font-style: italic;
-		color: #94a3b8;
+		color: var(--ui-text-subtle);
 		line-height: 1;
 		letter-spacing: 0.04em;
 		text-transform: lowercase;
@@ -214,7 +211,7 @@
 	.board-count {
 		margin: 0 0 0.85rem;
 		font-size: 0.83rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		font-weight: 500;
 	}
 
@@ -228,8 +225,8 @@
 
 	/* ── Add-new card ── */
 	.add-card {
-		background: #fff;
-		border: 2px dashed #cbd5e1;
+		background: var(--ui-surface);
+		border: 2px dashed var(--ui-border-strong);
 		border-radius: 16px;
 		cursor: pointer;
 		display: flex;
@@ -238,18 +235,17 @@
 		justify-content: center;
 		gap: 0.6rem;
 		padding: 2rem 1rem;
-		/* Match board card height roughly (thumbnail 16/9 of ~260px ≈ 147px + body ≈ 90px) */
 		min-height: 200px;
 		transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.18s;
-		color: #94a3b8;
+		color: var(--ui-text-subtle);
 	}
 
 	.add-card:hover {
-		border-color: #2563eb;
-		background: #eff6ff;
-		color: #2563eb;
+		border-color: var(--ui-accent);
+		background: var(--ui-accent-muted);
+		color: var(--ui-accent);
 		transform: translateY(-3px);
-		box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
+		box-shadow: 0 6px 20px var(--ui-shadow);
 	}
 
 	.add-icon {
@@ -303,31 +299,31 @@
 		position: fixed;
 		inset: 0;
 		z-index: 9999;
-		background: rgba(15, 23, 42, 0.55);
+		background: var(--ui-overlay);
 		backdrop-filter: blur(6px);
 		display: grid;
 		place-items: center;
 	}
 
 	.modal-dialog {
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 20px;
 		padding: 2rem 2.2rem;
 		width: min(380px, 92vw);
-		box-shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+		box-shadow: 0 25px 60px var(--ui-shadow-strong);
 	}
 
 	.modal-title {
 		margin: 0 0 0.5rem;
 		font-size: 1.1rem;
 		font-weight: 700;
-		color: #1e293b;
+		color: var(--ui-text-secondary);
 	}
 
 	.modal-message {
 		margin: 0 0 1.5rem;
 		font-size: 0.88rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		line-height: 1.5;
 	}
 
@@ -348,8 +344,8 @@
 	}
 
 	.modal-btn.secondary {
-		background: #f1f5f9;
-		color: #475569;
+		background: var(--ui-surface-alt);
+		color: var(--ui-text-muted);
 	}
 
 	.modal-btn.secondary:hover {
@@ -357,7 +353,7 @@
 	}
 
 	.modal-btn.danger {
-		background: #dc2626;
+		background: var(--ui-danger);
 		color: #fff;
 	}
 

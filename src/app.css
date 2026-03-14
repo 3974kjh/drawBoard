@@ -1,0 +1,91 @@
+/* ─── UI 테마: 전역 CSS 변수 (data-ui-theme에 따라 적용) ─── */
+/* Light: 기존 밝은 톤 */
+[data-ui-theme='light'],
+:root {
+	--ui-bg: #f1f5f9;
+	--ui-surface: #ffffff;
+	--ui-surface-alt: #f8fafc;
+	--ui-text: #0f172a;
+	--ui-text-secondary: #1e293b;
+	--ui-text-muted: #64748b;
+	--ui-text-subtle: #94a3b8;
+	--ui-border: #e2e8f0;
+	--ui-border-strong: #cbd5e1;
+	--ui-accent: #2563eb;
+	--ui-accent-hover: #1d4ed8;
+	--ui-accent-muted: #eff6ff;
+	--ui-accent-soft: #dbeafe;
+	--ui-accent-focus: rgba(147, 197, 253, 0.3);
+	--ui-danger: #dc2626;
+	--ui-danger-hover: #b91c1c;
+	--ui-danger-bg: #fee2e2;
+	--ui-scrollbar: #94a3b8;
+	--ui-scrollbar-hover: #64748b;
+	--ui-glass-bg: rgba(255, 255, 255, 0.55);
+	--ui-glass-border: rgba(255, 255, 255, 0.4);
+	--ui-overlay: rgba(15, 23, 42, 0.55);
+	--ui-shadow: rgba(15, 23, 42, 0.06);
+	--ui-shadow-strong: rgba(0, 0, 0, 0.22);
+}
+
+/* Dark: 어두운 무드 */
+[data-ui-theme='dark'] {
+	--ui-bg: #0f172a;
+	--ui-surface: #1e293b;
+	--ui-surface-alt: #334155;
+	--ui-text: #f1f5f9;
+	--ui-text-secondary: #e2e8f0;
+	--ui-text-muted: #94a3b8;
+	--ui-text-subtle: #64748b;
+	--ui-border: #334155;
+	--ui-border-strong: #475569;
+	--ui-accent: #60a5fa;
+	--ui-accent-hover: #93c5fd;
+	--ui-accent-muted: rgba(96, 165, 250, 0.18);
+	--ui-accent-soft: rgba(96, 165, 250, 0.25);
+	--ui-accent-focus: rgba(96, 165, 250, 0.25);
+	--ui-danger: #f87171;
+	--ui-danger-hover: #fca5a5;
+	--ui-danger-bg: rgba(248, 113, 113, 0.15);
+	--ui-scrollbar: #475569;
+	--ui-scrollbar-hover: #64748b;
+	--ui-glass-bg: rgba(30, 41, 59, 0.85);
+	--ui-glass-border: rgba(255, 255, 255, 0.08);
+	--ui-overlay: rgba(0, 0, 0, 0.65);
+	--ui-shadow: rgba(0, 0, 0, 0.2);
+	--ui-shadow-strong: rgba(0, 0, 0, 0.45);
+}
+
+/* Modern: 나무 가구 느낌 – 따뜻한 우드·크림 톤 */
+[data-ui-theme='modern'] {
+	--ui-bg: #f2ebe3;
+	--ui-surface: #fdf9f5;
+	--ui-surface-alt: #f5ede5;
+	--ui-text: #2c2419;
+	--ui-text-secondary: #3d3428;
+	--ui-text-muted: #6b5b4a;
+	--ui-text-subtle: #8f7e6a;
+	--ui-border: #d9cbb8;
+	--ui-border-strong: #c4b49c;
+	--ui-accent: #8b6914;
+	--ui-accent-hover: #6b5312;
+	--ui-accent-muted: #f5ecd8;
+	--ui-accent-soft: #ebe0c8;
+	--ui-accent-focus: rgba(139, 105, 20, 0.22);
+	--ui-danger: #b54a3a;
+	--ui-danger-hover: #9a3d2e;
+	--ui-danger-bg: #fdf0ee;
+	--ui-scrollbar: #b8a890;
+	--ui-scrollbar-hover: #8f7e6a;
+	--ui-glass-bg: rgba(253, 249, 245, 0.78);
+	--ui-glass-border: rgba(196, 180, 156, 0.5);
+	--ui-overlay: rgba(44, 36, 25, 0.48);
+	--ui-shadow: rgba(44, 36, 25, 0.08);
+	--ui-shadow-strong: rgba(44, 36, 25, 0.22);
+}
+
+/* 기본 body (테마 변수 사용) */
+body {
+	background: var(--ui-bg);
+	color: var(--ui-text);
+}

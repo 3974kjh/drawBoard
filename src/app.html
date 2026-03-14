@@ -98,6 +98,12 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<script>
+			(function () {
+				var t = localStorage.getItem('drawboard-ui-theme');
+				if (t === 'dark' || t === 'modern') document.documentElement.setAttribute('data-ui-theme', t);
+			})();
+		</script>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

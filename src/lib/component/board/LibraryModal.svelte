@@ -91,7 +91,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(15, 23, 42, 0.4);
+		background: var(--ui-overlay);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -103,7 +103,7 @@
 	}
 	.library-modal {
 		position: relative;
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 12px;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 		width: 90%;
@@ -171,14 +171,14 @@
 		border-radius: 10px;
 		overflow: hidden;
 		border: 1px solid #e2e8f0;
-		background: #fff;
+		background: var(--ui-surface);
 	}
 	.library-item-main {
 		flex: 1;
 		display: block;
 		padding: 0;
 		text-align: left;
-		background: #fff;
+		background: var(--ui-surface);
 		border: none;
 		cursor: pointer;
 		min-width: 0;
@@ -192,7 +192,7 @@
 		width: 140px;
 		height: 100px;
 		flex-shrink: 0;
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 8px;
 		overflow: hidden;
 		display: flex;
@@ -216,7 +216,7 @@
 		height: 100%;
 		object-fit: contain;
 		object-position: center;
-		background: #fff;
+		background: var(--ui-surface);
 	}
 	.item-thumb img {
 		width: 100%;
@@ -226,10 +226,10 @@
 	}
 	.item-thumb.no-thumb {
 		color: #94a3b8;
-		background: #fff;
+		background: var(--ui-surface);
 	}
 	.item-thumb.no-thumb.item-thumb-full {
-		background: #f8fafc;
+		background: var(--ui-surface-alt);
 	}
 	.item-name-overlay {
 		position: absolute;
@@ -248,7 +248,7 @@
 	}
 	.library-item-delete {
 		padding: 0.5rem 0.6rem;
-		background: #fff;
+		background: var(--ui-surface);
 		border: none;
 		border-left: 1px solid #e2e8f0;
 		cursor: pointer;
@@ -256,7 +256,7 @@
 		transition: color 0.15s, background 0.15s;
 	}
 	.library-item-delete:hover {
-		background: #fef2f2;
+		background: var(--ui-danger-bg);
 		color: #dc2626;
 	}
 	.modal-footer {
@@ -269,12 +269,12 @@
 		padding: 0.45rem 1rem;
 		font-size: 0.85rem;
 		border: 1px solid #cbd5e1;
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 8px;
 		cursor: pointer;
 		color: #475569;
 	}
 	.btn-secondary:hover {
-		background: #f8fafc;
+		background: var(--ui-surface-alt);
 	}
 </style>

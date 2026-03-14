@@ -70,7 +70,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(15, 23, 42, 0.4);
+		background: var(--ui-overlay);
 		backdrop-filter: blur(4px);
 		display: grid;
 		place-items: center;
@@ -89,11 +89,11 @@
 	.modal {
 		position: relative;
 		z-index: 1;
-		background: #fff;
+		background: var(--ui-surface);
 		width: min(560px, 100%);
 		border-radius: 20px;
 		padding: 1.5rem;
-		box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+		box-shadow: 0 20px 60px var(--ui-shadow-strong);
 		animation: fadeUp 0.2s ease;
 	}
 
@@ -127,16 +127,16 @@
 		display: grid;
 		place-items: center;
 		border: none;
-		background: #f1f5f9;
+		background: var(--ui-surface-alt);
 		border-radius: 8px;
 		cursor: pointer;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		transition: background 0.12s;
 	}
 
 	.close-x:hover {
-		background: #e2e8f0;
-		color: #334155;
+		background: var(--ui-border);
+		color: var(--ui-text-secondary);
 	}
 
 	.field-label {
@@ -144,14 +144,14 @@
 		font-size: 0.85rem;
 		font-weight: 600;
 		margin-bottom: 0.4rem;
-		color: #334155;
+		color: var(--ui-text-secondary);
 	}
 
 	.field-input {
 		width: 100%;
 		box-sizing: border-box;
 		border-radius: 10px;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--ui-border-strong);
 		padding: 0.65rem 0.85rem;
 		font-size: 0.92rem;
 		outline: none;
@@ -159,15 +159,15 @@
 	}
 
 	.field-input:focus {
-		border-color: #2563eb;
-		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+		border-color: var(--ui-accent);
+		box-shadow: 0 0 0 3px var(--ui-accent-focus);
 	}
 
 	.theme-title {
 		margin: 1.2rem 0 0.5rem;
 		font-weight: 600;
 		font-size: 0.85rem;
-		color: #334155;
+		color: var(--ui-text-secondary);
 	}
 
 	.theme-grid {
@@ -177,10 +177,10 @@
 	}
 
 	.theme-btn {
-		border: 2px solid #e2e8f0;
+		border: 2px solid var(--ui-border);
 		border-radius: 14px;
 		padding: 0;
-		background: #fff;
+		background: var(--ui-surface);
 		cursor: pointer;
 		text-align: center;
 		overflow: hidden;
@@ -188,12 +188,12 @@
 	}
 
 	.theme-btn.active {
-		border-color: #2563eb;
-		box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+		border-color: var(--ui-accent);
+		box-shadow: 0 0 0 2px var(--ui-accent-focus);
 	}
 
 	.theme-btn:hover:not(.active) {
-		border-color: #94a3b8;
+		border-color: var(--ui-border-strong);
 	}
 
 	.preview {
@@ -209,7 +209,7 @@
 		padding: 0.4rem 0;
 		font-size: 0.8rem;
 		font-weight: 600;
-		color: #475569;
+		color: var(--ui-text-muted);
 	}
 
 	.modal-actions {
@@ -230,20 +230,20 @@
 	}
 
 	.btn-ghost {
-		background: #f1f5f9;
-		color: #475569;
+		background: var(--ui-surface-alt);
+		color: var(--ui-text-muted);
 	}
 
 	.btn-ghost:hover {
-		background: #e2e8f0;
+		background: var(--ui-border);
 	}
 
 	.btn-solid {
-		background: #2563eb;
+		background: var(--ui-accent);
 		color: #fff;
 	}
 
 	.btn-solid:hover {
-		background: #1d4ed8;
+		background: var(--ui-accent-hover);
 	}
 </style>

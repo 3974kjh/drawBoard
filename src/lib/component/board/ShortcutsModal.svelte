@@ -106,7 +106,7 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
-		background: rgba(15, 23, 42, 0.5);
+		background: var(--ui-overlay);
 		backdrop-filter: blur(3px);
 		z-index: 100;
 	}
@@ -124,7 +124,7 @@
 		z-index: 1;
 		width: min(480px, calc(100vw - 2rem));
 		max-height: calc(100vh - 4rem);
-		background: #fff;
+		background: var(--ui-surface);
 		border-radius: 20px;
 		box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
 		overflow: hidden;
@@ -141,7 +141,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		color: #1e293b;
+		color: var(--ui-text-secondary);
 		margin-bottom: 0.3rem;
 	}
 
@@ -154,7 +154,7 @@
 	.modal-desc {
 		margin: 0;
 		font-size: 0.8rem;
-		color: #64748b;
+		color: var(--ui-text-muted);
 	}
 
 	.shortcuts-body {
@@ -174,7 +174,7 @@
 		margin: 0 0 0.5rem 0;
 		font-size: 0.8rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--ui-text-muted);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 	}
@@ -203,17 +203,17 @@
 		padding: 0.25rem 0.5rem;
 		font-size: 0.75rem;
 		font-family: ui-monospace, monospace;
-		background: #f1f5f9;
+		background: var(--ui-surface-alt);
 		border: 1px solid #e2e8f0;
 		border-radius: 6px;
-		color: #334155;
+		color: var(--ui-text-secondary);
 		box-shadow: 0 1px 0 #e2e8f0;
 	}
 
 	.desc {
 		margin: 0;
 		font-size: 0.875rem;
-		color: #475569;
+		color: var(--ui-text-muted);
 	}
 
 	.modal-footer {
@@ -225,8 +225,8 @@
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #475569;
-		background: #f1f5f9;
+		color: var(--ui-text-muted);
+		background: var(--ui-surface-alt);
 		border: 1px solid #e2e8f0;
 		border-radius: 10px;
 		cursor: pointer;
@@ -234,7 +234,7 @@
 	}
 
 	.btn-close:hover {
-		background: #e2e8f0;
-		border-color: #cbd5e1;
+		background: var(--ui-border);
+		border-color: var(--ui-border-strong);
 	}
 </style>

@@ -309,10 +309,10 @@
 
 <style>
 	.minimap {
-		background: rgba(255, 255, 255, 0.92);
+		background: var(--ui-glass-bg);
 		backdrop-filter: blur(16px) saturate(160%);
 		-webkit-backdrop-filter: blur(16px) saturate(160%);
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--ui-border);
 		overflow: hidden;
 		flex-shrink: 0;
 	}
@@ -323,8 +323,8 @@
 		align-items: center;
 		gap: 0.35rem;
 		padding: 0.42rem 0.55rem 0.42rem 0.65rem;
-		background: rgba(248, 250, 252, 0.95);
-		border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+		background: var(--ui-surface-alt);
+		border-bottom: 1px solid var(--ui-border);
 		user-select: none;
 	}
 
@@ -334,13 +334,13 @@
 		gap: 0.28rem;
 		font-size: 0.7rem;
 		font-weight: 700;
-		color: #374151;
+		color: var(--ui-text-secondary);
 		letter-spacing: 0.01em;
 		flex: 1;
 	}
 
 	.minimap-title svg {
-		color: #6366f1;
+		color: var(--ui-accent);
 		flex-shrink: 0;
 	}
 
@@ -352,7 +352,7 @@
 		border: none;
 		background: transparent;
 		cursor: pointer;
-		color: #9ca3af;
+		color: var(--ui-text-subtle);
 		padding: 0;
 		transition:
 			background 0.15s,
@@ -361,8 +361,8 @@
 	}
 
 	.collapse-btn:hover {
-		background: rgba(0, 0, 0, 0.07);
-		color: #374151;
+		background: var(--ui-accent-muted);
+		color: var(--ui-text-secondary);
 	}
 
 	/* ── Canvas body ── */
@@ -370,10 +370,10 @@
 		position: relative;
 		width: 100%;
 		overflow: hidden;
-		background: #dbe3ef;
+		background: var(--ui-surface-alt);
 		line-height: 0;
-		border-top: 1px solid #94a3b8;
-		border-bottom: 1px solid #94a3b8;
+		border-top: 1px solid var(--ui-border-strong);
+		border-bottom: 1px solid var(--ui-border-strong);
 	}
 
 	canvas {
@@ -387,9 +387,9 @@
 	/* ── Viewport indicator rect ── */
 	.viewport-rect {
 		position: absolute;
-		border: 1.5px solid rgba(59, 130, 246, 0.9);
-		background: rgba(59, 130, 246, 0.1);
-		box-shadow: 0 0 0 0.5px rgba(59, 130, 246, 0.35);
+		border: 1.5px solid var(--ui-accent);
+		background: var(--ui-accent-muted);
+		box-shadow: 0 0 0 0.5px var(--ui-accent-focus);
 		pointer-events: none;
 		z-index: 2;
 	}
@@ -418,9 +418,9 @@
 	.minimap-footer {
 		padding: 0.28rem 0.65rem;
 		font-size: 0.6rem;
-		color: #94a3b8;
-		background: rgba(248, 250, 252, 0.95);
-		border-top: 1px solid rgba(226, 232, 240, 0.8);
+		color: var(--ui-text-subtle);
+		background: var(--ui-surface-alt);
+		border-top: 1px solid var(--ui-border);
 		text-align: center;
 		font-variant-numeric: tabular-nums;
 		letter-spacing: 0.04em;

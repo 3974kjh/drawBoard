@@ -7,12 +7,9 @@ alwaysApply: true
 
 - All styles are **scoped** inside `<style>` blocks (no global CSS framework). SCSS 사용 시 **style-rules.mdc** 참조 (style 폴더, 컴포넌트별 SCSS).
 - Design reference: **Canva Draw** – clean, minimal, tool-focused
+- **UI 테마 (앱 무드)**: `data-ui-theme` on `<html>` → `light` | `dark` | `modern`. 전역 변수는 `src/app.css`에 정의. 저장/적용은 `src/lib/ui-theme.ts` (localStorage 키 `drawboard-ui-theme`). 레이아웃에서 테마 스위처 노출, `app.html` 인라인 스크립트로 초기 테마 적용(플래시 방지). **modern** = 나무 가구 느낌(우드·크림·앰버 톤).
+- UI 색상은 **테마 CSS 변수** 사용: `--ui-bg`, `--ui-surface`, `--ui-surface-alt`, `--ui-text`, `--ui-text-muted`, `--ui-border`, `--ui-accent`, `--ui-accent-muted`, `--ui-danger`, `--ui-overlay`, `--ui-glass-bg`, `--ui-scrollbar` 등. 보드 캔버스 배경(BOARD_THEMES)과 별개.
 - Use CSS custom properties for dynamic per-element styles: `--fill`, `--stroke`, `--border-w`, `--text-valign`
-- Glassmorphism for floating action buttons:
-  ```css
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  ```
+- Glassmorphism for floating action buttons: `var(--ui-glass-bg)`, `var(--ui-glass-border)` 또는 기존 rgba 값
 - Fonts: `'Caveat'` (brand/logo), `'DM Sans'` (UI text) — loaded via Google Fonts in `src/app.html`
-- 보드 확장 버튼(바깥 스트립): 기본 반투명 흰 배경, 호버 시 위/아래 버튼은 좌우 방향·좌/우 버튼은 상하 방향 linear-gradient(가운데 진함), 클릭(active) 시 동일 그라데이션에 더 진한 색. 모서리 4칸은 버튼이 아닌 배경만 동일 색.
+- 보드 확장 버튼(바깥 스트립): 기본 반투명 배경(`var(--ui-glass-bg)`), 호버 시 그라데이션, 모서리 4칸은 버튼이 아닌 배경만 동일 색.
