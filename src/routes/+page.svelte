@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { type BoardData, type ThemeId } from '$lib/board-types';
-	import { createBoard, deleteBoard, getBoards } from '$lib/board-storage';
+	import { createBoard, deleteBoard, getBoards, upsertBoard } from '$lib/board-storage';
+	import { get } from 'svelte/store';
 	import { locale, t } from '$lib/i18n';
+	import { boardToJsonBlob, downloadBlob, parseBoardJson } from '$lib/board-json';
+	import toast from 'svelte-hot-french-toast';
 
 	import BoardCard from '$lib/component/home/BoardCard.svelte';
 	import CreateBoardModal from '$lib/component/home/CreateBoardModal.svelte';
+	import ExportBoardsModal from '$lib/component/home/ExportBoardsModal.svelte';
 
 	let boards = $state<BoardData[]>([]);
 	let showCreateModal = $state(false);
@@ -13,9 +17,13 @@
 	let selectedThemeId = $state<ThemeId>('whiteboard');
 	let showDeleteConfirmModal = $state(false);
 	let pendingDeleteId = $state<string | null>(null);
+	let showExportBoardsModal = $state(false);
+	let importFilesInputRef = $state<HTMLInputElement | null>(null);
 
 	const refreshBoards = async () => {
-		boards = await getBoards();
+		const list = await getBoards();
+		LOG('refreshBoards done', { count: list.length, ids: list.map((b) => b.id) });
+		boards = list;
 	};
 
 	const openCreateModal = () => {
@@ -56,22 +64,164 @@
 		goto(`/board/${boardId}`);
 	};
 
+	const safeFilename = (title: string): string => {
+		const base = (title || 'board').replace(/[^\w\s가-힣\-]/g, '').trim().slice(0, 80) || 'board';
+		return `${base}.json`;
+	};
+
+	const handleExportSelectedBoards = (selectedBoards: BoardData[]) => {
+		showExportBoardsModal = false;
+		selectedBoards.forEach((board, i) => {
+			setTimeout(() => {
+				const blob = boardToJsonBlob(board);
+				downloadBlob(blob, safeFilename(board.title));
+			}, i * 120);
+		});
+		if (selectedBoards.length > 0) {
+			const tFn = get(t);
+			toast.success(
+				selectedBoards.length === 1 ? tFn('home.exportedOne') : tFn('home.exportedMany', { n: selectedBoards.length })
+			);
+		}
+	};
+
+	const createId = (): string => {
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+		return `board-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+	};
+
+	const LOG = (msg: string, data?: unknown) => {
+		console.log('[Home Import]', msg, data !== undefined ? data : '');
+	};
+
+	/** 메인 페이지 전용: 업로드한 각 파일을 신규 보드로 추가(기존 보드 덮어쓰지 않음) */
+	const handleImportFiles = async (e: Event) => {
+		const input = e.currentTarget as HTMLInputElement;
+		const fileList = input.files;
+		LOG('handleImportFiles called', { filesLength: fileList?.length ?? 0, fileNames: fileList ? Array.from(fileList).map((f) => f.name) : [] });
+		if (!fileList?.length) {
+			LOG('early return: no files');
+			return;
+		}
+		// input.value 초기화를 여기서 하면 change가 다시 발생해 files가 비는 환경이 있음 → 처리 끝난 뒤에만 비움
+		const now = new Date().toISOString();
+		const created: BoardData[] = [];
+		for (const file of Array.from(fileList)) {
+			const titleFromFile = file.name.replace(/\.json$/i, '').trim() || 'Imported';
+			const newId = createId();
+			LOG('processing file', { fileName: file.name, titleFromFile, newId });
+			let boardData: BoardData;
+			try {
+				const text = await file.text();
+				LOG('file.text() ok', { textLength: text?.length ?? 0, textPreview: text?.slice(0, 80) });
+				const list = parseBoardJson(text);
+				LOG('parseBoardJson result', { listLength: list.length, firstBoardId: list[0]?.id });
+				if (list.length > 0) {
+					const src = list[0];
+					boardData = {
+						id: newId,
+						title: titleFromFile,
+						themeId: src.themeId ?? 'whiteboard',
+						createdAt: now,
+						updatedAt: now,
+						strokes: Array.isArray(src.strokes) ? [...src.strokes] : [],
+						elements: Array.isArray(src.elements) ? [...src.elements] : [],
+						thumbnail: src.thumbnail,
+						width: src.width,
+						height: src.height,
+						gridEnabled: src.gridEnabled,
+						gridSize: src.gridSize
+					};
+				} else {
+					boardData = {
+						id: newId,
+						title: titleFromFile,
+						themeId: 'whiteboard',
+						createdAt: now,
+						updatedAt: now,
+						strokes: [],
+						elements: []
+					};
+				}
+			} catch (err) {
+				LOG('file read/parse error', err);
+				boardData = {
+					id: newId,
+					title: titleFromFile,
+					themeId: 'whiteboard',
+					createdAt: now,
+					updatedAt: now,
+					strokes: [],
+					elements: []
+				};
+			}
+			LOG('calling upsertBoard', { id: boardData.id, title: boardData.title });
+			await upsertBoard(boardData);
+			LOG('upsertBoard done', { id: boardData.id });
+			created.push(boardData);
+		}
+		LOG('all files processed', { createdCount: created.length, createdIds: created.map((b) => b.id) });
+		if (created.length > 0) {
+			const afterBoards = await getBoards();
+			LOG('getBoards after import', { count: afterBoards.length, ids: afterBoards.map((b) => b.id) });
+			boards = afterBoards;
+			const tFn = get(t);
+			toast.success(created.length === 1 ? tFn('home.importedOne') : tFn('home.importedMany', { n: created.length }));
+		} else {
+			toast.error(get(t)('home.importNoBoards'));
+		}
+		input.value = '';
+	};
+
 	$effect(() => {
+		LOG('$effect running, calling refreshBoards');
 		refreshBoards();
 	});
 </script>
 
 <main class="page">
-	<!-- ── Header (logo + subtitle only, no action button) ── -->
+	<!-- ── Header (logo + subtitle + export/import) ── -->
 	<header class="header">
 		<div class="logo">
-			<!-- D logo mark – using static/favicon.svg -->
 			<img src="/favicon.svg" alt="DrawDashBoard logo" width="44" height="44" aria-hidden="true" />
 			<div class="logo-text">
 				<h1 class="brand-title">DrawDashBoard</h1>
 				<p class="subtitle">{$t('home.subtitle')}</p>
 			</div>
 		</div>
+		<div class="header-actions">
+			<button
+				type="button"
+				class="action-btn"
+				onclick={() => (showExportBoardsModal = true)}
+				disabled={boards.length === 0}
+				title={$t('home.exportBoards')}
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+				<span>{$t('home.exportBoards')}</span>
+			</button>
+			<button
+				type="button"
+				class="action-btn"
+				onclick={() => importFilesInputRef?.click()}
+				title={$t('home.importFromFiles')}
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+				<span>{$t('home.importFromFiles')}</span>
+			</button>
+		</div>
+		<input
+			type="file"
+			accept=".json,application/json"
+			multiple
+			class="hidden-file-input"
+			bind:this={importFilesInputRef}
+			onchange={handleImportFiles}
+			aria-hidden="true"
+			tabindex="-1"
+		/>
 	</header>
 
 	<!-- ── Board grid (always shown, first card = add new) ── -->
@@ -103,6 +253,13 @@
 	bind:selectedThemeId
 	onCreate={handleCreateBoard}
 	onClose={closeCreateModal}
+/>
+
+<ExportBoardsModal
+	show={showExportBoardsModal}
+	boards={boards}
+	onExport={handleExportSelectedBoards}
+	onClose={() => (showExportBoardsModal = false)}
 />
 
 {#if showDeleteConfirmModal}
@@ -144,6 +301,10 @@
 
 	/* ── Header ── */
 	.header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
 		padding: 1.1rem 2rem;
 		background: var(--ui-surface);
 		border-bottom: 1px solid var(--ui-border);
@@ -157,6 +318,48 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+	}
+
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.action-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.75rem;
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: var(--ui-text-secondary);
+		background: var(--ui-surface-alt);
+		border: 1px solid var(--ui-border);
+		border-radius: 10px;
+		cursor: pointer;
+		transition: background 0.15s, border-color 0.15s, color 0.15s;
+	}
+
+	.action-btn:hover:not(:disabled) {
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent-soft);
+		color: var(--ui-accent);
+	}
+
+	.action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.hidden-file-input {
+		position: absolute;
+		width: 0;
+		height: 0;
+		opacity: 0;
+		pointer-events: none;
+		overflow: hidden;
 	}
 
 	.logo-text {

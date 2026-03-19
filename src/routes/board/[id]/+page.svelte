@@ -65,6 +65,7 @@
 		type LibraryItem
 	} from '$lib/library-storage';
 	import { locale, t } from '$lib/i18n';
+	import { boardToJsonBlob, downloadBlob, parseBoardJson } from '$lib/board-json';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -125,6 +126,7 @@
 	let stageContainerRef = $state<HTMLElement | null>(null);
 	let contextMenuRef = $state<HTMLElement | null>(null);
 	let showSaveLibraryNameModal = $state(false);
+	let jsonFileInputRef = $state<HTMLInputElement | null>(null);
 	/** true = unsaved content (strokes/elements/settings) */
 	let _contentDirty = $state(false);
 	/** title at last load or save (so title change counts as dirty) */
@@ -522,11 +524,60 @@
 		themeId = source.themeId;
 		strokes = deepClone(source.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(source.elements).map((el: BoardElement) => migrateElement(el));
+		if (source.width != null && source.height != null) {
+			stageWidth = source.width;
+			stageHeight = source.height;
+		}
+		if (source.gridEnabled != null) gridEnabled = source.gridEnabled;
+		if (source.gridSize != null) gridSize = source.gridSize;
 		selectedElementIds = [];
 		editingElementId = null;
 		showImportModal = false;
 		commitSnapshot();
 		toast.success('Board content imported.');
+	};
+
+	const exportCurrentBoardAsJson = () => {
+		const now = new Date().toISOString();
+		const board: BoardData = {
+			id: boardId,
+			title: boardTitle,
+			themeId,
+			createdAt: now,
+			updatedAt: now,
+			strokes: deepClone(strokes),
+			elements: deepClone(elements).map((el: BoardElement) => migrateElement(el)),
+			width: stageWidth,
+			height: stageHeight,
+			gridEnabled,
+			gridSize
+		};
+		const blob = boardToJsonBlob(board);
+		const safeTitle = boardTitle.replace(/[^\w\s-]/g, '').trim() || 'board';
+		downloadBlob(blob, `${safeTitle.slice(0, 40)}.json`);
+		toast.success('Exported as JSON.');
+	};
+
+	const handleImportJsonFile = (e: Event) => {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = (ev) => {
+			const text = ev.target?.result as string;
+			try {
+				const list = parseBoardJson(text);
+				if (list.length === 0) {
+					toast.error('No valid board data in file.');
+					return;
+				}
+				importBoardContent(list[0]);
+			} catch {
+				toast.error('Invalid JSON file.');
+			}
+		};
+		reader.readAsText(file);
 	};
 
 	/* ── Element helpers ── */
@@ -3017,6 +3068,8 @@
 		onDownloadImage={downloadBoardImage}
 		onClear={openClearConfirmModal}
 		onShowImport={() => (showImportModal = true)}
+		onExportJson={exportCurrentBoardAsJson}
+		onImportJsonClick={() => jsonFileInputRef?.click()}
 		onShowLibrary={() => (showLibraryModal = true)}
 		onShowShortcuts={() => (showShortcutsModal = true)}
 		onUndo={undo}
@@ -3129,6 +3182,15 @@
 			class="hidden-input"
 			bind:this={imageFileInputRef}
 			onchange={handleImageReplaceFromFile}
+			aria-hidden="true"
+			tabindex="-1"
+		/>
+		<input
+			type="file"
+			accept=".json,application/json"
+			class="hidden-input"
+			bind:this={jsonFileInputRef}
+			onchange={handleImportJsonFile}
 			aria-hidden="true"
 			tabindex="-1"
 		/>

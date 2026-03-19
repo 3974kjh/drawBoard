@@ -24,7 +24,7 @@ alwaysApply: true
 ## 번역 키 구조 (translations.ts)
 
 - **점(.) 구분** 키: `home.subtitle`, `topbar.goBack`, `prop.color`, `stage.drawingBoard`, `lang.en`, `lang.ko` 등.
-- **영역별**: home, create, topbar, tool, prop, stage, expand, shortcuts, import, library, saveLib, unsaved, saved, clear, context, card, minimap, theme, lang.
+- **영역별**: home, create, topbar, tool, prop, stage, expand, shortcuts, import, library, saveLib, unsaved, saved, clear, context, card, minimap, theme, lang. home 영역: `home.exportedOne` / `home.exportedMany`(다중 내보내기 토스트), `home.importNoBoards`(가져오기 실패 시), `home.exportBoardsDesc`(선택 보드마다 제목으로 JSON 각각 저장 안내).
 - **placeholder**: `{n}` 등 — `t('home.boardCount', { n: 1 })` 형태로 전달.
 
 ## 적용 범위

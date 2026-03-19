@@ -386,11 +386,11 @@
 		/* CSS size set dynamically via JS */
 	}
 
-	/* ── Viewport indicator rect ── */
+	/* ── Viewport indicator rect: 투명 배경으로 해당 영역 내용이 보이도록 ── */
 	.viewport-rect {
 		position: absolute;
 		border: 1.5px solid var(--ui-accent);
-		background: var(--ui-accent-muted);
+		background: transparent;
 		box-shadow: 0 0 0 0.5px var(--ui-accent-focus);
 		pointer-events: none;
 		z-index: 2;

@@ -9,4 +9,4 @@ alwaysApply: true
 - Buttons without visible text must have `aria-label`
 - Modal overlays: `role="dialog" aria-modal="true"`
 
-관련: `src/lib/component/board/ImportModal.svelte`, `src/lib/component/home/CreateBoardModal.svelte` 등 모달 컴포넌트.
+관련: `src/lib/component/board/ImportModal.svelte`, `src/lib/component/board/Topbar.svelte`(아이콘 전용 버튼 aria-label), `src/lib/component/home/CreateBoardModal.svelte` 등 모달 컴포넌트.
