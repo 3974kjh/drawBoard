@@ -1620,15 +1620,14 @@
 				const oldCy = ob.y + ob.height / 2;
 				const w2 = ob.width / 2;
 				const h2 = ob.height / 2;
-				const dist = (ax: number, ay: number, bx: number, by: number) =>
-					Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
 				const px = point.x;
 				const py = point.y;
-
+				/* 엣지: 유클리드 거리 대신 축 방향 부호 투영 + abs — 미회전과 같이 고정점 너머로 넘기면(flip) 크기가 다시 늘어남 */
 				if (handle === 'e') {
 					const fixX = oldCx - w2 * cos;
 					const fixY = oldCy - w2 * sin;
-					newW = Math.max(10, dist(fixX, fixY, px, py));
+					const signedW = (px - fixX) * cos + (py - fixY) * sin;
+					newW = Math.max(10, Math.abs(signedW));
 					newH = ob.height;
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
@@ -1637,7 +1636,8 @@
 				} else if (handle === 'w') {
 					const fixX = oldCx + w2 * cos;
 					const fixY = oldCy + w2 * sin;
-					newW = Math.max(10, dist(fixX, fixY, px, py));
+					const signedW = (fixX - px) * cos + (fixY - py) * sin;
+					newW = Math.max(10, Math.abs(signedW));
 					newH = ob.height;
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
@@ -1646,8 +1646,9 @@
 				} else if (handle === 'n') {
 					const fixX = oldCx - h2 * sin;
 					const fixY = oldCy + h2 * cos;
+					const signedH = (px - fixX) * sin - (py - fixY) * cos;
 					newW = ob.width;
-					newH = Math.max(10, dist(fixX, fixY, px, py));
+					newH = Math.max(10, Math.abs(signedH));
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
 					newX = newCx - newW / 2;
@@ -1655,8 +1656,9 @@
 				} else if (handle === 's') {
 					const fixX = oldCx + h2 * sin;
 					const fixY = oldCy - h2 * cos;
+					const signedH = -(px - fixX) * sin + (py - fixY) * cos;
 					newW = ob.width;
-					newH = Math.max(10, dist(fixX, fixY, px, py));
+					newH = Math.max(10, Math.abs(signedH));
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
 					newX = newCx - newW / 2;
@@ -1682,19 +1684,8 @@
 					const dy = py - newCy;
 					const localX = dx * cos + dy * sin;
 					const localY = -dx * sin + dy * cos;
-					if (handle === 'ne') {
-						newW = Math.max(10, 2 * localX);
-						newH = Math.max(10, -2 * localY);
-					} else if (handle === 'sw') {
-						newW = Math.max(10, -2 * localX);
-						newH = Math.max(10, 2 * localY);
-					} else if (handle === 'nw') {
-						newW = Math.max(10, -2 * localX);
-						newH = Math.max(10, -2 * localY);
-					} else {
-						newW = Math.max(10, 2 * localX);
-						newH = Math.max(10, 2 * localY);
-					}
+					newW = Math.max(10, Math.abs(2 * localX));
+					newH = Math.max(10, Math.abs(2 * localY));
 					newX = newCx - newW / 2;
 					newY = newCy - newH / 2;
 				}
@@ -1802,15 +1793,14 @@
 
 			if (useRotatedResize) {
 				// Rotated resize: dragged handle moves to pointer; opposite edge/corner stays fixed.
-				const dist = (ax: number, ay: number, bx: number, by: number) =>
-					Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
 				const px = point.x;
 				const py = point.y;
 
 				if (handle === 'e') {
 					const fixX = oldCx - w2 * cos;
 					const fixY = oldCy - w2 * sin;
-					newW = Math.max(4, dist(fixX, fixY, px, py));
+					const signedW = (px - fixX) * cos + (py - fixY) * sin;
+					newW = Math.max(4, Math.abs(signedW));
 					newH = ob.height;
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
@@ -1819,7 +1809,8 @@
 				} else if (handle === 'w') {
 					const fixX = oldCx + w2 * cos;
 					const fixY = oldCy + w2 * sin;
-					newW = Math.max(4, dist(fixX, fixY, px, py));
+					const signedW = (fixX - px) * cos + (fixY - py) * sin;
+					newW = Math.max(4, Math.abs(signedW));
 					newH = ob.height;
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
@@ -1828,8 +1819,9 @@
 				} else if (handle === 'n') {
 					const fixX = oldCx - h2 * sin;
 					const fixY = oldCy + h2 * cos;
+					const signedH = (px - fixX) * sin - (py - fixY) * cos;
 					newW = ob.width;
-					newH = Math.max(4, dist(fixX, fixY, px, py));
+					newH = Math.max(4, Math.abs(signedH));
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
 					newX = newCx - newW / 2;
@@ -1837,8 +1829,9 @@
 				} else if (handle === 's') {
 					const fixX = oldCx + h2 * sin;
 					const fixY = oldCy - h2 * cos;
+					const signedH = -(px - fixX) * sin + (py - fixY) * cos;
 					newW = ob.width;
-					newH = Math.max(4, dist(fixX, fixY, px, py));
+					newH = Math.max(4, Math.abs(signedH));
 					const newCx = (fixX + px) / 2;
 					const newCy = (fixY + py) / 2;
 					newX = newCx - newW / 2;
@@ -1865,19 +1858,8 @@
 					const dy = py - newCy;
 					const localX = dx * cos + dy * sin;
 					const localY = -dx * sin + dy * cos;
-					if (handle === 'ne') {
-						newW = Math.max(4, 2 * localX);
-						newH = Math.max(4, -2 * localY);
-					} else if (handle === 'sw') {
-						newW = Math.max(4, -2 * localX);
-						newH = Math.max(4, 2 * localY);
-					} else if (handle === 'nw') {
-						newW = Math.max(4, -2 * localX);
-						newH = Math.max(4, -2 * localY);
-					} else {
-						newW = Math.max(4, 2 * localX);
-						newH = Math.max(4, 2 * localY);
-					}
+					newW = Math.max(4, Math.abs(2 * localX));
+					newH = Math.max(4, Math.abs(2 * localY));
 					newX = newCx - newW / 2;
 					newY = newCy - newH / 2;
 				}
