@@ -13,7 +13,7 @@ alwaysApply: true
 | Pointer drag/draw | `interaction` in `+page.svelte`; 스테이지에 `setPointerCapture`는 **사용하지 않음**(자식 `textarea` 히트 테스트 깨짐). `window` `pointerup`/`pointercancel`(capture)로 스테이지 밖에서 버튼 해제; 스테이지 **밖**에서만 `window` `pointermove`(capture)로 `onStagePointerMove` 호출; `pointerleave`는 연결선 프리뷰만 정리 |
 | Select (요소 클릭) | select 도구에서 **Shift 없이** 도형을 클릭해 드래그를 시작할 때 `selectedStrokeIds`를 비워 펜 스트로크 선택과 요소 선택이 섞이지 않게 함 (`onStagePointerDown`) |
 | Layer order | `layerOrder: LayerEntry[]`가 스트로크와 요소의 통합 z-order; 맨 앞/맨 뒤는 `bringLayerIdsToFront` / `sendLayerIdsToBack` (`bringSelectionToFront` / `sendSelectionToBack`). 히스토리 스냅샷에 포함. |
-| Board size | `expandBoard` / `fitBoardToContent` in `+page.svelte` — 확장 시 스트로크·요소 이동(좌/상), `fit` 시 캔버스 크기·콘텐츠 정렬·`commitSnapshot` |
+| Board size | `expandBoard` / `fitBoardToContent` in `+page.svelte` — 확장 시 스트로크·요소 이동(좌/상), `fit` 시 캔버스 크기·콘텐츠 정렬·`commitSnapshot`; `fit` 후 `stageWrapRef` 스크롤을 `(0,0)`으로 두어 미니맵 뷰포트가 보드 좌상단을 가리키게 함 |
 | Persistence | IndexedDB via `src/lib/board-storage.ts`, `src/lib/db/` |
 | 메인 페이지 보드 목록 | `src/routes/+page.svelte`: `boards` 상태, `getBoards()`/`refreshBoards()`. 다중 import 시 파일별로 `upsertBoard()`로 **신규 보드 추가** (새 id, 제목=파일명). input.value 초기화는 처리 **끝난 뒤**에만 수행(change 이벤트 이중 발생 시 빈 files로 early return 방지) |
 

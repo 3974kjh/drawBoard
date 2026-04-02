@@ -1038,11 +1038,16 @@
 		}
 		redrawCanvas();
 
+		/* Scroll to board origin so the main view and minimap viewport show the top-left area */
 		const wrap = stageWrapRef;
 		if (wrap) {
 			requestAnimationFrame(() => {
-				wrap.scrollLeft -= dx;
-				wrap.scrollTop -= dy;
+				requestAnimationFrame(() => {
+					const w = stageWrapRef;
+					if (!w) return;
+					w.scrollLeft = 0;
+					w.scrollTop = 0;
+				});
 			});
 		}
 
