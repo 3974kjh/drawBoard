@@ -8,6 +8,8 @@
 		onGoBack: () => void;
 		onDownloadPdf: () => void;
 		onDownloadImage: () => void;
+		/** Resize board to fit strokes and elements (optional; board page only). */
+		onFitBoardToContent?: () => void;
 		onClear: () => void;
 		onShowImport: () => void;
 		onExportJson?: () => void;
@@ -25,6 +27,7 @@
 		onGoBack,
 		onDownloadPdf,
 		onDownloadImage,
+		onFitBoardToContent,
 		onClear,
 		onShowImport,
 		onExportJson,
@@ -101,8 +104,33 @@
 			<div class="separator" aria-hidden="true"></div>
 		{/if}
 
-		<!-- 그룹: 보드 비우기 -->
+		<!-- 그룹: 내용에 맞게 보드 크기 · 보드 비우기 -->
 		<span class="topbar-group">
+			{#if onFitBoardToContent}
+				<button
+					type="button"
+					class="icon-btn"
+					onclick={onFitBoardToContent}
+					title={$t('topbar.fitBoardTitle')}
+					aria-label={$t('topbar.fitBoard')}
+				>
+					<!-- Inner content + outer corner brackets = fit bounds to content -->
+					<svg
+						width="17"
+						height="17"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<rect x="8" y="8" width="8" height="8" rx="1" />
+						<path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6" />
+					</svg>
+				</button>
+			{/if}
 			<button type="button" class="icon-btn danger" onclick={onClear} title={$t('topbar.clearBoard')} aria-label={$t('topbar.clearBoard')}>
 			<!-- Clear board: eraser (wipe clean) – distinct from trash (multi-eraser) and undo/redo -->
 			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8l10-10c.8-.8 2-.8 2.8 0l5.7 5.7c.8.8.8 2 0 2.8L14 19"/></svg>

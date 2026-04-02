@@ -66,6 +66,7 @@
 		saveLibraryItem,
 		type LibraryItem
 	} from '$lib/library-storage';
+	import { get } from 'svelte/store';
 	import { locale, t } from '$lib/i18n';
 	import { boardToJsonBlob, downloadBlob, parseBoardJson } from '$lib/board-json';
 	import {
@@ -957,6 +958,95 @@
 			});
 		}
 		if (commit) commitSnapshot();
+	};
+
+	const translateElementForFit = (el: BoardElement, dx: number, dy: number): BoardElement => {
+		if (el.type !== 'connector') {
+			return { ...el, x: el.x + dx, y: el.y + dy };
+		}
+		return {
+			...el,
+			x: el.x + dx,
+			y: el.y + dy,
+			...(el.connectorBendX != null ? { connectorBendX: el.connectorBendX + dx } : {}),
+			...(el.connectorBendY != null ? { connectorBendY: el.connectorBendY + dy } : {}),
+			...(el.connectorControlX != null ? { connectorControlX: el.connectorControlX + dx } : {}),
+			...(el.connectorControlY != null ? { connectorControlY: el.connectorControlY + dy } : {}),
+			...(el.connectorSelfBendX != null ? { connectorSelfBendX: el.connectorSelfBendX + dx } : {}),
+			...(el.connectorSelfBendY != null ? { connectorSelfBendY: el.connectorSelfBendY + dy } : {}),
+		};
+	};
+
+	/** Resize stage to content bounds (pen strokes + visual element bounds) with padding; shifts all content. */
+	const fitBoardToContent = () => {
+		const FIT_PAD = 32;
+		const MIN_DIM = 100;
+
+		let minX = Infinity;
+		let minY = Infinity;
+		let maxX = -Infinity;
+		let maxY = -Infinity;
+		let hasContent = false;
+
+		for (const s of strokes) {
+			const b = getStrokeBounds(s);
+			if (!b) continue;
+			hasContent = true;
+			minX = Math.min(minX, b.x);
+			minY = Math.min(minY, b.y);
+			maxX = Math.max(maxX, b.right);
+			maxY = Math.max(maxY, b.bottom);
+		}
+		for (const el of elements) {
+			const vb = getElementVisualBounds(el, elements);
+			hasContent = true;
+			minX = Math.min(minX, vb.minX);
+			minY = Math.min(minY, vb.minY);
+			maxX = Math.max(maxX, vb.maxX);
+			maxY = Math.max(maxY, vb.maxY);
+		}
+
+		if (!hasContent || minX === Infinity) {
+			toast.error(get(t)('prop.fitBoardEmpty'));
+			return;
+		}
+
+		const dx = FIT_PAD - minX;
+		const dy = FIT_PAD - minY;
+		const newW = Math.max(MIN_DIM, Math.ceil(maxX - minX + 2 * FIT_PAD));
+		const newH = Math.max(MIN_DIM, Math.ceil(maxY - minY + 2 * FIT_PAD));
+
+		strokes = strokes.map((s) => ({
+			...s,
+			points: s.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
+		}));
+		const moved = elements.map((el) => translateElementForFit(el, dx, dy));
+		elements = moved.map((item) =>
+			item.type === 'connector' ? updateConnectorBounds(item, moved) : item
+		);
+
+		stageWidth = newW;
+		stageHeight = newH;
+
+		if (drawCanvas) {
+			drawCanvas.width = stageWidth;
+			drawCanvas.height = stageHeight;
+		}
+		if (livePenCanvas) {
+			livePenCanvas.width = stageWidth;
+			livePenCanvas.height = stageHeight;
+		}
+		redrawCanvas();
+
+		const wrap = stageWrapRef;
+		if (wrap) {
+			requestAnimationFrame(() => {
+				wrap.scrollLeft -= dx;
+				wrap.scrollTop -= dy;
+			});
+		}
+
+		commitSnapshot();
 	};
 
 	/** Clamp point to current board bounds (so strokes/elements cannot be placed outside). */
@@ -3262,6 +3352,7 @@
 		onGoBack={() => goto('/')}
 		onDownloadPdf={downloadPdf}
 		onDownloadImage={downloadBoardImage}
+		onFitBoardToContent={fitBoardToContent}
 		onClear={openClearConfirmModal}
 		onShowImport={() => (showImportModal = true)}
 		onExportJson={exportCurrentBoardAsJson}

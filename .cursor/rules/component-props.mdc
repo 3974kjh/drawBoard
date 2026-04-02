@@ -9,14 +9,14 @@ alwaysApply: true
 |---|---|
 | `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors |
 | `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change). 로직: `ToolPanelCore.ts` (selectTool) |
-| `PropertyPanel.svelte` | Per-selection property controls, **Layer** (맨 앞/맨 뒤, **펜 스트로크** 또는 도형 선택 시 동일), **Nudge step** (`nudgeStepPx`, Shift+방향키 이동 거리, Select 도구), connector section (Line style, Arrow size, Direction) |
-| `Topbar.svelte` | Save, undo/redo, export(PDF/이미지/JSON), import(다른 보드/JSON), back-navigation. 버튼 그룹: 내보내기 \| 가져오기 \| 라이브러리 \| 비우기 \| 실행취소/다시실행. 아이콘 버튼에 aria-label 적용 |
+| `PropertyPanel.svelte` | Per-selection property controls, **Layer** (맨 앞/맨 뒤, **펜 스트로크** 또는 도형 선택 시 동일), **Nudge step** (`nudgeStepPx`, Shift+방향키 이동 거리, Select 도구), **Board size** (확장 방향 버튼만), connector section (Line style, Arrow size, Direction) |
+| `Topbar.svelte` | Save, undo/redo, export(PDF/이미지/JSON), import(다른 보드/JSON), back-navigation. 버튼 그룹: 내보내기 \| 가져오기 \| 라이브러리 \| **내용에 맞게 보드 크기** (`onFitBoardToContent`, 보드 비우기 옆) \| 비우기 \| 실행취소/다시실행. 아이콘 버튼에 aria-label 적용 |
 | `ImportModal.svelte` | Import boards modal (보드 페이지: 다른 보드 내용을 현재 보드로 병합) |
 | `ShortcutsModal.svelte` | Keyboard shortcuts list (opened via Topbar ❓) |
 | `MinimapThumbnail.svelte` | Mini preview. 뷰포트 인디케이터 박스는 배경 투명(해당 영역 내용 노출) |
 
 All board-page components live in **`src/lib/component/board/`**. 메인 페이지 전용: **`ExportBoardsModal.svelte`**(다중 보드 선택 후 각 보드를 제목으로 된 JSON 파일로 개별 다운로드), **`+page.svelte`**의 파일 input으로 JSON 다중 업로드 시 **업로드한 각 파일을 신규 보드로 생성** (파일명을 제목으로 사용). JSON 유틸: **`src/lib/board-json.ts`** (boardToJsonBlob, parseBoardJson, normalize).
 
-보드 확장 버튼(상·하·좌·우)은 **BoardStage 내부가 아니라** 보드 페이지 `+page.svelte`의 `stage-with-expand` 그리드에서 렌더하며, `expandBoard` 콜백으로 확장 실행. BoardStage에는 확장 스트립/호버 로직 없음.
+보드 확장 버튼(상·하·좌·우)은 **BoardStage 내부가 아니라** 보드 페이지 `+page.svelte`의 `stage-with-expand` 그리드에서 렌더하며, `expandBoard` 콜백으로 확장 실행. **내용에 맞게 보드 크기**는 `fitBoardToContent` (`+page.svelte`): 펜 스트로크·요소의 시각적 바운딩(연결선 경로 포함) 합집합 + 패딩으로 `stageWidth`/`stageHeight` 설정, 전체 콘텐츠를 평행이동, 커넥터 벤드/컨트롤 좌표도 함께 이동 후 `updateConnectorBounds`. BoardStage에는 확장 스트립/호버 로직 없음.
 
 연결선 UI: **connectors.mdc**. 로직 분리: **coding-rules.mdc** (Core 파일).
