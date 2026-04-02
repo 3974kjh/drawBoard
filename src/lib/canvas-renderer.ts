@@ -1,4 +1,5 @@
 import type { BoardElement, LayerEntry, Stroke } from './board-types';
+import { getCanvasPlainText } from './text-element-display';
 import type { Bounds } from './board-types';
 import {
 	buildDefaultLayerOrder,
@@ -379,9 +380,10 @@ export const drawElementToCanvas = (
 	}
 
 	/* Only render text for types that support it */
+	const canvasText = getCanvasPlainText(element);
 	if (
 		TEXT_EDITABLE_TYPES.includes(element.type) &&
-		(element.text.trim().length > 0 || element.type === 'text')
+		(canvasText.trim().length > 0 || element.type === 'text')
 	) {
 		ctx.fillStyle = element.strokeColor;
 		ctx.textAlign = element.textAlign;
@@ -394,7 +396,7 @@ export const drawElementToCanvas = (
 				: element.textAlign === 'center'
 					? element.x + element.width / 2
 					: element.x + element.width - 10;
-		const lines = element.text.split('\n');
+		const lines = canvasText.split('\n');
 		const lineHeight = fs + 4;
 		const totalTextH = lines.length * lineHeight;
 		const valign = element.textVerticalAlign ?? 'top';

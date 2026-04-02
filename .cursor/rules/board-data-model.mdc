@@ -16,6 +16,7 @@ interface BoardElement {
   strokeColor: string; fillColor: string; borderWidth: number;
   text: string; textAlign: TextAlign; textVerticalAlign: TextVerticalAlign;
   fontSize: number; imageDataUrl?: string;
+  // text-capable shapes: textMode ('plain' | 'markdown' | 'code'), textHtml (sanitized rich plain), textCodeLanguage (hljs id; PropertyPanel preset `CODE_LANGUAGE_IDS`, default `DEFAULT_CODE_LANGUAGE` = javascript)
   // connector-only: startElementId, startAnchor, endElementId, endAnchor, connectorStyle, connectorType,
   // startArrow, endArrow, startArrowDirection, endArrowDirection, connectorArrowSize, connectorSelfBendX/Y, etc.
 }

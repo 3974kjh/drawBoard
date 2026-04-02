@@ -8,6 +8,7 @@ export type {
 	ConnectorAnchorId,
 	TextAlign,
 	TextVerticalAlign,
+	TextContentMode,
 	AlignMode,
 	ResizeHandle,
 	DistributeMode,

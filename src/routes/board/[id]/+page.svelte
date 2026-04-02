@@ -2,6 +2,7 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import {
 		BOARD_THEMES,
+		DEFAULT_CODE_LANGUAGE,
 		TEXT_EDITABLE_TYPES,
 		type AlignMode,
 		type BoardData,
@@ -24,7 +25,8 @@
 		type ConnectorStyle,
 		type ConnectorType,
 		type ConnectorArrow,
-		type ConnectorArrowDirection
+		type ConnectorArrowDirection,
+		type TextContentMode
 	} from '$lib/board-types';
 	import { getConnectorPath, updateConnectorBounds } from '$lib/connector-geometry';
 	import { getBoardById, getBoards, upsertBoard } from '$lib/board-storage';
@@ -49,7 +51,7 @@
 		renderThumbnail,
 		loadImages
 	} from '$lib/canvas-renderer';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { jsPDF } from 'jspdf';
 	import toast from 'svelte-hot-french-toast';
 
@@ -395,7 +397,7 @@
 	const migrateElement = (el: BoardElement): BoardElement => {
 		const raw = el as unknown as Record<string, unknown>;
 		const legacyType = raw.type as string;
-		return {
+		let next: BoardElement = {
 			...el,
 			rotation: typeof raw.rotation === 'number' ? (raw.rotation as number) : 0,
 			borderWidth: typeof raw.borderWidth === 'number' ? (raw.borderWidth as number) : 2,
@@ -405,6 +407,12 @@
 					: 'top',
 			type: legacyType === 'line' ? 'line-h' : el.type
 		};
+		if (next.type === 'ellipse' || next.type === 'triangle') {
+			if (next.textMode === 'markdown' || next.textMode === 'code') {
+				next = { ...next, textMode: 'plain', textHtml: undefined };
+			}
+		}
+		return next;
 	};
 
 	/** Returns the current inner dimensions of the board's scrollable wrapper. */
@@ -3069,7 +3077,60 @@
 
 	/* ── Stage callbacks forwarded to BoardStage ── */
 	const handleElementTextChange = (id: string, text: string) => {
-		updateElement(id, (item) => ({ ...item, text }));
+		updateElement(id, (item) => {
+			if ((item.textMode ?? 'plain') === 'plain') {
+				return { ...item, text, textHtml: undefined };
+			}
+			return { ...item, text };
+		});
+	};
+
+	/** Code mode: widen/tallens the box when monospace content overflows. */
+	const handleElementCodeBoxGrow = (id: string, width: number, height: number) => {
+		updateElement(id, (item) => {
+			if ((item.textMode ?? 'plain') !== 'code') return item;
+			const maxW = Math.max(10, stageWidth - item.x);
+			const maxH = Math.max(10, stageHeight - item.y);
+			const nw = Math.min(Math.max(10, width), maxW);
+			const nh = Math.min(Math.max(10, height), maxH);
+			if (nw === item.width && nh === item.height) return item;
+			return { ...item, width: nw, height: nh };
+		});
+	};
+
+	const handleTextContentModeChange = async (mode: TextContentMode) => {
+		if (selectedElementIds.length === 0) return;
+		editingElementId = null;
+		await tick();
+		updateSelectedElements((item) => {
+			if (!TEXT_EDITABLE_TYPES.includes(item.type)) return item;
+			if (
+				(item.type === 'ellipse' || item.type === 'triangle') &&
+				mode !== 'plain'
+			) {
+				return item;
+			}
+			let next: BoardElement = { ...item, textMode: mode };
+			if (mode === 'markdown' || mode === 'code') {
+				next = { ...next, textHtml: undefined };
+			}
+			if (mode === 'code' && !next.textCodeLanguage?.trim()) {
+				next = { ...next, textCodeLanguage: DEFAULT_CODE_LANGUAGE };
+			}
+			if (mode === 'plain') {
+				next = { ...next, textHtml: undefined };
+			}
+			return next;
+		});
+		commitSnapshot();
+	};
+
+	const handleTextCodeLanguageChange = (lang: string) => {
+		if (selectedElementIds.length === 0) return;
+		updateSelectedElements((item) =>
+			TEXT_EDITABLE_TYPES.includes(item.type) ? { ...item, textCodeLanguage: lang } : item
+		);
+		commitSnapshot();
 	};
 
 	const handleElementTextBlur = () => {
@@ -3443,6 +3504,7 @@
 			onBeginRotate={beginRotate}
 			onBeginRotateGroup={beginRotateGroup}
 			onElementTextChange={handleElementTextChange}
+			onElementCodeBoxGrow={handleElementCodeBoxGrow}
 			onElementTextBlur={handleElementTextBlur}
 			showConnectorAnchors={showConnectorAnchors}
 			{pendingConnector}
@@ -3604,6 +3666,8 @@
 				onFillColorChange={handleFillColorChange}
 				onBorderWidthChange={handleBorderWidthChange}
 				onFontSizeChange={handleFontSizeChange}
+				onTextContentModeChange={handleTextContentModeChange}
+				onTextCodeLanguageChange={handleTextCodeLanguageChange}
 			onImageUpload={handleImageUpload}
 			onExpandBoard={expandBoard}
 			{gridEnabled}

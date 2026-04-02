@@ -60,4 +60,33 @@ export const EMPTY_BOARD_CONTENT = {
 	elements: [] as BoardElement[]
 };
 
-export const TEXT_EDITABLE_TYPES: BoardElement['type'][] = ['rect', 'ellipse', 'text'];
+export const TEXT_EDITABLE_TYPES: BoardElement['type'][] = ['rect', 'ellipse', 'triangle', 'text'];
+
+/** highlight.js language ids — PropertyPanel code-mode buttons (label = id). `javascript` first, then alphabetical. */
+export const CODE_LANGUAGE_IDS: readonly string[] = [
+	'javascript',
+	'typescript',
+	'tsx',
+	'jsx',
+	'css',
+	'bash',
+	'cpp',
+	'csharp',
+	'go',
+	'html',
+	'java',
+	'json',
+	'kotlin',
+	'markdown',
+	'php',
+	'plaintext',
+	'python',
+	'rust',
+	'sql',
+	'swift',
+	'xml',
+	'yaml'
+];
+
+/** Stored on elements when switching to code mode if unset; highlight.js default. */
+export const DEFAULT_CODE_LANGUAGE = 'javascript';

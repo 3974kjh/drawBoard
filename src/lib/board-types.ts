@@ -12,6 +12,7 @@ export type {
 	ConnectorAnchorId,
 	TextAlign,
 	TextVerticalAlign,
+	TextContentMode,
 	AlignMode,
 	ResizeHandle,
 	DistributeMode,
@@ -37,5 +38,7 @@ export {
 	CONNECTABLE_TYPES,
 	BOARD_THEMES,
 	EMPTY_BOARD_CONTENT,
-	TEXT_EDITABLE_TYPES
+	TEXT_EDITABLE_TYPES,
+	CODE_LANGUAGE_IDS,
+	DEFAULT_CODE_LANGUAGE
 } from './Enum/index.js';

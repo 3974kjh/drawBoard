@@ -5,6 +5,7 @@ import type {
 	ConnectorStyle,
 	ConnectorType,
 	TextAlign,
+	TextContentMode,
 	TextVerticalAlign
 } from './AliasTypes.js';
 
@@ -24,6 +25,12 @@ export interface BoardElement {
 	textAlign: TextAlign;
 	textVerticalAlign: TextVerticalAlign;
 	fontSize: number;
+	/** How text is edited and rendered (rect / ellipse / text). Default: plain. */
+	textMode?: TextContentMode;
+	/** Sanitized HTML for plain mode (bold, inline size). Synced with `text` (innerText). */
+	textHtml?: string;
+	/** highlight.js language id for `code` mode (e.g. javascript, css, python). */
+	textCodeLanguage?: string;
 	imageDataUrl?: string;
 	startElementId?: string;
 	startAnchor?: ConnectorAnchorId;

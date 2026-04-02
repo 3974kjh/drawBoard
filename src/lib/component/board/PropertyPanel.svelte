@@ -2,6 +2,8 @@
 	import { locale, t } from '$lib/i18n';
 	import {
 		BOARD_THEMES,
+		CODE_LANGUAGE_IDS,
+		DEFAULT_CODE_LANGUAGE,
 		type AlignMode,
 		type BoardElement,
 		type ConnectorArrow,
@@ -11,6 +13,7 @@
 		type DistributeMode,
 		type DrawingTool,
 		type TextAlign,
+		type TextContentMode,
 		type TextVerticalAlign,
 		type ThemeId
 	} from '$lib/board-types';
@@ -55,6 +58,8 @@
 		onFillColorChange: (color: string) => void;
 		onBorderWidthChange: (w: number) => void;
 		onFontSizeChange: (size: number) => void;
+		onTextContentModeChange: (mode: TextContentMode) => void;
+		onTextCodeLanguageChange: (lang: string) => void;
 		onImageUpload: (dataUrl: string) => void;
 		onExpandBoard: (dir: 'top' | 'bottom' | 'left' | 'right', amount: number) => void;
 		gridEnabled: boolean;
@@ -113,6 +118,8 @@
 		onFillColorChange,
 		onBorderWidthChange,
 		onFontSizeChange,
+		onTextContentModeChange,
+		onTextCodeLanguageChange,
 		onImageUpload,
 		onExpandBoard,
 		gridEnabled,
@@ -148,7 +155,9 @@
 	let fillColorRef = $state<HTMLInputElement | null>(null);
 	let imageFileRef = $state<HTMLInputElement | null>(null);
 
-	const TEXT_TYPES = ['rect', 'ellipse', 'text'];
+	const TEXT_TYPES = ['rect', 'ellipse', 'triangle', 'text'];
+
+	const allowsTextMarkdownCode = (t: BoardElement['type']) => t === 'rect' || t === 'text';
 
 	const handleImageFileChange = (e: Event) => {
 		const file = (e.currentTarget as HTMLInputElement).files?.[0];
@@ -362,6 +371,54 @@
 					>{preset}</button>
 				{/each}
 			</div>
+		</div>
+		<!-- Text display mode: plain (rich) / Markdown / code — rect & text only; shapes use plain only -->
+		<div class="section sub-section">
+			<div class="section-title small">{$t('prop.textContentMode')}</div>
+			{#if allowsTextMarkdownCode(singleElement.type)}
+				<div class="text-mode-row" role="group" aria-label={$t('prop.textContentMode')}>
+					<button
+						type="button"
+						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'plain' ? 'active' : ''}"
+						onclick={() => onTextContentModeChange('plain')}
+					>{$t('prop.textModePlain')}</button>
+					<button
+						type="button"
+						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'markdown' ? 'active' : ''}"
+						onclick={() => onTextContentModeChange('markdown')}
+					>{$t('prop.textModeMarkdown')}</button>
+					<button
+						type="button"
+						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'code' ? 'active' : ''}"
+						onclick={() => onTextContentModeChange('code')}
+					>{$t('prop.textModeCode')}</button>
+				</div>
+				{#if (singleElement.textMode ?? 'plain') === 'markdown'}
+					<details class="markdown-help">
+						<summary>{$t('prop.markdownHelpTitle')}</summary>
+						<pre class="markdown-help-pre">{$t('prop.markdownHelpBody')}</pre>
+					</details>
+				{/if}
+				{#if (singleElement.textMode ?? 'plain') === 'code'}
+					{@const rawLang = singleElement.textCodeLanguage ?? DEFAULT_CODE_LANGUAGE}
+					{@const activeLangId = CODE_LANGUAGE_IDS.includes(rawLang) ? rawLang : null}
+					<div class="code-lang-block">
+						<div class="code-lang-label">{$t('prop.codeLanguage')}</div>
+						<div class="code-lang-row" role="group" aria-label={$t('prop.codeLanguage')}>
+							{#each CODE_LANGUAGE_IDS as langId (langId)}
+								<button
+									type="button"
+									class="code-lang-btn {activeLangId === langId ? 'active' : ''}"
+									aria-pressed={activeLangId === langId}
+									onclick={() => onTextCodeLanguageChange(langId)}
+								>{langId}</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			{:else}
+				<p class="hint-note">{$t('prop.textModeShapePlainOnly')}</p>
+			{/if}
 		</div>
 	{/if}
 
@@ -1082,6 +1139,109 @@
 
 	.toggle-btn.active .toggle-knob {
 		transform: translateX(16px);
+	}
+
+	/* ─── Text content mode ─── */
+	.text-mode-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+
+	.text-mode-btn {
+		flex: 1;
+		min-width: 0;
+		padding: 0.3rem 0.35rem;
+		font-size: 0.68rem;
+		font-weight: 600;
+		border: 1px solid var(--ui-border);
+		border-radius: 6px;
+		background: var(--ui-surface);
+		color: var(--ui-text-muted);
+		cursor: pointer;
+		transition: background 0.12s, border-color 0.12s, color 0.12s;
+	}
+
+	.text-mode-btn:hover {
+		background: var(--ui-surface-alt);
+		border-color: var(--ui-border-strong);
+	}
+
+	.text-mode-btn.active {
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
+	}
+
+	.markdown-help {
+		margin-top: 0.45rem;
+		font-size: 0.72rem;
+		color: var(--ui-text-muted);
+	}
+
+	.markdown-help summary {
+		cursor: pointer;
+		font-weight: 600;
+		color: var(--ui-text-secondary);
+		list-style: none;
+	}
+
+	.markdown-help summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.markdown-help-pre {
+		margin: 0.4rem 0 0;
+		padding: 0.45rem 0.5rem;
+		font-size: 0.68rem;
+		line-height: 1.45;
+		white-space: pre-wrap;
+		word-break: break-word;
+		border-radius: 6px;
+		background: var(--ui-surface-alt);
+		border: 1px solid var(--ui-border);
+		color: var(--ui-text-secondary);
+		font-family: ui-monospace, 'Cascadia Code', Menlo, Monaco, monospace;
+	}
+
+	.code-lang-block {
+		margin-top: 0.45rem;
+	}
+
+	.code-lang-label {
+		font-size: 0.72rem;
+		color: var(--ui-text-muted);
+		margin-bottom: 0.3rem;
+	}
+
+	.code-lang-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.code-lang-btn {
+		padding: 0.28rem 0.4rem;
+		font-size: 0.62rem;
+		font-weight: 600;
+		font-family: ui-monospace, 'Cascadia Code', Menlo, Monaco, monospace;
+		border: 1px solid var(--ui-border);
+		border-radius: 6px;
+		background: var(--ui-surface);
+		color: var(--ui-text-muted);
+		cursor: pointer;
+		transition: background 0.12s, border-color 0.12s, color 0.12s;
+	}
+
+	.code-lang-btn:hover {
+		background: var(--ui-surface-alt);
+		border-color: var(--ui-border-strong);
+	}
+
+	.code-lang-btn.active {
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
 	}
 
 	/* ─── Grid size ─── */

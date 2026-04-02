@@ -22,6 +22,8 @@ export type ConnectorAnchorId = string;
 
 export type TextAlign = 'left' | 'center' | 'right';
 export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
+/** Text box display/edit: plain (rich HTML), Markdown, or syntax-highlighted code. */
+export type TextContentMode = 'plain' | 'markdown' | 'code';
 export type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
 export type DistributeMode = 'horizontal' | 'vertical';

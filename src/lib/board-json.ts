@@ -82,7 +82,8 @@ export const parseBoardJson = (text: string): BoardData[] => {
 		return raw.filter((item): item is Record<string, unknown> => isBoardLike(item)).map(normalizeParsedBoard);
 	}
 	if (raw && typeof raw === 'object' && 'boards' in raw && Array.isArray((raw as BoardJsonMulti).boards)) {
-		return (raw as BoardJsonMulti).boards
+		const boards = (raw as { boards: unknown[] }).boards;
+		return boards
 			.filter((item): item is Record<string, unknown> => isBoardLike(item))
 			.map(normalizeParsedBoard);
 	}

@@ -19,7 +19,8 @@ const isValidTheme = (v: string): v is UiThemeId =>
 export const getStoredUiTheme = (): UiThemeId => {
 	if (typeof window === 'undefined') return 'light';
 	const raw = localStorage.getItem(STORAGE_KEY);
-	return isValidTheme(raw ?? '') ? raw : 'light';
+	if (raw && isValidTheme(raw)) return raw;
+	return 'light';
 };
 
 export const setStoredUiTheme = (theme: UiThemeId): void => {

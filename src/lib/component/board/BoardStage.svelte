@@ -1,8 +1,11 @@
 <script lang="ts">
+	/* Rich text / Markdown / code views use {@html} with content sanitized in text-element-display (DOMPurify, marked, highlight.js). */
+	/* eslint-disable svelte/no-at-html-tags */
 	import {
 		CONNECTABLE_TYPES,
 		TEXT_EDITABLE_TYPES,
 		type BoardElement,
+		type TextContentMode,
 		type DrawingTool,
 		type GroupBox,
 		type GuideLine,
@@ -17,6 +20,8 @@
 	import { layerOrderToSegments } from '$lib/layer-order';
 	import { locale, t } from '$lib/i18n';
 	import ConnectorSvg from './ConnectorSvg.svelte';
+	import { markdownToSafeHtml, highlightCodeToHtml } from '$lib/text-element-display';
+	import 'highlight.js/styles/github.css';
 
 	/** All 8 resize handle positions (compass directions). */
 	const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
@@ -111,6 +116,8 @@
 		onContextMenu?: (e: MouseEvent) => void;
 		/** When true, show placement cursor (e.g. after picking from library). */
 		pendingLibraryPlacement?: boolean;
+		/** Grow bounds when code content overflows (rect / text). */
+		onElementCodeBoxGrow?: (id: string, width: number, height: number) => void;
 	}
 
 	let {
@@ -157,7 +164,8 @@
 		pendingConnector = null,
 		connectorPreviewEnd = null,
 		onContextMenu,
-		pendingLibraryPlacement = false
+		pendingLibraryPlacement = false,
+		onElementCodeBoxGrow
 	}: Props = $props();
 
 	/* ── Internal eraser cursor tracking ── */
@@ -186,6 +194,140 @@
 	/* ── Auto-focus action for textarea (preventScroll for tablet: avoid page scroll on focus) ── */
 	function autoFocus(node: HTMLTextAreaElement) {
 		requestAnimationFrame(() => node.focus({ preventScroll: true }));
+	}
+
+	/** Ellipse/triangle: plain rich text only (no Markdown/code). */
+	function effectiveTextMode(el: BoardElement): TextContentMode {
+		if (el.type === 'ellipse' || el.type === 'triangle') return 'plain';
+		return el.textMode ?? 'plain';
+	}
+
+	const CODE_BOX_MIN = 10;
+	/** Horizontal + vertical padding of `.text-view` around the code area (0.5rem × 2). */
+	const TEXT_VIEW_TOTAL_PAD = 16;
+
+	/** Natural size of code content (textarea or highlighted pre), for fitting the shape. */
+	const measureCodeContentOuterSize = (node: HTMLElement): { w: number; h: number } => {
+		if (node instanceof HTMLTextAreaElement) {
+			const cs = window.getComputedStyle(node);
+			const g = document.createElement('div');
+			g.style.cssText = [
+				'position:fixed',
+				'left:-9999px',
+				'top:0',
+				'visibility:hidden',
+				'white-space:pre',
+				'overflow:visible',
+				'box-sizing:border-box',
+				`font:${cs.font}`,
+				`padding:${cs.padding}`,
+				`border:${cs.borderWidth} ${cs.borderStyle} ${cs.borderColor}`,
+				`line-height:${cs.lineHeight}`,
+				'width:max-content',
+				'height:max-content',
+				'min-width:0',
+				'min-height:0'
+			].join(';');
+			g.textContent = node.value;
+			document.body.appendChild(g);
+			const w = g.offsetWidth;
+			const h = g.offsetHeight;
+			document.body.removeChild(g);
+			return {
+				w: Math.max(CODE_BOX_MIN, w),
+				h: Math.max(CODE_BOX_MIN, h)
+			};
+		}
+		const g = node.cloneNode(true) as HTMLElement;
+		g.style.cssText = [
+			'position:fixed',
+			'left:-9999px',
+			'top:0',
+			'visibility:hidden',
+			'width:max-content',
+			'height:max-content',
+			'max-width:none',
+			'max-height:none',
+			'overflow:visible',
+			'margin:0',
+			'box-sizing:border-box'
+		].join(';');
+		const cs = window.getComputedStyle(node);
+		g.style.fontSize = cs.fontSize;
+		g.style.fontFamily = cs.fontFamily;
+		g.style.lineHeight = cs.lineHeight;
+		g.style.padding = cs.padding;
+		g.style.whiteSpace = cs.whiteSpace || 'pre';
+		g.style.tabSize = cs.tabSize;
+		document.body.appendChild(g);
+		const w = g.offsetWidth;
+		const h = g.offsetHeight;
+		document.body.removeChild(g);
+		return {
+			w: Math.max(CODE_BOX_MIN, w),
+			h: Math.max(CODE_BOX_MIN, h)
+		};
+	};
+
+	/** Widen/tallens the board element so code display (edit or view) fits inside the shape. */
+	function codeBoxGrow(
+		node: HTMLElement,
+		params: {
+			enabled: boolean;
+			elementId: string;
+			elX: number;
+			elY: number;
+			elW: number;
+			elH: number;
+		}
+	) {
+		if (!onElementCodeBoxGrow) {
+			return { update() {}, destroy() {} };
+		}
+
+		let p = params;
+		let ro: ResizeObserver;
+		let mo: MutationObserver | undefined;
+
+		const measure = () => {
+			if (!p.enabled) return;
+			const { w: contentW, h: contentH } = measureCodeContentOuterSize(node);
+			const needW = Math.ceil(contentW + TEXT_VIEW_TOTAL_PAD);
+			const needH = Math.ceil(contentH + TEXT_VIEW_TOTAL_PAD);
+			const maxW = Math.max(CODE_BOX_MIN, stageWidth - p.elX);
+			const maxH = Math.max(CODE_BOX_MIN, stageHeight - p.elY);
+			const nextW = Math.min(Math.max(p.elW, needW, CODE_BOX_MIN), maxW);
+			const nextH = Math.min(Math.max(p.elH, needH, CODE_BOX_MIN), maxH);
+			if (nextW !== p.elW || nextH !== p.elH) {
+				onElementCodeBoxGrow(p.elementId, nextW, nextH);
+			}
+		};
+
+		const schedule = () => {
+			requestAnimationFrame(() => requestAnimationFrame(measure));
+		};
+
+		ro = new ResizeObserver(schedule);
+		ro.observe(node);
+		node.addEventListener('input', schedule);
+		if (node.tagName === 'PRE') {
+			mo = new MutationObserver(schedule);
+			mo.observe(node, { childList: true, subtree: true, characterData: true });
+		}
+
+		schedule();
+
+		return {
+			update(newP: typeof params) {
+				p = newP;
+				schedule();
+			},
+			destroy() {
+				ro.disconnect();
+				mo?.disconnect();
+				node.removeEventListener('input', schedule);
+			}
+		};
 	}
 
 	/** Check if an element type supports text editing */
@@ -312,22 +454,90 @@
 
 			{#if hasText}
 					{#if isEditing}
-						<textarea
-							class="text-editor"
-							value={element.text}
-							oninput={(event) =>
-								onElementTextChange(
-									element.id,
-									(event.currentTarget as HTMLTextAreaElement).value
-								)}
-							onblur={onElementTextBlur}
-							onpointerdown={(e) => e.stopPropagation()}
-							onmousedown={(e) => e.stopPropagation()}
-							use:autoFocus
-						></textarea>
+						{#if effectiveTextMode(element) === 'plain'}
+							<textarea
+								class="text-editor"
+								value={element.text}
+								oninput={(event) =>
+									onElementTextChange(
+										element.id,
+										(event.currentTarget as HTMLTextAreaElement).value
+									)}
+								onblur={onElementTextBlur}
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => e.stopPropagation()}
+								use:autoFocus
+							></textarea>
+						{:else if effectiveTextMode(element) === 'markdown'}
+							<textarea
+								class="text-editor"
+								value={element.text}
+								oninput={(event) =>
+									onElementTextChange(
+										element.id,
+										(event.currentTarget as HTMLTextAreaElement).value
+									)}
+								onblur={onElementTextBlur}
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => e.stopPropagation()}
+								use:autoFocus
+							></textarea>
+						{:else}
+							<textarea
+								class="text-editor text-editor-code"
+								value={element.text}
+								wrap="off"
+								use:codeBoxGrow={{
+									enabled: effectiveTextMode(element) === 'code' && !!onElementCodeBoxGrow,
+									elementId: element.id,
+									elX: element.x,
+									elY: element.y,
+									elW: element.width,
+									elH: element.height
+								}}
+								oninput={(event) =>
+									onElementTextChange(
+										element.id,
+										(event.currentTarget as HTMLTextAreaElement).value
+									)}
+								onblur={onElementTextBlur}
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => e.stopPropagation()}
+								spellcheck="false"
+								use:autoFocus
+							></textarea>
+						{/if}
 					{:else}
-						<div class="text-view" style={`font-size:${element.fontSize}px;`}>
-							{element.text || (element.type === 'text' ? 'Double-click to enter text' : '')}
+						<div
+							class="text-view text-view--{effectiveTextMode(element)}"
+							style={`font-size:${element.fontSize}px;`}
+						>
+							{#if effectiveTextMode(element) === 'plain'}
+								<div class="text-view-plain-inner">
+									{element.text ||
+										(element.type === 'text' ? $t('stage.textPlaceholder') : '')}
+								</div>
+							{:else if effectiveTextMode(element) === 'markdown'}
+								<div class="text-view-md-inner">
+									{@html markdownToSafeHtml(element.text)}
+								</div>
+							{:else}
+								<pre
+									class="text-view-code-pre"
+									use:codeBoxGrow={{
+										enabled: effectiveTextMode(element) === 'code' && !!onElementCodeBoxGrow,
+										elementId: element.id,
+										elX: element.x,
+										elY: element.y,
+										elW: element.width,
+										elH: element.height
+									}}
+								><code class="hljs"
+									>{@html highlightCodeToHtml(
+										element.text,
+										element.textCodeLanguage
+									)}</code></pre>
+							{/if}
 						</div>
 					{/if}
 				{/if}
@@ -660,6 +870,11 @@
 		-webkit-user-select: none;
 	}
 
+	/* Text / code / md editor sits above live-pen canvas (z-index 12) so caret & selection stay visible */
+	.element:has(.text-editor) {
+		z-index: 16;
+	}
+
 	/* Default rect rendering via CSS */
 	.element.rect {
 		border: var(--border-w) solid var(--stroke);
@@ -788,10 +1003,125 @@
 		box-sizing: border-box;
 		outline: none;
 		color: var(--stroke);
+		caret-color: var(--stroke);
 		font: inherit;
 		z-index: 2;
 		user-select: text;
 		-webkit-user-select: text;
+		position: relative;
+	}
+
+	.text-view-plain-inner {
+		width: 100%;
+		min-height: 0;
+		line-height: 1.45;
+		white-space: pre-wrap;
+		word-break: break-word;
+		overflow: auto;
+	}
+
+	.text-editor-code {
+		font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Monaco, monospace;
+		font-size: clamp(12px, 0.88em, 18px);
+		line-height: 1.45;
+		tab-size: 2;
+		white-space: pre;
+		overflow: auto;
+		caret-color: var(--stroke);
+		color: var(--stroke);
+		opacity: 1;
+		-webkit-text-fill-color: var(--stroke);
+	}
+
+	.text-view-md-inner {
+		width: 100%;
+		min-height: 0;
+		line-height: 1.45;
+		overflow: auto;
+	}
+
+	.text-view-md-inner :global(p) {
+		margin: 0 0 0.25em;
+		line-height: 1.45;
+	}
+	.text-view-md-inner :global(p:last-child) {
+		margin-bottom: 0;
+	}
+	.text-view-md-inner :global(h1),
+	.text-view-md-inner :global(h2),
+	.text-view-md-inner :global(h3),
+	.text-view-md-inner :global(h4),
+	.text-view-md-inner :global(h5),
+	.text-view-md-inner :global(h6) {
+		margin: 0.35em 0 0.2em;
+		line-height: 1.25;
+		font-weight: 700;
+	}
+	.text-view-md-inner :global(h1) {
+		font-size: 1.35em;
+	}
+	.text-view-md-inner :global(h2) {
+		font-size: 1.2em;
+	}
+	.text-view-md-inner :global(h3) {
+		font-size: 1.1em;
+	}
+	.text-view-md-inner :global(h4) {
+		font-size: 1.05em;
+	}
+	.text-view-md-inner :global(h5),
+	.text-view-md-inner :global(h6) {
+		font-size: 1em;
+	}
+	.text-view-md-inner :global(h1:first-child),
+	.text-view-md-inner :global(h2:first-child),
+	.text-view-md-inner :global(h3:first-child) {
+		margin-top: 0;
+	}
+	.text-view-md-inner :global(blockquote) {
+		margin: 0.35em 0;
+		padding-left: 0.65em;
+		border-left: 3px solid color-mix(in srgb, var(--stroke) 35%, transparent);
+	}
+	.text-view-md-inner :global(ul),
+	.text-view-md-inner :global(ol) {
+		margin: 0.25em 0;
+		padding-left: 1.25em;
+	}
+	.text-view-md-inner :global(code) {
+		font-size: 0.9em;
+		background: color-mix(in srgb, var(--stroke) 10%, transparent);
+		padding: 0.05em 0.25em;
+		border-radius: 3px;
+	}
+	.text-view-md-inner :global(pre) {
+		margin: 0.35em 0;
+		overflow: auto;
+		white-space: pre-wrap;
+	}
+
+	.text-view-code-pre {
+		margin: 0;
+		width: 100%;
+		height: 100%;
+		overflow: auto;
+		font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Monaco, monospace;
+		font-size: 0.78em;
+		line-height: 1.4;
+		white-space: pre;
+		tab-size: 2;
+	}
+
+	.text-view--markdown,
+	.text-view--code {
+		font-size: inherit;
+	}
+
+	.text-view--code .text-view-code-pre {
+		background: color-mix(in srgb, var(--stroke) 6%, transparent);
+		border-radius: 4px;
+		padding: 0.35rem 0.45rem;
+		box-sizing: border-box;
 	}
 
 	/* ── Handles ── */
