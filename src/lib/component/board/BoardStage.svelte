@@ -415,6 +415,7 @@
 								)}
 							onblur={onElementTextBlur}
 							onpointerdown={(e) => e.stopPropagation()}
+							onmousedown={(e) => e.stopPropagation()}
 							use:autoFocus
 						></textarea>
 					{:else}

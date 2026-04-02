@@ -10,6 +10,7 @@ alwaysApply: true
 | Board state (`strokes`, `elements`, `themeId`, …) | `src/routes/board/[id]/+page.svelte` |
 | Child components | Receive **read-only props + callback props**; own no board state |
 | History (undo/redo) | `history: Snapshot[]` + `historyIndex` in `+page.svelte` |
+| Pointer drag/draw | `interaction` in `+page.svelte`; 스테이지에 `setPointerCapture`는 **사용하지 않음**(자식 `textarea` 히트 테스트 깨짐). `window` `pointerup`/`pointercancel`(capture)로 스테이지 밖에서 버튼 해제; 스테이지 **밖**에서만 `window` `pointermove`(capture)로 `onStagePointerMove` 호출; `pointerleave`는 연결선 프리뷰만 정리 |
 | Persistence | IndexedDB via `src/lib/board-storage.ts`, `src/lib/db/` |
 | 메인 페이지 보드 목록 | `src/routes/+page.svelte`: `boards` 상태, `getBoards()`/`refreshBoards()`. 다중 import 시 파일별로 `upsertBoard()`로 **신규 보드 추가** (새 id, 제목=파일명). input.value 초기화는 처리 **끝난 뒤**에만 수행(change 이벤트 이중 발생 시 빈 files로 early return 방지) |
 

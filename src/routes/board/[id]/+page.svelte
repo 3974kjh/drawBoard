@@ -1278,9 +1278,144 @@
 		return element?.dataset.elementId ?? null;
 	};
 
+	/** Global bridge: `pointerup` outside the stage; `pointermove` only when outside (inside → stage handler). */
+	let _globalPointerMoveHandler: ((e: PointerEvent) => void) | null = null;
+	let _globalPointerUpHandler: ((e: PointerEvent) => void) | null = null;
+
+	const removeGlobalPointerListeners = () => {
+		if (_globalPointerMoveHandler) {
+			window.removeEventListener('pointermove', _globalPointerMoveHandler, true);
+			_globalPointerMoveHandler = null;
+		}
+		if (!_globalPointerUpHandler) return;
+		window.removeEventListener('pointerup', _globalPointerUpHandler, true);
+		window.removeEventListener('pointercancel', _globalPointerUpHandler, true);
+		_globalPointerUpHandler = null;
+	};
+
+	const onStagePointerUp = (event: PointerEvent) => {
+		removeGlobalPointerListeners();
+		if (!interaction || interaction.pointerId !== event.pointerId) return;
+
+		if (interaction.kind === 'drawing') {
+			// Commit the live stroke to reactive state, then snapshot for undo
+			commitLiveStroke();
+			commitSnapshot();
+		} else if (interaction.kind === 'erasing') {
+			_prevEraserPt = null; // end sweep session
+			commitSnapshot();
+		} else if (interaction.kind === 'marquee') {
+			const x1 = Math.min(interaction.start.x, interaction.current.x);
+			const y1 = Math.min(interaction.start.y, interaction.current.y);
+			const x2 = Math.max(interaction.start.x, interaction.current.x);
+			const y2 = Math.max(interaction.start.y, interaction.current.y);
+			const w = x2 - x1;
+			const h = y2 - y1;
+			const hits = elements
+				.filter(
+					(item) =>
+						item.x < x2 &&
+						item.x + item.width > x1 &&
+						item.y < y2 &&
+						item.y + item.height > y1
+				)
+				.map((item) => item.id);
+			const expandedHits = expandByGroups(hits);
+			setSelection(
+				interaction.append ? [...selectedElementIds, ...expandedHits] : expandedHits
+			);
+			const strokeHits = strokes
+				.filter((s) => s.tool === 'pen' && strokeIntersectsRect(s, x1, y1, w, h))
+				.map((s) => s.id);
+			selectedStrokeIds = interaction.append
+				? [...selectedStrokeIds, ...strokeHits]
+				: strokeHits;
+			if (expandedHits.length > 0 || strokeHits.length > 0) activeTool = 'select';
+		} else if (interaction.kind === 'connector-bend') {
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else if (interaction.kind === 'resize-group') {
+			if (interaction.lastNewBounds) {
+				selectionBboxBoundsPersisted = { ...interaction.lastNewBounds };
+			}
+			commitSnapshot();
+		} else if (interaction.kind === 'rotate-group') {
+			selectionBboxRotationPersisted =
+				interaction.originBboxRotation + (interaction.currentDeltaDeg ?? 0);
+			selectionBboxBoundsPersisted = interaction.originBounds
+				? { ...interaction.originBounds }
+				: selectionBboxBoundsPersisted;
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else if (interaction.kind === 'drag-group') {
+			const point = getPointFromPointer(event);
+			const dx = point.x - interaction.start.x;
+			const dy = point.y - interaction.start.y;
+			if (selectionBboxBoundsPersisted) {
+				selectionBboxBoundsPersisted = {
+					...selectionBboxBoundsPersisted,
+					x: selectionBboxBoundsPersisted.x + dx,
+					y: selectionBboxBoundsPersisted.y + dy
+				};
+			}
+			refreshConnectorBounds();
+			commitSnapshot();
+		} else {
+			refreshConnectorBounds();
+			commitSnapshot();
+		}
+
+		guideLines = [];
+		guideDistances = [];
+		interaction = null;
+	};
+
+	/**
+	 * Do not use setPointerCapture on the stage: it retargets all pointer events to the stage and
+	 * breaks hit-testing for child textarea (shape text edit). Use window pointerup + outside-only pointermove.
+	 */
+	const tryCaptureStagePointer = (event: PointerEvent) => {
+		removeGlobalPointerListeners();
+		const pid = event.pointerId;
+		const onMove = (e: PointerEvent) => {
+			if (e.pointerId !== pid) return;
+			const r = stageRef?.getBoundingClientRect();
+			if (!r) return;
+			const inside =
+				e.clientX >= r.left &&
+				e.clientX <= r.right &&
+				e.clientY >= r.top &&
+				e.clientY <= r.bottom;
+			if (inside) return;
+			onStagePointerMove(e);
+		};
+		const onUp = (e: PointerEvent) => {
+			if (e.pointerId !== pid) return;
+			onStagePointerUp(e);
+		};
+		_globalPointerMoveHandler = onMove;
+		_globalPointerUpHandler = onUp;
+		window.addEventListener('pointermove', onMove, true);
+		window.addEventListener('pointerup', onUp, true);
+		window.addEventListener('pointercancel', onUp, true);
+	};
+
+	/** Pointer left the stage only — clear connector line preview; drag/draw waits for pointerup. */
+	const endInteractionOnLeave = () => {
+		connectorPreviewEnd = null;
+	};
+
 	const onStagePointerDown = (event: PointerEvent) => {
 		/* Only react to primary (left) button; right-click is for context menu and must not start drag/marquee */
 		if (event.button !== 0) return;
+		const rawTarget = event.target as HTMLElement | null;
+		if (
+			rawTarget?.closest?.(
+				'textarea, input:not([type="hidden"]):not(.hidden-input), select, [contenteditable="true"]'
+			)
+		) {
+			return;
+		}
 		const point = getPointFromPointer(event);
 		if (pendingLibraryItem) {
 			placeLibraryItemAt(point, pendingLibraryItem);
@@ -1335,6 +1470,7 @@
 							originalControlY: !isSelfConnector && conn.connectorType === 'curved' ? bend.y : undefined,
 							orthogonalBendVertical: isOrthogonal ? orthogonalBendVertical : undefined
 						};
+						tryCaptureStagePointer(event);
 					}
 					return;
 				}
@@ -1359,12 +1495,14 @@
 				eraseAt(point);
 			}
 			interaction = { kind: 'erasing', pointerId: event.pointerId };
+			tryCaptureStagePointer(event);
 			return;
 		}
 
 		if (activeTool === 'pen') {
 			startDrawing(point);
 			interaction = { kind: 'drawing', pointerId: event.pointerId };
+			tryCaptureStagePointer(event);
 			return;
 		}
 
@@ -1404,6 +1542,7 @@
 					elementIds: dragIds,
 					originById
 				};
+				tryCaptureStagePointer(event);
 				return;
 			}
 
@@ -1418,6 +1557,7 @@
 				current: point,
 				append: event.shiftKey
 			};
+			tryCaptureStagePointer(event);
 			return;
 		}
 
@@ -1992,132 +2132,6 @@
 		}
 	};
 
-	const onStagePointerUp = (event: PointerEvent) => {
-		if (!interaction || interaction.pointerId !== event.pointerId) return;
-
-		if (interaction.kind === 'drawing') {
-			// Commit the live stroke to reactive state, then snapshot for undo
-			commitLiveStroke();
-			commitSnapshot();
-		} else if (interaction.kind === 'erasing') {
-			_prevEraserPt = null; // end sweep session
-			commitSnapshot();
-		} else if (interaction.kind === 'marquee') {
-			const x1 = Math.min(interaction.start.x, interaction.current.x);
-			const y1 = Math.min(interaction.start.y, interaction.current.y);
-			const x2 = Math.max(interaction.start.x, interaction.current.x);
-			const y2 = Math.max(interaction.start.y, interaction.current.y);
-			const w = x2 - x1;
-			const h = y2 - y1;
-			const hits = elements
-				.filter(
-					(item) =>
-						item.x < x2 &&
-						item.x + item.width > x1 &&
-						item.y < y2 &&
-						item.y + item.height > y1
-				)
-				.map((item) => item.id);
-			const expandedHits = expandByGroups(hits);
-			setSelection(
-				interaction.append ? [...selectedElementIds, ...expandedHits] : expandedHits
-			);
-			const strokeHits = strokes
-				.filter((s) => s.tool === 'pen' && strokeIntersectsRect(s, x1, y1, w, h))
-				.map((s) => s.id);
-			selectedStrokeIds = interaction.append
-				? [...selectedStrokeIds, ...strokeHits]
-				: strokeHits;
-			if (expandedHits.length > 0 || strokeHits.length > 0) activeTool = 'select';
-		} else if (interaction.kind === 'connector-bend') {
-			refreshConnectorBounds();
-			commitSnapshot();
-		} else if (interaction.kind === 'resize-group') {
-			if (interaction.lastNewBounds) {
-				selectionBboxBoundsPersisted = { ...interaction.lastNewBounds };
-			}
-			commitSnapshot();
-		} else if (interaction.kind === 'rotate-group') {
-			selectionBboxRotationPersisted =
-				interaction.originBboxRotation + (interaction.currentDeltaDeg ?? 0);
-			selectionBboxBoundsPersisted = interaction.originBounds
-				? { ...interaction.originBounds }
-				: selectionBboxBoundsPersisted;
-			refreshConnectorBounds();
-			commitSnapshot();
-		} else if (interaction.kind === 'drag-group') {
-			const point = getPointFromPointer(event);
-			const dx = point.x - interaction.start.x;
-			const dy = point.y - interaction.start.y;
-			if (selectionBboxBoundsPersisted) {
-				selectionBboxBoundsPersisted = {
-					...selectionBboxBoundsPersisted,
-					x: selectionBboxBoundsPersisted.x + dx,
-					y: selectionBboxBoundsPersisted.y + dy
-				};
-			}
-			refreshConnectorBounds();
-			commitSnapshot();
-		} else {
-			refreshConnectorBounds();
-			commitSnapshot();
-		}
-
-		guideLines = [];
-		guideDistances = [];
-		interaction = null;
-	};
-
-	/** End current interaction when pointer leaves the board (drag/pen released outside). */
-	const endInteractionOnLeave = () => {
-		connectorPreviewEnd = null;
-		if (!interaction) return;
-		const current = interaction;
-		if (current.kind === 'drawing') {
-			commitLiveStroke();
-			commitSnapshot();
-		} else if (current.kind === 'erasing') {
-			_prevEraserPt = null;
-			commitSnapshot();
-		} else if (current.kind === 'marquee') {
-			/* Cancel marquee selection when leaving board */
-		} else if (
-			current.kind === 'connector-bend' ||
-			current.kind === 'resize-group' ||
-			current.kind === 'rotate-group' ||
-			current.kind === 'drag-group' ||
-			current.kind === 'drag' ||
-			current.kind === 'resize' ||
-			current.kind === 'rotate'
-		) {
-			if (current.kind === 'resize-group' && current.lastNewBounds) {
-				selectionBboxBoundsPersisted = { ...current.lastNewBounds };
-			}
-			if (current.kind === 'rotate-group') {
-				selectionBboxRotationPersisted =
-					current.originBboxRotation + (current.currentDeltaDeg ?? 0);
-				selectionBboxBoundsPersisted = current.originBounds
-					? { ...current.originBounds }
-					: selectionBboxBoundsPersisted;
-			}
-			if (current.kind === 'drag-group' && selectionBboxBoundsPersisted && current.currentDx != null && current.currentDy != null) {
-				selectionBboxBoundsPersisted = {
-					...selectionBboxBoundsPersisted,
-					x: selectionBboxBoundsPersisted.x + current.currentDx,
-					y: selectionBboxBoundsPersisted.y + current.currentDy
-				};
-			}
-			refreshConnectorBounds();
-			commitSnapshot();
-		} else {
-			refreshConnectorBounds();
-			commitSnapshot();
-		}
-		guideLines = [];
-		guideDistances = [];
-		interaction = null;
-	};
-
 	const beginResize = (event: PointerEvent, elementId: string, handle: ResizeHandle) => {
 		if (activeTool !== 'select' || selectedElementIds.length !== 1) return;
 		event.stopPropagation();
@@ -2137,6 +2151,7 @@
 			originHeight: element.height,
 			...(rot !== 0 ? { originRotation: rot } : {})
 		};
+		tryCaptureStagePointer(event);
 	};
 
 	const beginRotate = (event: PointerEvent, elementId: string) => {
@@ -2159,6 +2174,7 @@
 			startAngle,
 			originRotation: element.rotation
 		};
+		tryCaptureStagePointer(event);
 	};
 
 	const beginResizeGroup = (event: PointerEvent, handle: ResizeHandle) => {
@@ -2185,6 +2201,7 @@
 				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
 				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
 		};
+		tryCaptureStagePointer(event);
 	};
 
 	const beginRotateGroup = (event: PointerEvent) => {
@@ -2231,6 +2248,7 @@
 				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
 				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
 		};
+		tryCaptureStagePointer(event);
 	};
 
 	/** Move selected elements (with groups) and pen strokes by dx/dy; clamps to board. */
@@ -2323,6 +2341,7 @@
 				.filter((s) => strokeSet.has(s.id) && s.tool === 'pen')
 				.map((s) => ({ id: s.id, points: s.points.map((p) => ({ x: p.x, y: p.y })) }))
 		};
+		tryCaptureStagePointer(event);
 	};
 
 	/* ── Actions ── */
@@ -2540,6 +2559,7 @@
 
 	const handleStageContextMenu = (e: MouseEvent) => {
 		e.preventDefault();
+		removeGlobalPointerListeners();
 		interaction = null;
 		const point = getPointFromPointer(e as unknown as PointerEvent);
 		/* If right-clicked on an element, select it (and its group) first */
