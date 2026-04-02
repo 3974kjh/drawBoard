@@ -1524,6 +1524,9 @@
 					return;
 				}
 
+				/* Replace stroke-only (or mixed) selection: plain click on an element starts element drag only */
+				selectedStrokeIds = [];
+
 				const dragIds = selectedElementIds.includes(clickedElementId)
 					? selectedElementIds
 					: expandByGroups(clickedIds);
