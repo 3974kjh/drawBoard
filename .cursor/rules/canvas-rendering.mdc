@@ -5,13 +5,12 @@ alwaysApply: true
 
 # Canvas & Rendering
 
-- `drawCanvas` (`HTMLCanvasElement`) holds the **committed** board state (background + saved strokes + elements)
-- `redrawCanvas()` in `+page.svelte` does a **full clear + redraw** and is triggered by `$effect` whenever reactive board state changes
-- **Live drawing** (in-progress pen stroke) bypasses Svelte reactivity:
+- **Committed rasters**: `drawCanvas` = 배경+그리드만; `strokeRunCanvases[]` = `layerOrder`에 따른 스트로크 런(투명 레이어). 도형·연결선은 DOM(`BoardStage`).
+- `redrawCanvas()` → `redrawStrokeLayers(...)`로 위 캔버스들만 갱신; `$effect` 등에서 호출.
+- **Live drawing** (in-progress pen) bypasses Svelte reactivity:
   - Store points in plain `let _livePoints: Point[]`
-  - Snapshot canvas with `ctx.getImageData()` when stroke starts
-  - Each RAF frame: `ctx.putImageData(snapshot)` then draw smooth live stroke
-  - On pointer-up: commit to reactive `strokes` state once → `$effect` fires → `redrawCanvas()`
+  - **`livePenCanvas`**: 투명 레이어에 진행 중 선만 그림(`clearRect` 후 Bezier 스트로크). 전체 래스터를 `putImageData`로 올리지 않음 — 그렇지 않으면 불투명 배경이 DOM 도형을 가림.
+  - On pointer-up: commit to reactive `strokes` → `redrawCanvas()`로 확정
 - Stroke smoothing: **quadratic Bezier with midpoint control** (`ctx.quadraticCurveTo`)
 - Canvas renderer pure functions (`src/lib/canvas-renderer.ts`):
   - `drawThemeBackground` – fills background + optional grid

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { BoardElement, Stroke } from '$lib/board-types';
+	import type { BoardElement, LayerEntry, Stroke } from '$lib/board-types';
 	import {
+		drawBoardInLayerOrder,
 		drawThemeBackground,
-		drawStroke,
-		drawElementToCanvas,
 		loadImages
 	} from '$lib/canvas-renderer';
+	import { normalizeLayerOrder } from '$lib/layer-order';
 	import { locale, t } from '$lib/i18n';
 
 	interface Props {
@@ -15,6 +15,7 @@
 		themeGridColor: string;
 		strokes: Stroke[];
 		elements: BoardElement[];
+		layerOrder: LayerEntry[];
 		stageWrapRef: HTMLElement | null;
 	}
 
@@ -25,6 +26,7 @@
 		themeGridColor,
 		strokes,
 		elements,
+		layerOrder,
 		stageWrapRef
 	}: Props = $props();
 
@@ -145,8 +147,8 @@
 		ctx.scale(sc * DPR, sc * DPR);
 
 		drawThemeBackground(ctx, stageWidth, stageHeight, themeBackground, themeGridColor);
-		strokes.forEach((s) => drawStroke(ctx, s));
-		elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, elements));
+		const order = normalizeLayerOrder(layerOrder, strokes, elements);
+		drawBoardInLayerOrder(ctx, order, strokes, elements, imageMap);
 
 		ctx.restore();
 	});

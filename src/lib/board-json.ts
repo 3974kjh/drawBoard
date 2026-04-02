@@ -3,7 +3,7 @@
  * 단일 보드: BoardData 객체 하나.
  * 다중 보드: BoardData[] 배열 (메인 페이지 일괄 내보내기/가져오기).
  */
-import type { BoardData } from '$lib/board-types';
+import type { BoardData, LayerEntry } from '$lib/board-types';
 
 const BOARD_JSON_VERSION = 1;
 
@@ -51,6 +51,15 @@ const normalizeParsedBoard = (o: Record<string, unknown>): BoardData => {
 		updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : now,
 		strokes: Array.isArray(o.strokes) ? o.strokes : [],
 		elements: Array.isArray(o.elements) ? o.elements : [],
+		layerOrder: Array.isArray(o.layerOrder)
+			? (o.layerOrder as LayerEntry[]).filter(
+					(e: unknown): e is LayerEntry =>
+						e != null &&
+						typeof e === 'object' &&
+						((e as LayerEntry).kind === 'stroke' || (e as LayerEntry).kind === 'element') &&
+						typeof (e as LayerEntry).id === 'string'
+				)
+			: undefined,
 		thumbnail: typeof o.thumbnail === 'string' ? o.thumbnail : undefined,
 		width: typeof o.width === 'number' ? o.width : undefined,
 		height: typeof o.height === 'number' ? o.height : undefined,

@@ -14,6 +14,7 @@
 		type Point,
 		type ResizeHandle,
 		type Snapshot,
+		type LayerEntry,
 		type Stroke,
 		type TextAlign,
 		type TextVerticalAlign,
@@ -41,9 +42,10 @@
 		strokeIntersectsCircle
 	} from '$lib/canvas-renderer';
 	import {
+		drawBoardInLayerOrder,
 		drawThemeBackground,
-		drawStroke,
 		drawElementToCanvas,
+		redrawStrokeLayers,
 		renderThumbnail,
 		loadImages
 	} from '$lib/canvas-renderer';
@@ -66,6 +68,12 @@
 	} from '$lib/library-storage';
 	import { locale, t } from '$lib/i18n';
 	import { boardToJsonBlob, downloadBlob, parseBoardJson } from '$lib/board-json';
+	import {
+		bringLayerIdsToFront,
+		normalizeLayerOrder,
+		removeLayerEntriesByIds,
+		sendLayerIdsToBack
+	} from '$lib/layer-order';
 
 	type PageData = { boardId: string };
 	type Axis = 'x' | 'y';
@@ -76,11 +84,17 @@
 	/* ── State ── */
 	let stageRef = $state<HTMLElement | null>(null);
 	let drawCanvas = $state<HTMLCanvasElement | null>(null);
+	/** Stroke-run canvases (transparent layers between DOM elements); bound from BoardStage. */
+	let strokeRunCanvases = $state<(HTMLCanvasElement | null)[]>([]);
+	/** Live pen preview (above shapes); composite base from bg + stroke runs. */
+	let livePenCanvas = $state<HTMLCanvasElement | null>(null);
 	let stageWrapRef = $state<HTMLElement | null>(null);
 	let boardTitle = $state('');
 	let themeId = $state<ThemeId>('whiteboard');
 	let strokes = $state<Stroke[]>([]);
 	let elements = $state<BoardElement[]>([]);
+	/** Unified z-order for strokes and elements (later = on top). */
+	let layerOrder = $state<LayerEntry[]>([]);
 	let activeTool = $state<DrawingTool>('pen');
 	let selectedElementIds = $state<string[]>([]);
 	let selectedStrokeIds = $state<string[]>([]);
@@ -156,7 +170,6 @@
 	let _livePoints: Point[] = [];
 	let _liveColor = '';
 	let _liveSize = 0;
-	let _committedImageData: ImageData | null = null;
 	let _liveRafId = 0;
 	let _isLiveDrawing = false;
 
@@ -319,6 +332,7 @@
 		const snapshot: Snapshot = {
 			strokes: deepClone(strokes),
 			elements: deepClone(elements),
+			layerOrder: deepClone(layerOrder),
 			themeId,
 			stageWidth,
 			stageHeight,
@@ -338,8 +352,16 @@
 			drawCanvas.width = stageWidth;
 			drawCanvas.height = stageHeight;
 		}
+		if (livePenCanvas) {
+			livePenCanvas.width = stageWidth;
+			livePenCanvas.height = stageHeight;
+		}
 		strokes = deepClone(snapshot.strokes);
 		elements = deepClone(snapshot.elements);
+		layerOrder =
+			snapshot.layerOrder && snapshot.layerOrder.length > 0
+				? deepClone(snapshot.layerOrder)
+				: normalizeLayerOrder(undefined, snapshot.strokes, snapshot.elements);
 		themeId = snapshot.themeId;
 		gridEnabled = snapshot.gridEnabled;
 		gridSize = snapshot.gridSize;
@@ -412,6 +434,7 @@
 		gridSize = board.gridSize ?? 32;
 		strokes = deepClone(board.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(board.elements).map((el: BoardElement) => migrateElement(el));
+		layerOrder = normalizeLayerOrder(board.layerOrder, strokes, elements);
 		selectedElementIds = [];
 		selectedStrokeIds = [];
 		penColor =
@@ -434,6 +457,10 @@
 					if (drawCanvas) {
 						drawCanvas.width = stageWidth;
 						drawCanvas.height = stageHeight;
+					}
+					if (livePenCanvas) {
+						livePenCanvas.width = stageWidth;
+						livePenCanvas.height = stageHeight;
 					}
 					redrawCanvas();
 					commitSnapshot();
@@ -472,7 +499,8 @@
 			elements,
 			imageMap,
 			gridEnabled,
-			gridSize
+			gridSize,
+			layerOrder
 		);
 		const savedTitle = boardTitle.trim() || original.title;
 		await upsertBoard({
@@ -481,6 +509,7 @@
 			themeId,
 			strokes: deepClone(strokes),
 			elements: deepClone(elements),
+			layerOrder: deepClone(layerOrder),
 			thumbnail,
 			width: stageWidth,
 			height: stageHeight,
@@ -505,6 +534,7 @@
 		const vp = getViewportSize();
 		strokes = [];
 		elements = [];
+		layerOrder = [];
 		selectedElementIds = [];
 		editingElementId = null;
 		stageWidth = vp.w;
@@ -512,6 +542,10 @@
 		if (drawCanvas) {
 			drawCanvas.width = stageWidth;
 			drawCanvas.height = stageHeight;
+		}
+		if (livePenCanvas) {
+			livePenCanvas.width = stageWidth;
+			livePenCanvas.height = stageHeight;
 		}
 		redrawCanvas();
 		/* Reset history so undo/redo cannot go back to pre-clear state */
@@ -526,6 +560,7 @@
 		themeId = source.themeId;
 		strokes = deepClone(source.strokes).filter((s: Stroke) => s.tool !== 'eraser');
 		elements = deepClone(source.elements).map((el: BoardElement) => migrateElement(el));
+		layerOrder = normalizeLayerOrder(source.layerOrder, strokes, elements);
 		if (source.width != null && source.height != null) {
 			stageWidth = source.width;
 			stageHeight = source.height;
@@ -549,6 +584,7 @@
 			updatedAt: now,
 			strokes: deepClone(strokes),
 			elements: deepClone(elements).map((el: BoardElement) => migrateElement(el)),
+			layerOrder: deepClone(layerOrder),
 			width: stageWidth,
 			height: stageHeight,
 			gridEnabled,
@@ -703,6 +739,7 @@
 			fontSize: type === 'text' ? 24 : 18
 		};
 		elements = [...elements, element];
+		layerOrder = [...layerOrder, { kind: 'element', id: element.id }];
 		setSelection([element.id]);
 		if (type === 'text') {
 			editingElementId = element.id;
@@ -851,6 +888,7 @@
 		};
 		const updated = updateConnectorBounds(connector, elements);
 		elements = [...elements, updated];
+		layerOrder = [...layerOrder, { kind: 'element', id: updated.id }];
 		setSelection([updated.id]);
 		pendingConnector = null;
 		commitSnapshot();
@@ -904,6 +942,10 @@
 			drawCanvas.width = stageWidth;
 			drawCanvas.height = stageHeight;
 		}
+		if (livePenCanvas) {
+			livePenCanvas.width = stageWidth;
+			livePenCanvas.height = stageHeight;
+		}
 		redrawCanvas();
 		/* Keep visible area fixed: scroll by expansion amount for top/left so content doesn’t jump */
 		const wrap = stageWrapRef;
@@ -928,12 +970,10 @@
 	/* ── Drawing ── */
 	const startDrawing = (point: Point) => {
 		const pt = clampPointToBoard(point);
-		// Snapshot the current canvas so we can restore it on every RAF frame
-		if (drawCanvas) {
-			const ctx = drawCanvas.getContext('2d');
-			if (ctx) {
-				_committedImageData = ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
-			}
+		/* Live ink only on livePenCanvas (transparent); committed rasters + DOM stay visible below */
+		if (livePenCanvas) {
+			const ctx = livePenCanvas.getContext('2d');
+			if (ctx) ctx.clearRect(0, 0, livePenCanvas.width, livePenCanvas.height);
 		}
 		_livePoints = [pt];
 		_liveColor = penColor;
@@ -954,12 +994,12 @@
 		}
 	};
 
-	/** Restore the pre-stroke canvas snapshot then draw the in-progress stroke with Bezier smoothing. */
+	/** In-progress stroke only (layer is transparent; board + shapes show through). */
 	const _drawLiveStroke = () => {
-		if (!drawCanvas || !_committedImageData) return;
-		const ctx = drawCanvas.getContext('2d');
+		if (!livePenCanvas) return;
+		const ctx = livePenCanvas.getContext('2d');
 		if (!ctx) return;
-		ctx.putImageData(_committedImageData, 0, 0);
+		ctx.clearRect(0, 0, livePenCanvas.width, livePenCanvas.height);
 		_renderSmoothStroke(ctx, _livePoints, _liveColor, _liveSize);
 	};
 
@@ -1006,7 +1046,10 @@
 			cancelAnimationFrame(_liveRafId);
 			_liveRafId = 0;
 		}
-		_committedImageData = null;
+		if (livePenCanvas) {
+			const ctx = livePenCanvas.getContext('2d');
+			if (ctx) ctx.clearRect(0, 0, livePenCanvas.width, livePenCanvas.height);
+		}
 		if (_livePoints.length < 1) return;
 		const stroke: Stroke = {
 			id: nextId(),
@@ -1016,6 +1059,7 @@
 			points: [..._livePoints]
 		};
 		strokes = [...strokes, stroke];
+		layerOrder = [...layerOrder, { kind: 'stroke', id: stroke.id }];
 		_livePoints = [];
 		// The $effect on strokes will now fire → redrawCanvas() for a clean committed frame
 	};
@@ -1250,6 +1294,7 @@
 
 		_prevEraserPt = point;
 		strokes = current;
+		layerOrder = normalizeLayerOrder(layerOrder, strokes, elements);
 
 		// Redraw immediately — no $effect frame delay.
 		redrawCanvas();
@@ -1267,6 +1312,7 @@
 			const py = Math.max(el.y, Math.min(point.y, el.y + el.height));
 			return (point.x - px) ** 2 + (point.y - py) ** 2 > r2;
 		});
+		layerOrder = normalizeLayerOrder(layerOrder, strokes, elements);
 		redrawCanvas();
 	};
 
@@ -2417,25 +2463,23 @@
 		commitSnapshot();
 	};
 
-	/** Later index in `elements` = drawn on top (canvas + HTML overlays). */
+	/** Unified layer order: strokes + elements (later = on top). */
 	const bringSelectionToFront = () => {
-		if (selectedElementIds.length === 0) return;
-		const moveIds = new Set(expandByGroups(selectedElementIds));
-		const moving = elements.filter((e) => moveIds.has(e.id));
-		const rest = elements.filter((e) => !moveIds.has(e.id));
-		if (moving.length === 0) return;
-		elements = [...rest, ...moving];
+		const ids = new Set<string>();
+		for (const id of expandByGroups(selectedElementIds)) ids.add(id);
+		for (const id of selectedStrokeIds) ids.add(id);
+		if (ids.size === 0) return;
+		layerOrder = bringLayerIdsToFront(layerOrder, ids);
 		redrawCanvas();
 		commitSnapshot();
 	};
 
 	const sendSelectionToBack = () => {
-		if (selectedElementIds.length === 0) return;
-		const moveIds = new Set(expandByGroups(selectedElementIds));
-		const moving = elements.filter((e) => moveIds.has(e.id));
-		const rest = elements.filter((e) => !moveIds.has(e.id));
-		if (moving.length === 0) return;
-		elements = [...moving, ...rest];
+		const ids = new Set<string>();
+		for (const id of expandByGroups(selectedElementIds)) ids.add(id);
+		for (const id of selectedStrokeIds) ids.add(id);
+		if (ids.size === 0) return;
+		layerOrder = sendLayerIdsToBack(layerOrder, ids);
 		redrawCanvas();
 		commitSnapshot();
 	};
@@ -2477,6 +2521,8 @@
 		elements = elements.filter((item) => !idsToDelete.has(item.id));
 		const strokeIdsToDelete = new Set(selectedStrokeIds);
 		strokes = strokes.filter((s) => !strokeIdsToDelete.has(s.id));
+		const layerRemove = new Set<string>([...idsToDelete, ...strokeIdsToDelete]);
+		layerOrder = removeLayerEntriesByIds(layerOrder, layerRemove);
 		selectedElementIds = [];
 		selectedStrokeIds = [];
 		editingElementId = null;
@@ -2507,6 +2553,10 @@
 			};
 		});
 		elements = [...elements, ...duplicated];
+		layerOrder = [
+			...layerOrder,
+			...duplicated.map((item) => ({ kind: 'element' as const, id: item.id }))
+		];
 		refreshConnectorBounds();
 		setSelection(duplicated.map((item) => item.id));
 		commitSnapshot();
@@ -2553,6 +2603,11 @@
 		}));
 		elements = [...elements, ...newElements];
 		strokes = [...strokes, ...newStrokes];
+		layerOrder = [
+			...layerOrder,
+			...newStrokes.map((s) => ({ kind: 'stroke' as const, id: s.id })),
+			...newElements.map((e) => ({ kind: 'element' as const, id: e.id }))
+		];
 		setSelection(newElements.map((e) => e.id));
 		selectedStrokeIds = newStrokes.map((s) => s.id);
 		refreshConnectorBounds();
@@ -2685,6 +2740,7 @@
 		shiftY = Math.min(shiftY, stageHeight - pastedMaxY);
 		newEls = newEls.map((el) => ({ ...el, x: el.x + shiftX, y: el.y + shiftY }));
 		elements = [...elements, ...newEls];
+		layerOrder = [...layerOrder, ...newEls.map((e) => ({ kind: 'element' as const, id: e.id }))];
 		setSelection(newEls.map((e) => e.id));
 		commitSnapshot();
 	}
@@ -2790,6 +2846,11 @@
 					points: s.points.map((p) => ({ x: p.x - minX, y: p.y - minY }))
 				}));
 				const imageMap = await loadImages(shiftedElements);
+				const subLayerOrder = layerOrder.filter(
+					(e) =>
+						(e.kind === 'stroke' && strokeIds.has(e.id)) ||
+						(e.kind === 'element' && elIds.has(e.id))
+				);
 				thumbnail = renderThumbnail(
 					w,
 					h,
@@ -2799,7 +2860,8 @@
 					shiftedElements,
 					imageMap,
 					gridEnabled,
-					gridSize
+					gridSize,
+					subLayerOrder
 				);
 			}
 		}
@@ -2817,11 +2879,11 @@
 
 	/* ── Canvas ── */
 	const redrawCanvas = () => {
-		if (!drawCanvas) return;
-		const ctx = drawCanvas.getContext('2d');
-		if (!ctx) return;
-		drawThemeBackground(
-			ctx,
+		redrawStrokeLayers(
+			drawCanvas,
+			strokeRunCanvases,
+			layerOrder,
+			strokes,
 			stageWidth,
 			stageHeight,
 			currentTheme.background,
@@ -2829,7 +2891,6 @@
 			gridEnabled,
 			gridSize
 		);
-		strokes.forEach((stroke) => drawStroke(ctx, stroke));
 	};
 
 	const downloadPdf = async () => {
@@ -2839,6 +2900,7 @@
 		renderCanvas.height = stageHeight;
 		const ctx = renderCanvas.getContext('2d');
 		if (!ctx) return;
+		const order = normalizeLayerOrder(layerOrder, strokes, elements);
 		drawThemeBackground(
 			ctx,
 			stageWidth,
@@ -2848,8 +2910,7 @@
 			gridEnabled,
 			gridSize
 		);
-		strokes.forEach((stroke) => drawStroke(ctx, stroke));
-		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap, elements));
+		drawBoardInLayerOrder(ctx, order, strokes, elements, imageMap);
 		const orientation = stageWidth > stageHeight ? 'landscape' : 'portrait';
 		const pdf = new jsPDF({ orientation, unit: 'px', format: [stageWidth, stageHeight] });
 		pdf.addImage(
@@ -2872,9 +2933,9 @@
 		renderCanvas.height = stageHeight;
 		const ctx = renderCanvas.getContext('2d');
 		if (!ctx) return;
+		const orderPng = normalizeLayerOrder(layerOrder, strokes, elements);
 		drawThemeBackground(ctx, stageWidth, stageHeight, currentTheme.background, currentTheme.gridColor, gridEnabled, gridSize);
-		strokes.forEach((stroke) => drawStroke(ctx, stroke));
-		elements.forEach((element) => drawElementToCanvas(ctx, element, imageMap, elements));
+		drawBoardInLayerOrder(ctx, orderPng, strokes, elements, imageMap);
 		renderCanvas.toBlob(
 			(blob) => {
 				if (!blob) return;
@@ -2904,6 +2965,10 @@
 		stageHeight = h;
 		drawCanvas.width = stageWidth;
 		drawCanvas.height = stageHeight;
+		if (livePenCanvas) {
+			livePenCanvas.width = stageWidth;
+			livePenCanvas.height = stageHeight;
+		}
 		redrawCanvas();
 	};
 
@@ -2955,6 +3020,15 @@
 	};
 
 	$effect(() => {
+		strokes;
+		layerOrder;
+		gridEnabled;
+		gridSize;
+		themeId;
+		stageWidth;
+		stageHeight;
+		drawCanvas;
+		strokeRunCanvases;
 		redrawCanvas();
 	});
 
@@ -3015,6 +3089,7 @@
 						y: el.y + offset
 					}));
 					elements = [...elements, ...newEls];
+					layerOrder = [...layerOrder, ...newEls.map((e) => ({ kind: 'element' as const, id: e.id }))];
 					selectedElementIds = newEls.map((el) => el.id);
 					_clipboard = _clipboard.map((el) => ({ ...el, x: el.x + offset, y: el.y + offset }));
 					commitSnapshot();
@@ -3236,6 +3311,8 @@
 		<BoardStage
 			bind:stageRef
 			bind:drawCanvas
+			bind:strokeRunCanvases
+			bind:livePenCanvas
 			bind:wrapRef={stageWrapRef}
 			themeBackground={currentTheme.background}
 			themeGridColor={currentTheme.gridColor}
@@ -3246,6 +3323,7 @@
 			isErasing={interaction?.kind === 'erasing'}
 			{stageWidth}
 			{stageHeight}
+			{layerOrder}
 			{elements}
 			{selectedElementIds}
 			{selectedSingleElement}
@@ -3389,6 +3467,7 @@
 					themeGridColor={currentTheme.gridColor}
 					{strokes}
 					{elements}
+					{layerOrder}
 					{stageWrapRef}
 				/>
 			</div>

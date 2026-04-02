@@ -544,7 +544,7 @@
 	</div>
 
 	<!-- ─── Layer (z-order) ─── -->
-	{#if selectedElementIds.length > 0}
+	{#if selectedElementIds.length > 0 || (selectedStrokeCount ?? 0) > 0}
 		<div class="sub-section">
 			<div class="section-title small">{$t('prop.sectionLayer')}</div>
 			<div class="action-grid">

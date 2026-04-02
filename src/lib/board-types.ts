@@ -28,7 +28,9 @@ export type {
 	GroupBox,
 	InteractionState,
 	Snapshot,
-	ToolItem
+	ToolItem,
+	LayerEntry,
+	LayerSegment
 } from './Type/index.js';
 export {
 	TOOL_ITEMS,

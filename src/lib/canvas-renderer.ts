@@ -1,5 +1,10 @@
-import type { BoardElement, Stroke } from './board-types';
+import type { BoardElement, LayerEntry, Stroke } from './board-types';
 import type { Bounds } from './board-types';
+import {
+	buildDefaultLayerOrder,
+	layerOrderToSegments,
+	normalizeLayerOrder
+} from './layer-order';
 import { TEXT_EDITABLE_TYPES } from './board-types';
 import { getConnectorPath } from './connector-geometry';
 
@@ -143,6 +148,69 @@ export const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke): void 
 		ctx.stroke();
 	}
 	ctx.restore();
+};
+
+/** Rasterize board content in unified layer order (strokes + elements). */
+export const drawBoardInLayerOrder = (
+	ctx: CanvasRenderingContext2D,
+	layerOrder: LayerEntry[],
+	strokes: Stroke[],
+	elements: BoardElement[],
+	imageMap?: Map<string, HTMLImageElement>
+): void => {
+	const strokeMap = new Map(strokes.map((s) => [s.id, s]));
+	const elementMap = new Map(elements.map((e) => [e.id, e]));
+	for (const entry of layerOrder) {
+		if (entry.kind === 'stroke') {
+			const s = strokeMap.get(entry.id);
+			if (s) drawStroke(ctx, s);
+		} else {
+			const el = elementMap.get(entry.id);
+			if (el) drawElementToCanvas(ctx, el, imageMap, elements);
+		}
+	}
+};
+
+/**
+ * Background canvas + transparent stroke-run canvases (interleaved with DOM elements in BoardStage).
+ */
+export const redrawStrokeLayers = (
+	bgEl: HTMLCanvasElement | null,
+	runEls: (HTMLCanvasElement | null)[],
+	layerOrder: LayerEntry[],
+	strokes: Stroke[],
+	stageWidth: number,
+	stageHeight: number,
+	background: string,
+	gridColor: string,
+	gridEnabled: boolean,
+	gridSize: number
+): void => {
+	if (!bgEl) return;
+	bgEl.width = stageWidth;
+	bgEl.height = stageHeight;
+	const bgCtx = bgEl.getContext('2d');
+	if (!bgCtx) return;
+	drawThemeBackground(bgCtx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
+
+	const segments = layerOrderToSegments(layerOrder);
+	const strokeMap = new Map(strokes.map((s) => [s.id, s]));
+	let runIdx = 0;
+	for (const seg of segments) {
+		if (seg.kind !== 'strokes') continue;
+		const canvas = runEls[runIdx];
+		runIdx += 1;
+		if (!canvas) continue;
+		canvas.width = stageWidth;
+		canvas.height = stageHeight;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) continue;
+		ctx.clearRect(0, 0, stageWidth, stageHeight);
+		for (const id of seg.ids) {
+			const s = strokeMap.get(id);
+			if (s) drawStroke(ctx, s);
+		}
+	}
 };
 
 /**
@@ -363,7 +431,8 @@ export const renderThumbnail = (
 	elements: BoardElement[],
 	imageMap?: Map<string, HTMLImageElement>,
 	gridEnabled = true,
-	gridSize = 32
+	gridSize = 32,
+	layerOrder?: LayerEntry[]
 ): string => {
 	const canvas = document.createElement('canvas');
 	canvas.width = THUMB_W * THUMB_DPR;
@@ -389,9 +458,12 @@ export const renderThumbnail = (
 	ctx.clip();
 	ctx.translate(ox, oy);
 	ctx.scale(scale, scale);
+	const order =
+		layerOrder != null && layerOrder.length > 0
+			? normalizeLayerOrder(layerOrder, strokes, elements)
+			: buildDefaultLayerOrder(strokes, elements);
 	drawThemeBackground(ctx, stageWidth, stageHeight, background, gridColor, gridEnabled, gridSize);
-	strokes.forEach((s) => drawStroke(ctx, s));
-	elements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, elements));
+	drawBoardInLayerOrder(ctx, order, strokes, elements, imageMap);
 	ctx.restore();
 
 	return canvas.toDataURL('image/jpeg', 0.72);
@@ -433,7 +505,8 @@ export const renderLibraryThumbnail = (
 	stageHeight: number,
 	strokes: Stroke[],
 	elements: BoardElement[],
-	imageMap?: Map<string, HTMLImageElement>
+	imageMap?: Map<string, HTMLImageElement>,
+	layerOrder?: LayerEntry[]
 ): string => {
 	const canvas = document.createElement('canvas');
 	canvas.width = THUMB_W * THUMB_DPR;
@@ -471,8 +544,11 @@ export const renderLibraryThumbnail = (
 		fillColor: e.fillColor != null ? libraryThumbColor(e.fillColor) : e.fillColor
 	}));
 
-	libStrokes.forEach((s) => drawStroke(ctx, s));
-	libElements.forEach((e) => drawElementToCanvas(ctx, e, imageMap, libElements));
+	const order =
+		layerOrder != null && layerOrder.length > 0
+			? normalizeLayerOrder(layerOrder, libStrokes, libElements)
+			: buildDefaultLayerOrder(libStrokes, libElements);
+	drawBoardInLayerOrder(ctx, order, libStrokes, libElements, imageMap);
 	ctx.restore();
 
 	return canvas.toDataURL('image/jpeg', 0.72);

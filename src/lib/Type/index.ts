@@ -25,4 +25,5 @@ export type { Bounds } from './Bounds.js';
 export type { GroupBox } from './GroupBox.js';
 export type { InteractionState } from './InteractionState.js';
 export type { Snapshot } from './Snapshot.js';
+export type { LayerEntry, LayerSegment } from './LayerOrder.js';
 export type { ToolItem } from './ToolItem.js';
