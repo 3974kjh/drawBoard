@@ -2323,6 +2323,29 @@
 		commitSnapshot();
 	};
 
+	/** Later index in `elements` = drawn on top (canvas + HTML overlays). */
+	const bringSelectionToFront = () => {
+		if (selectedElementIds.length === 0) return;
+		const moveIds = new Set(expandByGroups(selectedElementIds));
+		const moving = elements.filter((e) => moveIds.has(e.id));
+		const rest = elements.filter((e) => !moveIds.has(e.id));
+		if (moving.length === 0) return;
+		elements = [...rest, ...moving];
+		redrawCanvas();
+		commitSnapshot();
+	};
+
+	const sendSelectionToBack = () => {
+		if (selectedElementIds.length === 0) return;
+		const moveIds = new Set(expandByGroups(selectedElementIds));
+		const moving = elements.filter((e) => moveIds.has(e.id));
+		const rest = elements.filter((e) => !moveIds.has(e.id));
+		if (moving.length === 0) return;
+		elements = [...moving, ...rest];
+		redrawCanvas();
+		commitSnapshot();
+	};
+
 	const groupSelected = () => {
 		if (!canGroup) return;
 		const groupId = nextId();
@@ -3281,6 +3304,8 @@
 				onUngroup={ungroupSelected}
 				onAlign={alignSelected}
 				onDistribute={distributeSelected}
+				onBringToFront={bringSelectionToFront}
+				onSendToBack={sendSelectionToBack}
 				onTextAlign={setTextAlign}
 				onTextVerticalAlign={setTextVerticalAlign}
 				onPenColorChange={handlePenColorChange}

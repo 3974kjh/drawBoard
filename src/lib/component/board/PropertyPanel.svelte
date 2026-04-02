@@ -44,6 +44,9 @@
 		onUngroup: () => void;
 		onAlign: (mode: AlignMode) => void;
 		onDistribute: (mode: DistributeMode) => void;
+		/** Z-order: `elements` array order = draw order (later = on top). */
+		onBringToFront: () => void;
+		onSendToBack: () => void;
 		onTextAlign: (align: TextAlign) => void;
 		onTextVerticalAlign: (align: TextVerticalAlign) => void;
 		onPenColorChange: (color: string) => void;
@@ -99,6 +102,8 @@
 		onUngroup,
 		onAlign,
 		onDistribute,
+		onBringToFront,
+		onSendToBack,
 		onTextAlign,
 		onTextVerticalAlign,
 		onPenColorChange,
@@ -523,6 +528,27 @@
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M7 14l-1 1"/><path d="M17 10l1-1"/></svg>
 		</button>
 	</div>
+
+	<!-- ─── Layer (z-order) ─── -->
+	{#if selectedElementIds.length > 0}
+		<div class="sub-section">
+			<div class="section-title small">{$t('prop.sectionLayer')}</div>
+			<div class="action-grid">
+				<button
+					type="button"
+					title={$t('prop.bringToFront')}
+					onclick={onBringToFront}
+				>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12L4 7.5"/></svg>
+				</button>
+				<button type="button" title={$t('prop.sendToBack')} onclick={onSendToBack}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5"/><path d="M12 3v9"/><path d="M12 12L4 7.5"/></svg>
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	<!-- ─── Align (multi-select) ─── -->
 	{#if selectedElementIds.length > 1}

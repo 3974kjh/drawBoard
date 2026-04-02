@@ -9,7 +9,7 @@ alwaysApply: true
 |---|---|
 | `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors |
 | `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change). 로직: `ToolPanelCore.ts` (selectTool) |
-| `PropertyPanel.svelte` | Per-selection property controls, connector section (Line style, Arrow size, Direction) |
+| `PropertyPanel.svelte` | Per-selection property controls, **Layer** (맨 앞/맨 뒤, `onBringToFront` / `onSendToBack`), connector section (Line style, Arrow size, Direction) |
 | `Topbar.svelte` | Save, undo/redo, export(PDF/이미지/JSON), import(다른 보드/JSON), back-navigation. 버튼 그룹: 내보내기 \| 가져오기 \| 라이브러리 \| 비우기 \| 실행취소/다시실행. 아이콘 버튼에 aria-label 적용 |
 | `ImportModal.svelte` | Import boards modal (보드 페이지: 다른 보드 내용을 현재 보드로 병합) |
 | `ShortcutsModal.svelte` | Keyboard shortcuts list (opened via Topbar ❓) |

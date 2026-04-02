@@ -21,6 +21,7 @@ interface BoardElement {
 }
 interface Stroke { id: string; tool: 'pen' | 'eraser'; color: string; size: number; points: Point[]; }
 interface BoardData { id: string; title: string; themeId: ThemeId; strokes: Stroke[]; elements: BoardElement[]; width?: number; height?: number; gridEnabled?: boolean; gridSize?: number; thumbnail?: string; }
+/** `elements` 배열 순서 = z-order(뒤에 올수록 위에 그려짐). 펜 스트로크는 항상 그 아래 레이어(`drawCanvas`에서 strokes 먼저, 그 다음 elements). */
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
 ```
 
