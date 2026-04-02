@@ -126,6 +126,8 @@ const en: TranslationMap = {
 	'prop.hideGrid': 'Hide Grid',
 	'prop.importImage': 'Import Image',
 	'prop.sectionAlign': 'Align',
+	'prop.nudgeStep': 'Nudge step',
+	'prop.nudgeStepHint': 'Distance per Shift+arrow key (Select tool, selection required)',
 	'prop.sectionLayer': 'Layer',
 	'prop.bringToFront': 'Bring to front',
 	'prop.sendToBack': 'Send to back',
@@ -175,6 +177,7 @@ const en: TranslationMap = {
 	'shortcuts.expandDown': 'Expand board down',
 	'shortcuts.expandLeft': 'Expand board left',
 	'shortcuts.expandRight': 'Expand board right',
+	'shortcuts.nudgeSelection': 'Move selection (Shift+arrow; step from property panel)',
 	'shortcuts.close': 'Close',
 	'shortcuts.closeAria': 'Close shortcuts',
 
@@ -355,6 +358,8 @@ const ko: TranslationMap = {
 	'prop.hideGrid': '격자 숨기기',
 	'prop.importImage': '이미지 가져오기',
 	'prop.sectionAlign': '정렬',
+	'prop.nudgeStep': '이동 간격',
+	'prop.nudgeStepHint': 'Shift+방향키로 선택 항목 이동 시 한 번에 움직일 픽셀 (선택 도구·선택 필요)',
 	'prop.sectionLayer': '레이어',
 	'prop.bringToFront': '맨 앞으로',
 	'prop.sendToBack': '맨 뒤로',
@@ -401,6 +406,7 @@ const ko: TranslationMap = {
 	'shortcuts.expandDown': '보드 아래로 확장',
 	'shortcuts.expandLeft': '보드 왼쪽으로 확장',
 	'shortcuts.expandRight': '보드 오른쪽으로 확장',
+	'shortcuts.nudgeSelection': '선택 항목 이동 (Shift+방향키, 간격은 속성 패널)',
 	'shortcuts.close': '닫기',
 	'shortcuts.closeAria': '단축키 닫기',
 

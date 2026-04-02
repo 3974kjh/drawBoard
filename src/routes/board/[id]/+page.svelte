@@ -95,6 +95,8 @@
 	let borderWidth = $state(2);
 	let fontSize = $state(18);
 	let snapThreshold = $state(8);
+	/** Pixels to move per Shift+arrow (select tool); configurable in Property panel. */
+	let nudgeStepPx = $state(5);
 	let gridEnabled = $state(true);
 	let gridSize = $state(32);
 	let keepToolActive = $state(false);
@@ -2231,6 +2233,76 @@
 		};
 	};
 
+	/** Move selected elements (with groups) and pen strokes by dx/dy; clamps to board. */
+	const nudgeSelection = (dx: number, dy: number) => {
+		if (dx === 0 && dy === 0) return;
+		if (activeTool !== 'select') return;
+		const moveElIds = new Set(expandByGroups(selectedElementIds));
+		const strokeIdSet = new Set(selectedStrokeIds);
+		if (moveElIds.size === 0 && strokeIdSet.size === 0) return;
+
+		let dxMin = -Infinity;
+		let dxMax = Infinity;
+		let dyMin = -Infinity;
+		let dyMax = Infinity;
+
+		for (const item of elements) {
+			if (!moveElIds.has(item.id)) continue;
+			const o = { x: item.x, y: item.y };
+			const rot = (item.rotation ?? 0) * (Math.PI / 180);
+			const hw = item.width / 2;
+			const hh = item.height / 2;
+			const aabbHalfW = hw * Math.abs(Math.cos(rot)) + hh * Math.abs(Math.sin(rot));
+			const aabbHalfH = hw * Math.abs(Math.sin(rot)) + hh * Math.abs(Math.cos(rot));
+			const originCx = o.x + hw;
+			const originCy = o.y + hh;
+			dxMin = Math.max(dxMin, aabbHalfW - originCx);
+			dxMax = Math.min(dxMax, stageWidth - originCx - aabbHalfW);
+			dyMin = Math.max(dyMin, aabbHalfH - originCy);
+			dyMax = Math.min(dyMax, stageHeight - originCy - aabbHalfH);
+		}
+		for (const s of strokes) {
+			if (!strokeIdSet.has(s.id) || s.tool !== 'pen') continue;
+			for (const p of s.points) {
+				dxMin = Math.max(dxMin, -p.x);
+				dxMax = Math.min(dxMax, stageWidth - p.x);
+				dyMin = Math.max(dyMin, -p.y);
+				dyMax = Math.min(dyMax, stageHeight - p.y);
+			}
+		}
+
+		const ndx = Math.max(dxMin, Math.min(dxMax, dx));
+		const ndy = Math.max(dyMin, Math.min(dyMax, dy));
+		if (ndx === 0 && ndy === 0) return;
+
+		elements = elements.map((item) => {
+			if (!moveElIds.has(item.id)) return item;
+			return { ...item, x: item.x + ndx, y: item.y + ndy };
+		});
+		strokes = strokes.map((s) => {
+			if (!strokeIdSet.has(s.id) || s.tool !== 'pen') return s;
+			return {
+				...s,
+				points: s.points.map((p) => ({
+					x: Math.max(0, Math.min(stageWidth, p.x + ndx)),
+					y: Math.max(0, Math.min(stageHeight, p.y + ndy))
+				}))
+			};
+		});
+
+		if (selectionBboxBoundsPersisted) {
+			selectionBboxBoundsPersisted = {
+				...selectionBboxBoundsPersisted,
+				x: selectionBboxBoundsPersisted.x + ndx,
+				y: selectionBboxBoundsPersisted.y + ndy
+			};
+		}
+
+		refreshConnectorBounds();
+		redrawCanvas();
+		commitSnapshot();
+	};
+
 	const beginDragGroup = (event: PointerEvent) => {
 		if (activeTool !== 'select' || (selectedElementIds.length === 0 && selectedStrokeIds.length === 0)) return;
 		event.stopPropagation();
@@ -2956,6 +3028,27 @@
 					return;
 				}
 			}
+			/* Shift+Arrow: nudge selection (select tool); not when Ctrl is held (handled above). */
+			if (
+				event.shiftKey &&
+				!mod &&
+				activeTool === 'select' &&
+				(selectedElementIds.length > 0 || selectedStrokeIds.length > 0)
+			) {
+				const ak = event.key;
+				if (ak === 'ArrowUp' || ak === 'ArrowDown' || ak === 'ArrowLeft' || ak === 'ArrowRight') {
+					event.preventDefault();
+					const step = Math.max(1, Math.min(500, Math.round(Number(nudgeStepPx)) || 1));
+					let ndx = 0;
+					let ndy = 0;
+					if (ak === 'ArrowLeft') ndx = -step;
+					if (ak === 'ArrowRight') ndx = step;
+					if (ak === 'ArrowUp') ndy = -step;
+					if (ak === 'ArrowDown') ndy = step;
+					nudgeSelection(ndx, ndy);
+					return;
+				}
+			}
 			if (mod) {
 				const num = key >= '0' && key <= '9' ? parseInt(key, 10) : -1;
 				if (num >= 0 && num <= 9 && TOOL_ITEMS[num]) {
@@ -3285,6 +3378,7 @@
 				bind:borderWidth
 				bind:fontSize
 				bind:snapThreshold
+				bind:nudgeStepPx
 				bind:themeId
 				{activeTool}
 				{stageWidth}

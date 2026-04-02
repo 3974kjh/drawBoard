@@ -594,6 +594,9 @@
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
+		/* Shift+클릭 멀티 선택 시 도형 라벨이 브라우저 텍스트처럼 드래그 선택되지 않도록 */
+		user-select: none;
+		-webkit-user-select: none;
 		touch-action: manipulation; /* tablet: no double-tap zoom, stable touch for drawing */
 		background:
 			repeating-linear-gradient(0deg, var(--grid-color) 0 1px, transparent 1px var(--grid-size)),
@@ -712,6 +715,8 @@
 		place-items: center;
 		cursor: move;
 		overflow: visible;
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	/* Default rect rendering via CSS */
@@ -823,6 +828,8 @@
 		box-sizing: border-box;
 		color: var(--stroke);
 		white-space: pre-wrap;
+		user-select: none;
+		-webkit-user-select: none;
 		pointer-events: none;
 		z-index: 1;
 		display: flex;
@@ -842,6 +849,8 @@
 		color: var(--stroke);
 		font: inherit;
 		z-index: 2;
+		user-select: text;
+		-webkit-user-select: text;
 	}
 
 	/* ── Handles ── */

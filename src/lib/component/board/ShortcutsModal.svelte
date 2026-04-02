@@ -61,7 +61,8 @@
 				{ keys: 'Ctrl + Shift + ↑', descKey: 'shortcuts.expandUp' },
 				{ keys: 'Ctrl + Shift + ↓', descKey: 'shortcuts.expandDown' },
 				{ keys: 'Ctrl + Shift + ←', descKey: 'shortcuts.expandLeft' },
-				{ keys: 'Ctrl + Shift + →', descKey: 'shortcuts.expandRight' }
+				{ keys: 'Ctrl + Shift + →', descKey: 'shortcuts.expandRight' },
+				{ keys: 'Shift + Arrow keys', descKey: 'shortcuts.nudgeSelection' }
 			]
 		}
 	];

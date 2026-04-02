@@ -23,6 +23,8 @@
 		borderWidth: number;
 		fontSize: number;
 		snapThreshold: number;
+		/** Pixels per Shift+arrow when Select tool and something is selected. */
+		nudgeStepPx?: number;
 		themeId: ThemeId;
 		activeTool: DrawingTool;
 		stageWidth: number;
@@ -83,6 +85,7 @@
 		borderWidth = $bindable(2),
 		fontSize = $bindable(18),
 		snapThreshold = $bindable(8),
+		nudgeStepPx = $bindable(5),
 		themeId = $bindable<ThemeId>('whiteboard'),
 		activeTool,
 		stageWidth,
@@ -421,6 +424,17 @@
 		</div>
 		<input type="range" min="1" max="24" bind:value={snapThreshold} />
 		<p class="hint-note">Sensitivity for snapping to guides and elements</p>
+	</div>
+
+	<!-- ─── Nudge (keyboard) ─── -->
+	<div class="section">
+		<div class="section-title">
+			<!-- prettier-ignore -->
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 6 12 11 17 6"/><polyline points="7 18 12 13 17 18"/><line x1="12" y1="11" x2="12" y2="13"/></svg>
+			{$t('prop.nudgeStep')} <span class="badge">{nudgeStepPx}px</span>
+		</div>
+		<input type="range" min="1" max="100" step="1" bind:value={nudgeStepPx} />
+		<p class="hint-note">{$t('prop.nudgeStepHint')}</p>
 	</div>
 
 	<!-- ─── Theme ─── -->
