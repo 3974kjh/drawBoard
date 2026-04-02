@@ -13,3 +13,4 @@ alwaysApply: true
 - Glassmorphism for floating action buttons: `var(--ui-glass-bg)`, `var(--ui-glass-border)` 또는 기존 rgba 값
 - Fonts: `'Caveat'` (brand/logo), `'DM Sans'` (UI text) — loaded via Google Fonts in `src/app.html`
 - 보드 확장 버튼(바깥 스트립): 기본 반투명 배경(`var(--ui-glass-bg)`), 호버 시 그라데이션, 모서리 4칸은 버튼이 아닌 배경만 동일 색.
+- `+layout.svelte` 우하단 고정 **언어·테마** 스위처(`global-switchers`)와 겹치지 않도록 보드 페이지 **PropertyPanel** (`.property-panel`)에 하단 패딩(`padding-bottom`)을 둠.

@@ -702,8 +702,11 @@
 		background: var(--ui-surface);
 		border: none;
 		padding: 0.6rem;
+		/* Extra bottom space so last controls stay above +layout fixed lang/theme switchers */
+		padding-bottom: 4rem;
 		overflow-y: auto;
 		font-size: 0.8rem;
+		box-sizing: border-box;
 	}
 
 	.section {
