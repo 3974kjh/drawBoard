@@ -19,6 +19,32 @@
 	let pendingDeleteId = $state<string | null>(null);
 	let showExportBoardsModal = $state(false);
 	let importFilesInputRef = $state<HTMLInputElement | null>(null);
+	let boardsGridRef = $state<HTMLDivElement | null>(null);
+	let selectedBoardIndex = $state(-1);
+
+	const handleBoardsGridKeydown = (e: KeyboardEvent) => {
+		const totalItems = boards.length + 1;
+		if (totalItems === 0) return;
+
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			selectedBoardIndex = selectedBoardIndex < totalItems - 1 ? selectedBoardIndex + 1 : 0;
+			focusCard(selectedBoardIndex);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			selectedBoardIndex = selectedBoardIndex > 0 ? selectedBoardIndex - 1 : totalItems - 1;
+			focusCard(selectedBoardIndex);
+		}
+	};
+
+	const focusCard = (index: number) => {
+		if (!boardsGridRef) return;
+		const cards = boardsGridRef.querySelectorAll('.boards-grid > *');
+		const card = cards[index] as HTMLElement;
+		if (card) {
+			card.focus();
+		}
+	};
 
 	const refreshBoards = async () => {
 		const list = await getBoards();
@@ -65,7 +91,11 @@
 	};
 
 	const safeFilename = (title: string): string => {
-		const base = (title || 'board').replace(/[^\w\s가-힣\-]/g, '').trim().slice(0, 80) || 'board';
+		const base =
+			(title || 'board')
+				.replace(/[^\w\s가-힣\-]/g, '')
+				.trim()
+				.slice(0, 80) || 'board';
 		return `${base}.json`;
 	};
 
@@ -80,7 +110,9 @@
 		if (selectedBoards.length > 0) {
 			const tFn = get(t);
 			toast.success(
-				selectedBoards.length === 1 ? tFn('home.exportedOne') : tFn('home.exportedMany', { n: selectedBoards.length })
+				selectedBoards.length === 1
+					? tFn('home.exportedOne')
+					: tFn('home.exportedMany', { n: selectedBoards.length })
 			);
 		}
 	};
@@ -100,7 +132,10 @@
 	const handleImportFiles = async (e: Event) => {
 		const input = e.currentTarget as HTMLInputElement;
 		const fileList = input.files;
-		LOG('handleImportFiles called', { filesLength: fileList?.length ?? 0, fileNames: fileList ? Array.from(fileList).map((f) => f.name) : [] });
+		LOG('handleImportFiles called', {
+			filesLength: fileList?.length ?? 0,
+			fileNames: fileList ? Array.from(fileList).map((f) => f.name) : []
+		});
 		if (!fileList?.length) {
 			LOG('early return: no files');
 			return;
@@ -162,13 +197,23 @@
 			LOG('upsertBoard done', { id: boardData.id });
 			created.push(boardData);
 		}
-		LOG('all files processed', { createdCount: created.length, createdIds: created.map((b) => b.id) });
+		LOG('all files processed', {
+			createdCount: created.length,
+			createdIds: created.map((b) => b.id)
+		});
 		if (created.length > 0) {
 			const afterBoards = await getBoards();
-			LOG('getBoards after import', { count: afterBoards.length, ids: afterBoards.map((b) => b.id) });
+			LOG('getBoards after import', {
+				count: afterBoards.length,
+				ids: afterBoards.map((b) => b.id)
+			});
 			boards = afterBoards;
 			const tFn = get(t);
-			toast.success(created.length === 1 ? tFn('home.importedOne') : tFn('home.importedMany', { n: created.length }));
+			toast.success(
+				created.length === 1
+					? tFn('home.importedOne')
+					: tFn('home.importedMany', { n: created.length })
+			);
 		} else {
 			toast.error(get(t)('home.importNoBoards'));
 		}
@@ -199,7 +244,19 @@
 				disabled={boards.length === 0}
 				title={$t('home.exportBoards')}
 			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+				<svg
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+						points="7 10 12 15 17 10"
+					/><line x1="12" y1="15" x2="12" y2="3" /></svg
+				>
 				<span>{$t('home.exportBoards')}</span>
 			</button>
 			<button
@@ -208,7 +265,19 @@
 				onclick={() => importFilesInputRef?.click()}
 				title={$t('home.importFromFiles')}
 			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+				<svg
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+						points="17 8 12 3 7 8"
+					/><line x1="12" y1="3" x2="12" y2="15" /></svg
+				>
 				<span>{$t('home.importFromFiles')}</span>
 			</button>
 		</div>
@@ -227,10 +296,19 @@
 	<!-- ── Board grid (always shown, first card = add new) ── -->
 	<section class="boards-section scrollbar-theme">
 		{#if boards.length > 0}
-			<p class="board-count">{boards.length === 1 ? $t('home.boardCount', { n: 1 }) : $t('home.boardCountPlural', { n: boards.length })}</p>
+			<p class="board-count">
+				{boards.length === 1
+					? $t('home.boardCount', { n: 1 })
+					: $t('home.boardCountPlural', { n: boards.length })}
+			</p>
 		{/if}
 
-		<div class="boards-grid">
+		<div
+			class="boards-grid"
+			bind:this={boardsGridRef}
+			onkeydown={handleBoardsGridKeydown}
+			tabindex="-1"
+		>
 			<!-- "New Board" card – always first -->
 			<button type="button" class="add-card" onclick={openCreateModal}>
 				<div class="add-icon">
@@ -257,7 +335,7 @@
 
 <ExportBoardsModal
 	show={showExportBoardsModal}
-	boards={boards}
+	{boards}
 	onExport={handleExportSelectedBoards}
 	onClose={() => (showExportBoardsModal = false)}
 />
@@ -290,7 +368,12 @@
 <style>
 	:global(body) {
 		margin: 0;
-		font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+		font-family:
+			'Pretendard',
+			'Noto Sans KR',
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
 
 	.page {
@@ -339,7 +422,10 @@
 		border: 1px solid var(--ui-border);
 		border-radius: 10px;
 		cursor: pointer;
-		transition: background 0.15s, border-color 0.15s, color 0.15s;
+		transition:
+			background 0.15s,
+			border-color 0.15s,
+			color 0.15s;
 	}
 
 	.action-btn:hover:not(:disabled) {
@@ -440,7 +526,11 @@
 		gap: 0.6rem;
 		padding: 2rem 1rem;
 		min-height: 200px;
-		transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.18s;
+		transition:
+			border-color 0.15s,
+			background 0.15s,
+			transform 0.12s,
+			box-shadow 0.18s;
 		color: var(--ui-text-subtle);
 	}
 

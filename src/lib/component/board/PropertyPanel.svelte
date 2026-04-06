@@ -207,9 +207,40 @@
 				type="button"
 				class="swatch"
 				title={$t('prop.fillColor')}
-				style="background:{fillColor};{fillColor === 'transparent' ? 'background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,4px 4px;' : ''}"
-				onclick={() => fillColorRef?.click()}
+				style="background:{fillColor === 'transparent' ? 'transparent' : fillColor};{fillColor ===
+				'transparent'
+					? 'background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%);background-size:8px 8px;background-position:0 0,4px 4px;'
+					: ''}"
+				onclick={() => {
+					if (fillColor === 'transparent') {
+						fillColorRef?.click();
+					} else {
+						fillColorRef?.click();
+					}
+				}}
 			></button>
+			<button
+				type="button"
+				class="transparent-btn"
+				class:active={fillColor === 'transparent'}
+				title="Transparent"
+				onclick={() => {
+					fillColor = 'transparent';
+					onFillColorChange('transparent');
+				}}
+			>
+				<svg
+					width="12"
+					height="12"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><circle cx="12" cy="12" r="10" /><line x1="4" y1="4" x2="20" y2="20" /></svg
+				>
+			</button>
 			<span class="color-label">{$t('prop.fill')}</span>
 			<input
 				type="color"
@@ -251,7 +282,16 @@
 	{#if showConnectorSection}
 		<div class="section">
 			<div class="section-title">
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg
+				>
 				{$t('prop.lineStyle')}
 			</div>
 			<div class="connector-options">
@@ -260,7 +300,10 @@
 					<select
 						class="connector-option-select"
 						value={connectorStyle}
-						onchange={(e) => onConnectorStyleChange((e.currentTarget as HTMLSelectElement).value as ConnectorStyle)}
+						onchange={(e) =>
+							onConnectorStyleChange(
+								(e.currentTarget as HTMLSelectElement).value as ConnectorStyle
+							)}
 					>
 						<option value="solid">{$t('prop.solid')}</option>
 						<option value="dashed">{$t('prop.dashed')}</option>
@@ -277,20 +320,29 @@
 							max="24"
 							step="1"
 							value={connectorArrowSize}
-							oninput={(e) => onConnectorArrowSizeChange(Number((e.currentTarget as HTMLInputElement).value))}
+							oninput={(e) =>
+								onConnectorArrowSizeChange(Number((e.currentTarget as HTMLInputElement).value))}
 						/>
 						<span class="connector-option-badge">{connectorArrowSize}</span>
 					</div>
 				</label>
 				<label class="connector-option-row">
 					<span class="connector-option-label">
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 4 12 12 22 12 12 20 12 12 2"/></svg>
+						<svg
+							width="12"
+							height="12"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"><polygon points="12 2 4 12 12 22 12 12 20 12 12 2" /></svg
+						>
 						{$t('prop.startArrow')}
 					</span>
 					<select
 						class="connector-option-select"
 						value={startArrow}
-						onchange={(e) => onStartArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
+						onchange={(e) =>
+							onStartArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
 					>
 						<option value="none">{$t('prop.none')}</option>
 						<option value="arrow">{$t('prop.arrow')}</option>
@@ -302,7 +354,10 @@
 						<select
 							class="connector-option-select"
 							value={startArrowDirection}
-							onchange={(e) => onStartArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
+							onchange={(e) =>
+								onStartArrowDirectionChange(
+									(e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection
+								)}
 						>
 							<option value="auto">{$t('prop.auto')}</option>
 							<option value="n">{$t('prop.north')}</option>
@@ -314,13 +369,21 @@
 				{/if}
 				<label class="connector-option-row">
 					<span class="connector-option-label">
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 20 12 12 22 12 12 4 12 12 2"/></svg>
+						<svg
+							width="12"
+							height="12"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"><polygon points="12 2 20 12 12 22 12 12 4 12 12 2" /></svg
+						>
 						{$t('prop.endArrow')}
 					</span>
 					<select
 						class="connector-option-select"
 						value={endArrow}
-						onchange={(e) => onEndArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
+						onchange={(e) =>
+							onEndArrowChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrow)}
 					>
 						<option value="none">{$t('prop.none')}</option>
 						<option value="arrow">{$t('prop.arrow')}</option>
@@ -332,7 +395,10 @@
 						<select
 							class="connector-option-select"
 							value={endArrowDirection}
-							onchange={(e) => onEndArrowDirectionChange((e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection)}
+							onchange={(e) =>
+								onEndArrowDirectionChange(
+									(e.currentTarget as HTMLSelectElement).value as ConnectorArrowDirection
+								)}
 						>
 							<option value="auto">{$t('prop.auto')}</option>
 							<option value="n">{$t('prop.north')}</option>
@@ -367,8 +433,11 @@
 					<button
 						type="button"
 						class="preset-btn {fontSize === preset ? 'active' : ''}"
-						onclick={() => { fontSize = preset; onFontSizeChange(preset); }}
-					>{preset}</button>
+						onclick={() => {
+							fontSize = preset;
+							onFontSizeChange(preset);
+						}}>{preset}</button
+					>
 				{/each}
 			</div>
 		</div>
@@ -380,18 +449,21 @@
 					<button
 						type="button"
 						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'plain' ? 'active' : ''}"
-						onclick={() => onTextContentModeChange('plain')}
-					>{$t('prop.textModePlain')}</button>
+						onclick={() => onTextContentModeChange('plain')}>{$t('prop.textModePlain')}</button
+					>
 					<button
 						type="button"
-						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'markdown' ? 'active' : ''}"
+						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'markdown'
+							? 'active'
+							: ''}"
 						onclick={() => onTextContentModeChange('markdown')}
-					>{$t('prop.textModeMarkdown')}</button>
+						>{$t('prop.textModeMarkdown')}</button
+					>
 					<button
 						type="button"
 						class="text-mode-btn {(singleElement.textMode ?? 'plain') === 'code' ? 'active' : ''}"
-						onclick={() => onTextContentModeChange('code')}
-					>{$t('prop.textModeCode')}</button>
+						onclick={() => onTextContentModeChange('code')}>{$t('prop.textModeCode')}</button
+					>
 				</div>
 				{#if (singleElement.textMode ?? 'plain') === 'markdown'}
 					<details class="markdown-help">
@@ -410,8 +482,8 @@
 									type="button"
 									class="code-lang-btn {activeLangId === langId ? 'active' : ''}"
 									aria-pressed={activeLangId === langId}
-									onclick={() => onTextCodeLanguageChange(langId)}
-								>{langId}</button>
+									onclick={() => onTextCodeLanguageChange(langId)}>{langId}</button
+								>
 							{/each}
 						</div>
 					</div>
@@ -438,7 +510,9 @@
 			{#if singleElement.imageDataUrl}
 				<p class="hint-note">✓ Image loaded. Double-click the image on the board to replace it.</p>
 			{:else}
-				<p class="hint-note">Select an image with the button above, or double-click the image area on the board.</p>
+				<p class="hint-note">
+					Select an image with the button above, or double-click the image area on the board.
+				</p>
 			{/if}
 			<input
 				type="file"
@@ -468,7 +542,11 @@
 				Eraser <span class="badge">{eraserSize}px</span>
 			</div>
 			<input type="range" min="8" max="80" bind:value={eraserSize} />
-			<p class="hint">{activeTool === 'eraser-multi' ? 'Drag to erase strokes, shapes, connectors' : 'Drag to erase pen strokes only'}</p>
+			<p class="hint">
+				{activeTool === 'eraser-multi'
+					? 'Drag to erase strokes, shapes, connectors'
+					: 'Drag to erase pen strokes only'}
+			</p>
 		</div>
 	{/if}
 
@@ -540,9 +618,15 @@
 					onchange={(e) => onGridSizeChange(Number(e.currentTarget.value))}
 				/>
 				<div class="grid-presets">
-					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}>{$t('prop.small')}</button>
-					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}>{$t('prop.medium')}</button>
-					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}>{$t('prop.large')}</button>
+					<button type="button" class:active={gridSize === 16} onclick={() => onGridSizeChange(16)}
+						>{$t('prop.small')}</button
+					>
+					<button type="button" class:active={gridSize === 32} onclick={() => onGridSizeChange(32)}
+						>{$t('prop.medium')}</button
+					>
+					<button type="button" class:active={gridSize === 64} onclick={() => onGridSizeChange(64)}
+						>{$t('prop.large')}</button
+					>
 				</div>
 			</div>
 		{/if}
@@ -552,7 +636,11 @@
 
 	<!-- ─── Selection info ─── -->
 	<p class="selection-info">
-		Selected: {selectedElementIds.length + selectedStrokeCount} item{selectedElementIds.length + selectedStrokeCount !== 1 ? 's' : ''}
+		Selected: {selectedElementIds.length + selectedStrokeCount} item{selectedElementIds.length +
+			selectedStrokeCount !==
+		1
+			? 's'
+			: ''}
 		<span class="hint-inline">(Shift+Click to multi-select)</span>
 	</p>
 
@@ -580,7 +668,7 @@
 			type="button"
 			title={$t('prop.deleteSelected')}
 			onclick={onDelete}
-			disabled={!(canDeleteSelection ?? (selectedElementIds.length > 0))}
+			disabled={!(canDeleteSelection ?? selectedElementIds.length > 0)}
 		>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
@@ -589,12 +677,7 @@
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M6 14v-4h4"/><path d="M18 10v4h-4"/></svg>
 		</button>
-		<button
-			type="button"
-			title={$t('prop.ungroup')}
-			onclick={onUngroup}
-			disabled={!canUngroup}
-		>
+		<button type="button" title={$t('prop.ungroup')} onclick={onUngroup} disabled={!canUngroup}>
 			<!-- prettier-ignore -->
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M7 14l-1 1"/><path d="M17 10l1-1"/></svg>
 		</button>
@@ -605,11 +688,7 @@
 		<div class="sub-section">
 			<div class="section-title small">{$t('prop.sectionLayer')}</div>
 			<div class="action-grid">
-				<button
-					type="button"
-					title={$t('prop.bringToFront')}
-					onclick={onBringToFront}
-				>
+				<button type="button" title={$t('prop.bringToFront')} onclick={onBringToFront}>
 					<!-- prettier-ignore -->
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12L4 7.5"/></svg>
 				</button>
@@ -624,89 +703,109 @@
 	<!-- ─── Align (multi-select) ─── -->
 	{#if selectedElementIds.length > 1}
 		<div class="sub-section">
-		<div class="section-title small">{$t('prop.sectionAlign')}</div>
-		<div class="action-grid six">
-			<button type="button" title={$t('prop.alignLeft')} onclick={() => onAlign('left')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="2" x2="4" y2="22"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.alignCenter')} onclick={() => onAlign('center')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="6" y="14" width="12" height="4" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.alignRight')} onclick={() => onAlign('right')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="2" x2="20" y2="22"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.alignTop')} onclick={() => onAlign('top')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="22" y2="4"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.alignMiddle')} onclick={() => onAlign('middle')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="6" width="4" height="12" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.alignBottom')} onclick={() => onAlign('bottom')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
-			</button>
-		</div>
+			<div class="section-title small">{$t('prop.sectionAlign')}</div>
+			<div class="action-grid six">
+				<button type="button" title={$t('prop.alignLeft')} onclick={() => onAlign('left')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="2" x2="4" y2="22"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
+				</button>
+				<button type="button" title={$t('prop.alignCenter')} onclick={() => onAlign('center')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="6" y="14" width="12" height="4" rx="1"/></svg>
+				</button>
+				<button type="button" title={$t('prop.alignRight')} onclick={() => onAlign('right')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="2" x2="20" y2="22"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></svg>
+				</button>
+				<button type="button" title={$t('prop.alignTop')} onclick={() => onAlign('top')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="22" y2="4"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
+				</button>
+				<button type="button" title={$t('prop.alignMiddle')} onclick={() => onAlign('middle')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="6" width="4" height="12" rx="1"/></svg>
+				</button>
+				<button type="button" title={$t('prop.alignBottom')} onclick={() => onAlign('bottom')}>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></svg>
+				</button>
+			</div>
 		</div>
 	{/if}
 
 	<!-- ─── Distribute ─── -->
 	{#if canDistribute}
 		<div class="sub-section">
-		<div class="section-title small">{$t('prop.sectionDistribute')}</div>
-		<div class="action-grid">
-			<button type="button" title={$t('prop.distributeH')} onclick={() => onDistribute('horizontal')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.distributeV')} onclick={() => onDistribute('vertical')}>
-				<!-- prettier-ignore -->
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg>
-			</button>
-		</div>
+			<div class="section-title small">{$t('prop.sectionDistribute')}</div>
+			<div class="action-grid">
+				<button
+					type="button"
+					title={$t('prop.distributeH')}
+					onclick={() => onDistribute('horizontal')}
+				>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/></svg>
+				</button>
+				<button
+					type="button"
+					title={$t('prop.distributeV')}
+					onclick={() => onDistribute('vertical')}
+				>
+					<!-- prettier-ignore -->
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg>
+				</button>
+			</div>
 		</div>
 	{/if}
 
 	<!-- ─── Text align ─── -->
 	{#if isTextAlignVisible}
 		<div class="sub-section">
-		<div class="section-title small">{$t('prop.sectionTextH')}</div>
-		<div class="text-align-row">
-			<button type="button" title={$t('prop.textAlignLeft')} onclick={() => onTextAlign('left')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
-			</button>
-			<button type="button" title={$t('prop.textAlignCenter')} onclick={() => onTextAlign('center')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-			</button>
-			<button type="button" title="Align Right" onclick={() => onTextAlign('right')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
-			</button>
+			<div class="section-title small">{$t('prop.sectionTextH')}</div>
+			<div class="text-align-row">
+				<button type="button" title={$t('prop.textAlignLeft')} onclick={() => onTextAlign('left')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+				</button>
+				<button
+					type="button"
+					title={$t('prop.textAlignCenter')}
+					onclick={() => onTextAlign('center')}
+				>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+				</button>
+				<button type="button" title="Align Right" onclick={() => onTextAlign('right')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+				</button>
+			</div>
 		</div>
-	</div>
-	<div class="sub-section">
-		<div class="section-title small">Text Vertical Align</div>
-		<div class="text-align-row">
-			<button type="button" title="Align Top" onclick={() => onTextVerticalAlign('top')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.textAlignMiddle')} onclick={() => onTextVerticalAlign('middle')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-			</button>
-			<button type="button" title={$t('prop.textAlignBottom')} onclick={() => onTextVerticalAlign('bottom')}>
-				<!-- prettier-ignore -->
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-			</button>
+		<div class="sub-section">
+			<div class="section-title small">Text Vertical Align</div>
+			<div class="text-align-row">
+				<button type="button" title="Align Top" onclick={() => onTextVerticalAlign('top')}>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+				</button>
+				<button
+					type="button"
+					title={$t('prop.textAlignMiddle')}
+					onclick={() => onTextVerticalAlign('middle')}
+				>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+				</button>
+				<button
+					type="button"
+					title={$t('prop.textAlignBottom')}
+					onclick={() => onTextVerticalAlign('bottom')}
+				>
+					<!-- prettier-ignore -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+				</button>
+			</div>
 		</div>
-	</div>
 	{/if}
 
 	<div class="divider"></div>
@@ -792,14 +891,14 @@
 	/* ─── Color swatch row ─── */
 	.color-row {
 		display: grid;
-		grid-template-columns: 28px auto 28px auto;
-		gap: 0.35rem;
+		grid-template-columns: 26px auto 26px 26px auto;
+		gap: 0.2rem;
 		align-items: center;
 	}
 
 	.swatch {
-		width: 28px;
-		height: 28px;
+		width: 26px;
+		height: 26px;
 		border-radius: 8px;
 		border: 2px solid var(--ui-border-strong);
 		cursor: pointer;
@@ -826,6 +925,36 @@
 	.color-label {
 		font-size: 0.72rem;
 		color: #64748b;
+	}
+
+	/* ─── Transparent button ─── */
+	.transparent-btn {
+		width: 26px;
+		height: 26px;
+		border-radius: 6px;
+		border: 1px solid var(--ui-border-strong);
+		background: var(--ui-surface);
+		cursor: pointer;
+		display: grid;
+		place-items: center;
+		color: var(--ui-text-muted);
+		padding: 0;
+		transition:
+			background 0.12s,
+			border-color 0.12s,
+			color 0.12s;
+	}
+
+	.transparent-btn:hover {
+		background: var(--ui-accent-muted);
+		border-color: var(--ui-accent);
+		color: var(--ui-accent);
+	}
+
+	.transparent-btn.active {
+		background: var(--ui-accent);
+		border-color: var(--ui-accent);
+		color: #fff;
 	}
 
 	/* ─── Inputs ─── */
@@ -946,7 +1075,6 @@
 		color: var(--ui-accent);
 	}
 
-
 	/* ─── Board size ─── */
 	.size-display {
 		text-align: center;
@@ -1059,7 +1187,9 @@
 		background: var(--ui-surface);
 		cursor: pointer;
 		color: var(--ui-text-muted);
-		transition: background 0.12s, border-color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s;
 	}
 
 	.preset-btn:hover {
@@ -1089,7 +1219,9 @@
 		background: var(--ui-accent-muted);
 		color: var(--ui-accent);
 		cursor: pointer;
-		transition: background 0.12s, border-color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s;
 	}
 
 	.upload-btn:hover {
@@ -1159,7 +1291,10 @@
 		background: var(--ui-surface);
 		color: var(--ui-text-muted);
 		cursor: pointer;
-		transition: background 0.12s, border-color 0.12s, color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s,
+			color 0.12s;
 	}
 
 	.text-mode-btn:hover {
@@ -1230,7 +1365,10 @@
 		background: var(--ui-surface);
 		color: var(--ui-text-muted);
 		cursor: pointer;
-		transition: background 0.12s, border-color 0.12s, color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s,
+			color 0.12s;
 	}
 
 	.code-lang-btn:hover {
@@ -1281,7 +1419,10 @@
 		background: var(--ui-surface);
 		color: var(--ui-text-muted);
 		cursor: pointer;
-		transition: background 0.12s, border-color 0.12s, color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s,
+			color 0.12s;
 	}
 
 	.grid-presets button:hover {
