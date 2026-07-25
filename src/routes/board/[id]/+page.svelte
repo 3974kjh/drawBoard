@@ -804,6 +804,10 @@
 		borderWidth = w;
 		if (selectedElementIds.length > 0) {
 			updateSelectedElements((item) => ({ ...item, borderWidth: w }));
+			const hasConnector = selectedElementIds.some((id) =>
+				elements.find((el) => el.id === id)?.type === 'connector'
+			);
+			if (hasConnector) refreshConnectorBounds();
 			commitSnapshot();
 		}
 	};

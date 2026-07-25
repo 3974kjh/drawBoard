@@ -19,6 +19,8 @@
 			!!pathData?.arrowAt2
 	);
 	const arrowSize = $derived(connector.connectorArrowSize ?? 10);
+	const scale = $derived(arrowSize / 10);
+	const refY = $derived(arrowSize * 0.4);
 	const startMarkerId = $derived(
 		connector.startArrow === 'arrow'
 			? connector.startArrowDirection && connector.startArrowDirection !== 'auto'
@@ -33,10 +35,6 @@
 				: `arrow-end-${connector.id}`
 			: ''
 	);
-	const connectorSelected = $derived(selectedElementIds.includes(connector.id));
-	const connectorStroke = $derived(connectorSelected ? '#2563eb' : connector.strokeColor);
-	const scale = $derived(arrowSize / 10);
-	const refY = $derived(arrowSize * 0.4);
 </script>
 
 <svg class="connector-layer" width={stageWidth} height={stageHeight} aria-hidden="true">
@@ -52,7 +50,7 @@
 						refY={refY}
 						orient="auto"
 						markerUnits="userSpaceOnUse"
-						><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="10 0, 0 4, 10 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-start-n-{connector.id}"
@@ -62,7 +60,7 @@
 						refY={refY}
 						orient="270"
 						markerUnits="userSpaceOnUse"
-						><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="10 0, 0 4, 10 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-start-s-{connector.id}"
@@ -72,7 +70,7 @@
 						refY={refY}
 						orient="90"
 						markerUnits="userSpaceOnUse"
-						><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="10 0, 0 4, 10 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-start-e-{connector.id}"
@@ -82,7 +80,7 @@
 						refY={refY}
 						orient="0"
 						markerUnits="userSpaceOnUse"
-						><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="10 0, 0 4, 10 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-start-w-{connector.id}"
@@ -92,7 +90,7 @@
 						refY={refY}
 						orient="180"
 						markerUnits="userSpaceOnUse"
-						><polygon points="10 0, 0 4, 10 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="10 0, 0 4, 10 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-end-{connector.id}"
@@ -102,7 +100,7 @@
 						refY={refY}
 						orient="auto"
 						markerUnits="userSpaceOnUse"
-						><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="0 0, 10 4, 0 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-end-n-{connector.id}"
@@ -112,7 +110,7 @@
 						refY={refY}
 						orient="270"
 						markerUnits="userSpaceOnUse"
-						><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="0 0, 10 4, 0 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-end-s-{connector.id}"
@@ -122,7 +120,7 @@
 						refY={refY}
 						orient="90"
 						markerUnits="userSpaceOnUse"
-						><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="0 0, 10 4, 0 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-end-e-{connector.id}"
@@ -132,7 +130,7 @@
 						refY={refY}
 						orient="0"
 						markerUnits="userSpaceOnUse"
-						><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="0 0, 10 4, 0 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 					<marker
 						id="arrow-end-w-{connector.id}"
@@ -142,7 +140,7 @@
 						refY={refY}
 						orient="180"
 						markerUnits="userSpaceOnUse"
-						><polygon points="0 0, 10 4, 0 8" fill={connectorStroke} transform="scale({scale})" /></marker
+						><polygon points="0 0, 10 4, 0 8" fill={connector.strokeColor} transform="scale({scale})" /></marker
 					>
 				</defs>
 			{/if}
@@ -261,3 +259,26 @@
 		</g>
 	{/if}
 </svg>
+
+<style>
+	.connector-layer {
+		position: absolute;
+		left: 0;
+		top: 0;
+		pointer-events: none;
+	}
+
+	.connector-hit {
+		pointer-events: all;
+		cursor: pointer;
+	}
+
+	.connector-path.selected {
+		filter: drop-shadow(0 0 2px rgba(37, 99, 235, 0.6));
+	}
+
+	.connector-bend-handle {
+		pointer-events: all;
+		cursor: move;
+	}
+</style>

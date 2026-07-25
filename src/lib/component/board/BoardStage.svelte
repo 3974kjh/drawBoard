@@ -802,20 +802,6 @@
 		z-index: 12;
 	}
 
-	.connector-layer {
-		position: absolute;
-		left: 0;
-		top: 0;
-		pointer-events: none;
-	}
-	.connector-layer .connector-hit {
-		pointer-events: all;
-		cursor: pointer;
-	}
-	.connector-path.selected {
-		stroke: #2563eb;
-		filter: drop-shadow(0 0 2px rgba(37, 99, 235, 0.6));
-	}
 	.connector-preview-layer {
 		position: absolute;
 		left: 0;
@@ -825,10 +811,6 @@
 	}
 	.connector-preview {
 		pointer-events: none;
-	}
-	.connector-bend-handle {
-		pointer-events: all;
-		cursor: move;
 	}
 
 	.connector-anchors {

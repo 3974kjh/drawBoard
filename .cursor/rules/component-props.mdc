@@ -7,7 +7,8 @@ alwaysApply: true
 
 | Component | Responsibility |
 |---|---|
-| `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors; 텍스트는 `textMode`(plain / markdown / code): plain은 contenteditable+서식 툴바(B·크기), md·코드는 textarea, 표시는 `text-element-display`(DOMPurify·marked·highlight.js) |
+| `BoardStage.svelte` | Canvas display, element HTML overlays, pointer event routing, connector preview layer, anchors; `layerOrder` segments render `ConnectorSvg` for connectors; 텍스트는 `textMode`(plain / markdown / code): plain은 contenteditable+서식 툴바(B·크기), md·코드는 textarea, 표시는 `text-element-display`(DOMPurify·marked·highlight.js) |
+| `ConnectorSvg.svelte` | Per-connector SVG path, arrows, hit rect, bend handle; **owns** `position: absolute` layer styles (not BoardStage scoped CSS) |
 | `ToolPanel.svelte` | Tool selection, `onToolChange` (deselect on tool change). 로직: `ToolPanelCore.ts` (selectTool) |
 | `PropertyPanel.svelte` | Per-selection property controls, **Layer** (맨 앞/맨 뒤, **펜 스트로크** 또는 도형 선택 시 동일), **Nudge step** (`nudgeStepPx`, Shift+방향키 이동 거리, Select 도구), **Board size** (확장 방향 버튼만), **텍스트 모드** (일반·마크다운·코드, 코드 시 언어 필드), connector section (Line style, Arrow size, Direction) |
 | `Topbar.svelte` | Save, undo/redo, export(PDF/이미지/JSON), import(다른 보드/JSON), back-navigation. 버튼 그룹: 내보내기 \| 가져오기 \| 라이브러리 \| **내용에 맞게 보드 크기** (`onFitBoardToContent`, 보드 비우기 옆) \| 비우기 \| 실행취소/다시실행. 아이콘 버튼에 aria-label 적용 |
