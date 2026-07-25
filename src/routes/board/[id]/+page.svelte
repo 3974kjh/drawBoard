@@ -98,7 +98,7 @@
 	let elements = $state<BoardElement[]>([]);
 	/** Unified z-order for strokes and elements (later = on top). */
 	let layerOrder = $state<LayerEntry[]>([]);
-	let activeTool = $state<DrawingTool>('pen');
+	let activeTool = $state<DrawingTool>('select');
 	let selectedElementIds = $state<string[]>([]);
 	let selectedStrokeIds = $state<string[]>([]);
 	let editingElementId = $state<string | null>(null);

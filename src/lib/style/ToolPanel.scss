@@ -1,10 +1,6 @@
 /* ToolPanel – 좌측 도구 패널. 테마 변수 사용 */
 .tool-panel {
 	width: 48px;
-	background: var(--ui-glass-bg);
-	backdrop-filter: blur(8px);
-	border: 1px solid var(--ui-border-strong);
-	border-radius: 14px;
 	padding: 0.3rem;
 	display: flex;
 	flex-direction: column;

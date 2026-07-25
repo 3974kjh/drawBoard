@@ -31,7 +31,7 @@
 		contextMenuOpen?: boolean;
 		onToolChange?: (tool: DrawingTool) => void;
 	}
-	let { activeTool = $bindable('pen'), keepToolActive = $bindable(false), showConnectorAnchors = $bindable(false), contextMenuOpen = false, onToolChange }: Props = $props();
+	let { activeTool = $bindable('select'), keepToolActive = $bindable(false), showConnectorAnchors = $bindable(false), contextMenuOpen = false, onToolChange }: Props = $props();
 
 	// 8. HTML 이벤트에 바인딩하는 함수
 	const handleToolClick = (tool: DrawingTool) => {
@@ -104,11 +104,6 @@
 
 	.tool-panel {
 		width: 48px;
-		background: var(--ui-glass-bg);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		border: 1px solid var(--ui-border-strong);
-		border-top: none;
 		padding: 0.3rem 0.5rem 0.3rem 0.3rem;
 		display: flex;
 		flex-direction: column;
